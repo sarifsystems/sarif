@@ -7,57 +7,87 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/router"
+	"github.com/xconstruct/stark"
 	"github.com/xconstruct/stark/natural"
+	"github.com/xconstruct/stark/router"
+	"github.com/xconstruct/stark/transports/pipe"
 )
 
-var r *router.Router
+func mpdService(p *pipe.Pipe) {
+	for {
+		msg, err := p.Read()
+		if err != nil {
+			return
+		}
+		exec.Command("mpc", msg.Action).Start()
 
-func echoService(msg *proto.Message) *proto.Message {
-	reply := proto.NewReply(msg)
-	reply.Action = "notify"
-	reply.Message = msg.Message
-	return reply
+		reply := stark.NewReply(msg)
+		reply.Action = "notify"
+		reply.Message = "done"
+		p.Write(reply)
+	}
 }
 
-func mpdService(msg *proto.Message) *proto.Message {
-	exec.Command("mpc", msg.Action).Start()
-	reply := proto.NewReply(msg)
-	reply.Action = "notify"
-	reply.Message = "done"
-	return reply
+func terminalService(p *pipe.Pipe) {
+	go func() {
+		stdin := bufio.NewReader(os.Stdin)
+		for {
+			cmd, _ := stdin.ReadString('\n')
+			cmd = strings.TrimSpace(cmd)
+
+			msg := natural.NewMessage("terminal", cmd)
+			p.Write(msg)
+		}
+	}()
+
+	for {
+		msg, err := p.Read()
+		if err != nil {
+			return
+		}
+		fmt.Println(msg.Message)
+	}
 }
 
-func terminalService(msg *proto.Message) *proto.Message {
-	fmt.Println(msg.Source + ": " + msg.Message)
-	return nil
-}
+func naturalService(p *pipe.Pipe) {
+	for {
+		msg, err := p.Read()
+		if err != nil {
+			return
+		}
+		if msg.Action != natural.ACTION_PROCESS {
+			return
+		}
 
-func routes() {
-	r.AddService("echo", router.ServiceFunc(echoService))
-	r.AddService("mpd", router.ServiceFunc(mpdService))
-	r.AddService("natural", router.ServiceFunc(natural.Handle))
-	r.AddService("terminal", router.ServiceFunc(terminalService))
+		reply := natural.Parse(msg.Message)
+		if reply == nil {
+			reply = stark.NewReply(msg)
+			reply.Action = "error"
+			reply.Source = "natural"
+			reply.Message = "Did not understand: " + msg.Message
+			p.Write(reply)
+			continue
+		}
+		reply.Source = "natural"
+		reply.ReplyTo = msg.Source
+		p.Write(reply)
+	}
 }
 
 func main() {
-	r = router.NewRouter("router")
-	routes()
+	r := router.NewRouter("router")
 
-	stdin := bufio.NewReader(os.Stdin)
-	for {
-		cmd, _ := stdin.ReadString('\n')
-		cmd = strings.TrimSpace(cmd)
+	left, right := pipe.New()
+	go terminalService(left)
+	r.Connect("terminal", right)
 
-		msg := proto.NewMessage()
-		msg.Action = natural.ACTION_PROCESS
-		msg.Message = cmd
-		msg.Source = "terminal"
-		msg.Destination = "natural"
-		reply := r.Handle(msg)
-		if reply != nil {
-			fmt.Println(reply)
-		}
-	}
+	left, right = pipe.New()
+	go mpdService(left)
+	r.Connect("mpd", right)
+
+	left, right = pipe.New()
+	go naturalService(left)
+	r.Connect("natural", right)
+
+	select{}
 }

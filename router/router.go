@@ -1,49 +1,69 @@
 package router
 
 import (
-	"github.com/xconstruct/stark/proto"
+	"log"
+	"github.com/xconstruct/stark"
 )
 
-type Service interface {
-	Handle(msg *proto.Message) *proto.Message
+type Conn interface {
+	Read() (*stark.Message, error)
+	Write(*stark.Message) error
 }
 
-type ServiceFunc func(msg *proto.Message) *proto.Message
+type LoggedConn struct {
+	Conn
+}
 
-func (f ServiceFunc) Handle (msg *proto.Message) *proto.Message {
-	return f(msg)
+func (c *LoggedConn) Write(msg *stark.Message) error {
+	log.Printf(" --> %v\n", msg)
+	return c.Conn.Write(msg)
+}
+
+func (c *LoggedConn) Read() (*stark.Message, error) {
+	msg, err := c.Conn.Read()
+	log.Printf(" <-- %v\n", msg)
+	return msg, err
 }
 
 type Router struct {
 	Name string
-	Services map[string]Service
+	Conns map[string]Conn
 }
 
 func NewRouter(name string) *Router {
 	return &Router{
 		name,
-		make(map[string]Service),
+		make(map[string]Conn),
 	}
 }
 
-func (r *Router) Handle(msg *proto.Message) *proto.Message {
-	path := proto.GetPath(msg)
+func (r *Router) Write(msg *stark.Message) error {
+	path := stark.GetPath(msg)
+
+	log.Println(msg)
 
 	next := path.Next()
-	if r.Services[next] != nil {
-		reply := r.Services[next].Handle(msg)
-		if reply != nil {
-			reply = r.Handle(reply)
+	if r.Conns[next] != nil {
+		if err := r.Conns[next].Write(msg); err != nil {
+			return err
 		}
-		return reply
+		return nil
 	}
 
-	reply := proto.NewReply(msg)
-	reply.Source = r.Name
-	reply.Message = "Unknown destination: " + msg.Destination
-	return reply
+	log.Fatalf("router/write: destination not found: %v\n", next)
+	return nil
 }
 
-func (r *Router) AddService(name string, service Service) {
-	r.Services[name] = service
+func (r *Router) Connect(name string, conn Conn) {
+	r.Conns[name] = conn
+	go func() {
+		for {
+			msg, err := conn.Read()
+			if err != nil {
+				log.Fatalf("router/connect: %v\n", err)
+				return
+			}
+			r.Write(msg)
+		}
+	}()
 }

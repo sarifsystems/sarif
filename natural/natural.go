@@ -2,7 +2,7 @@ package natural
 
 import (
 	"strings"
-	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark"
 )
 
 var actions = map[string]string{
@@ -19,7 +19,7 @@ var destinations = map[string]string{
 	"song": "mpd",
 }
 
-func Parse(text string) *proto.Message {
+func Parse(text string) *stark.Message {
 	text = strings.TrimSpace(text)
 	words := strings.Split(text, " ")
 
@@ -44,7 +44,7 @@ func Parse(text string) *proto.Message {
 		return nil
 	}
 
-	msg := proto.NewMessage()
+	msg := stark.NewMessage()
 	msg.Action = action
 	msg.Destination = dest
 	msg.Message = text
@@ -53,20 +53,11 @@ func Parse(text string) *proto.Message {
 
 const ACTION_PROCESS string = "process_natural"
 
-func Handle (msg *proto.Message) *proto.Message {
-	if msg.Action != ACTION_PROCESS {
-		return nil
-	}
-
-	reply := Parse(msg.Message)
-	if reply == nil {
-		reply = proto.NewMessage()
-		reply.Action = "error"
-		reply.Source = "natural"
-		reply.Destination = msg.Source
-		reply.Message = "Did not understand: " + msg.Message
-		return reply
-	}
-	reply.Source = msg.Source // TODO: Reply to?
-	return reply
+func NewMessage(source, message string) *stark.Message {
+		msg := stark.NewMessage()
+		msg.Action = ACTION_PROCESS
+		msg.Message = message
+		msg.Source = source
+		msg.Destination = "natural"
+		return msg
 }

@@ -1,4 +1,4 @@
-package proto
+package stark
 
 import (
 	"crypto/rand"
@@ -14,6 +14,7 @@ type Message struct {
 	Action string `json:"action"`
 	Source string `json:"source"`
 	Destination string `json:"destination"`
+	ReplyTo string `json:"reply_to"`
 
 	Data map[string]string `json:"data,omitempty"`
 
@@ -23,7 +24,9 @@ type Message struct {
 }
 
 func (m *Message) String() string {
-	return "message(" + m.Source + ": \"" + m.Message + "\")"
+	return fmt.Sprintf(`stark.Message(%s > %s: %s "%s")`,
+		m.Source, m.Destination, m.Action, m.Message,
+	)
 }
 
 func Decode(msg []byte) (*Message, error) {
@@ -84,7 +87,10 @@ func (m *Message) IsValid() (bool, error) {
 func NewReply(m *Message) *Message {
 	reply := NewMessage()
 	reply.Source = m.Destination
-	reply.Destination = m.Source
+	reply.Destination = m.Destination
+	if m.ReplyTo != "" {
+		reply.Destination = m.ReplyTo
+	}
 	reply.Cause = "reply"
 	reply.CausedBy = m.UUID
 	return reply
