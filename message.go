@@ -87,7 +87,7 @@ func (m *Message) IsValid() (bool, error) {
 func NewReply(m *Message) *Message {
 	reply := NewMessage()
 	reply.Source = m.Destination
-	reply.Destination = m.Destination
+	reply.Destination = m.Source
 	if m.ReplyTo != "" {
 		reply.Destination = m.ReplyTo
 	}

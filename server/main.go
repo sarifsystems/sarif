@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/xconstruct/stark/natural"
 	"github.com/xconstruct/stark/router"
 	"github.com/xconstruct/stark/transports/pipe"
+	"github.com/xconstruct/stark/transports/net"
 )
 
 func mpdService(p *pipe.Pipe) {
@@ -88,6 +90,11 @@ func main() {
 	left, right = pipe.New()
 	go naturalService(left)
 	r.Connect("natural", right)
+
+	nt := net.NewNetTransport(r, "tcp", ":9000")
+	if err := nt.Start(); err != nil {
+		log.Fatalf("server: %v\n", err)
+	}
 
 	select{}
 }

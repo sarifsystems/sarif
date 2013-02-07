@@ -55,12 +55,14 @@ func (r *Router) Write(msg *stark.Message) error {
 }
 
 func (r *Router) Connect(name string, conn Conn) {
+	log.Printf("router/connect(%s)\n", name)
 	r.Conns[name] = conn
 	go func() {
 		for {
 			msg, err := conn.Read()
 			if err != nil {
-				log.Fatalf("router/connect: %v\n", err)
+				delete(r.Conns, name)
+				log.Printf("router/disconnect(%s): %v\n", name, err)
 				return
 			}
 			r.Write(msg)

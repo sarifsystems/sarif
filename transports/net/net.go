@@ -3,12 +3,14 @@ package net
 import (
 	"encoding/json"
 	"log"
+	"net"
 	"github.com/xconstruct/stark"
+	"github.com/xconstruct/stark/router"
 )
 
 type NetTransport struct {
-	rt router.Router
-	net string
+	rt *router.Router
+	proto string
 	address string
 	ln net.Listener
 }
@@ -31,12 +33,13 @@ func (c *NetConn) Write(msg *stark.Message) error {
 	return c.enc.Encode(msg)
 }
 
-func NewNetTransport(rt router.Router, net, address string) *NetTransport {
-	return &NetTransport{rt, service, net, address}
+func NewNetTransport(rt *router.Router, proto, address string) *NetTransport {
+	return &NetTransport{rt, proto, address, nil}
 }
 
 func (t *NetTransport) Start() error {
-	t.ln, err := net.Listen(t.net, t.address)
+	ln, err := net.Listen(t.proto, t.address)
+	t.ln = ln
 	if err != nil {
 		return err
 	}
@@ -53,16 +56,16 @@ func (t *NetTransport) Start() error {
 				json.NewEncoder(conn),
 				conn,
 			}
-			rt.Connect("temp", nc)
+			t.rt.Connect("temp", nc)
 		}
-	}
+	}()
 
 	return nil
 }
 
 func (t *NetTransport) Stop() error {
 	if t.ln == nil {
-		return
+		return nil
 	}
 
 	err := t.ln.Close()
@@ -70,15 +73,15 @@ func (t *NetTransport) Stop() error {
 	return err
 }
 
-func Connect(net, address string) (*NetConn, error) {
-	conn, err := net.Dial(net, address)
+func Connect(proto, address string) (*NetConn, error) {
+	conn, err := net.Dial(proto, address)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	return &NetConn{
 		json.NewDecoder(conn),
 		json.NewEncoder(conn),
 		conn,
-	}
+	}, nil
 }
