@@ -19,7 +19,13 @@ import (
 func mpdService() {
 	s, err := service.Connect("local://default", service.Info{
 		Name: "mpd",
-		Actions: []string{"music"},
+		Actions: []string{
+			"music.play",
+			"music.pause",
+			"music.stop",
+			"music.prev",
+			"music.next",
+		},
 	})
 	if err != nil {
 		log.Fatalf("mpc: %v\n", err)
@@ -29,7 +35,10 @@ func mpdService() {
 		if err != nil {
 			return
 		}
-		exec.Command("mpc", msg.Action).Start()
+		action := strings.Split(msg.Action, ".")
+		if action[0] == "music" {
+			exec.Command("mpc", action[1]).Start()
+		}
 
 		reply := stark.NewReply(msg)
 		reply.Action = "notify"
@@ -71,7 +80,7 @@ func terminalService() {
 func naturalService() {
 	s, err := service.Connect("local://default", service.Info{
 		Name: "natural",
-		Actions: []string{"natural"},
+		Actions: []string{"natural.process"},
 	})
 	if err != nil {
 		log.Fatalf("natural: %v\n", err)
@@ -93,7 +102,7 @@ func naturalService() {
 			s.Write(reply)
 			continue
 		}
-		reply.Source = "natural"
+		reply.Source = s.Name()
 		reply.ReplyTo = msg.Source
 		s.Write(reply)
 	}

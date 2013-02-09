@@ -5,35 +5,21 @@ import (
 	"github.com/xconstruct/stark"
 )
 
-type Conn interface {
-	Read() (*stark.Message, error)
-	Write(*stark.Message) error
-}
-
-type LoggedConn struct {
-	Conn
-}
-
-func (c *LoggedConn) Write(msg *stark.Message) error {
-	log.Printf(" --> %v\n", msg)
-	return c.Conn.Write(msg)
-}
-
-func (c *LoggedConn) Read() (*stark.Message, error) {
-	msg, err := c.Conn.Read()
-	log.Printf(" <-- %v\n", msg)
-	return msg, err
+type connInfo struct {
+	conn stark.Conn
+	dest string
+	actions []string
 }
 
 type Router struct {
 	Name string
-	Route map[string]Conn
+	Conns map[stark.Conn]connInfo
 }
 
 func NewRouter(name string) *Router {
 	return &Router{
 		name,
-		make(map[string]Conn),
+		make(map[stark.Conn]connInfo, 0),
 	}
 }
 
@@ -49,38 +35,53 @@ func (r *Router) Write(msg *stark.Message) error {
 	path := stark.GetPath(msg)
 	log.Println(msg)
 
+	// Exact destination found
 	next := path.Next()
-	if next == "" {
-		// TODO: Capabilities routing
-		return nil
-	}
-	if r.Route[next] != nil {
-		if err := r.Route[next].Write(msg); err != nil {
-			return err
+	if next != "" {
+		for _, info := range r.Conns {
+			if info.dest != next {
+				continue
+			}
+			if err := info.conn.Write(msg); err != nil {
+				return err
+			}
+			return nil
 		}
-		return nil
 	}
 
-	return &ErrDestination{next}
+	// Action-based routing
+	for _, info := range r.Conns {
+		if info.actions == nil {
+			continue
+		}
+		for _, action := range info.actions {
+			if action == msg.Action {
+				if err := info.conn.Write(msg); err != nil {
+					return err
+				}
+				return nil
+			}
+		}
+	}
+
+	return &ErrDestination{"unknown"}
 }
 
-func (r *Router) Connect(conn Conn) {
-	log.Printf("router/connect\n")
+func (r *Router) Connect(conn stark.Conn) {
 	go func() {
-		name := stark.GenerateUUID()
 		for {
 			msg, err := conn.Read()
 			if err != nil {
-				delete(r.Route, name)
 				log.Printf("router/disconnect: %v\n", err)
+				delete(r.Conns, conn)
 				return
 			}
 			if msg.Action == "route.hello" {
-				newName, _ := msg.Data["name"].(string)
-				log.Printf("router/hello: %s now known as %s\n", name, newName)
-				delete(r.Route, name)
-				name = newName
-				r.Route[name] = conn
+				name, _ := msg.Data["name"].(string)
+				actions, _ := msg.Data["actions"].([]string)
+				log.Printf("router/connect: %s connected\n", name)
+				r.Conns[conn] = connInfo{conn, name, actions}
+				continue
 			}
 			if err = r.Write(msg); err != nil {
 				log.Printf("router: %v\n", err)

@@ -28,7 +28,6 @@ func main() {
 
 			msg := stark.NewMessage()
 			msg.Action = "natural.process"
-			msg.Destination = "natural"
 			msg.Message = cmd
 			s.Write(msg)
 		}

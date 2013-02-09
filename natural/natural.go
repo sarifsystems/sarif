@@ -6,6 +6,12 @@ import (
 )
 
 var actions = map[string]string{
+	"mpd": "music",
+	"music": "music",
+	"song": "music",
+}
+
+var subactions = map[string]string{
 	"play": "play",
 	"pause": "pause",
 	"stop": "stop",
@@ -13,40 +19,29 @@ var actions = map[string]string{
 	"prev": "prev",
 }
 
-var destinations = map[string]string{
-	"mpd": "mpd",
-	"music": "mpd",
-	"song": "mpd",
-}
 
 func Parse(text string) *stark.Message {
 	text = strings.TrimSpace(text)
 	words := strings.Split(text, " ")
 
-	var action, dest string
+	var action, subaction string
 	for _, word := range words {
-		if word == "echo" {
-			action = "echo"
-			dest = "echo"
-			break
-		}
 		if actions[word] != "" {
 			action = actions[word]
 			continue
 		}
-		if destinations[word] != "" {
-			dest = destinations[word]
+		if subactions[word] != "" {
+			subaction = subactions[word]
 			continue
 		}
 	}
 
-	if action == "" || dest == "" {
+	if action == "" || subaction == "" {
 		return nil
 	}
 
 	msg := stark.NewMessage()
-	msg.Action = action
-	msg.Destination = dest
+	msg.Action = action + "." + subaction
 	msg.Message = text
 	return msg
 }
