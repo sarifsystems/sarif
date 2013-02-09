@@ -17,7 +17,7 @@ import (
 )
 
 func mpdService(p *local.Pipe) {
-	s, err := service.New("mpc", p)
+	s, err := service.New("mpd", p)
 	if err != nil {
 		log.Fatalf("mpc: %v\n", err)
 	}
@@ -36,7 +36,7 @@ func mpdService(p *local.Pipe) {
 }
 
 func terminalService(p *local.Pipe) {
-	s, err := service.New("mpc", p)
+	s, err := service.New("terminal", p)
 	if err != nil {
 		log.Fatalf("intterminal: %v\n", err)
 	}
@@ -81,7 +81,6 @@ func naturalService(p *local.Pipe) {
 		if reply == nil {
 			reply = stark.NewReply(msg)
 			reply.Action = "error"
-			reply.Source = "natural"
 			reply.Message = "Did not understand: " + msg.Message
 			p.Write(reply)
 			continue
@@ -97,15 +96,15 @@ func main() {
 
 	left, right := local.NewPipe()
 	go terminalService(left)
-	r.Connect("intterminal", right)
+	r.Connect(right)
 
 	left, right = local.NewPipe()
 	go mpdService(left)
-	r.Connect("mpd", right)
+	r.Connect(right)
 
 	left, right = local.NewPipe()
 	go naturalService(left)
-	r.Connect("natural", right)
+	r.Connect(right)
 
 	nt := net.NewNetTransport(r, "tcp", ":9000")
 	if err := nt.Start(); err != nil {

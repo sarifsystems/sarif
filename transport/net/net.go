@@ -68,7 +68,7 @@ func (t *NetTransport) Start() error {
 				json.NewEncoder(conn),
 				conn,
 			}
-			t.rt.Connect("temp", nc)
+			t.rt.Connect(nc)
 		}
 	}()
 

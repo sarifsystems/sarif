@@ -27,7 +27,7 @@ func (c *LoggedConn) Read() (*stark.Message, error) {
 
 type Router struct {
 	Name string
-	Conns map[string]Conn
+	Route map[string]Conn
 }
 
 func NewRouter(name string) *Router {
@@ -37,35 +37,54 @@ func NewRouter(name string) *Router {
 	}
 }
 
+type ErrDestination struct {
+	Dest string
+}
+
+func (e *ErrDestination) Error() string {
+	return "destination not found: " + e.Dest
+}
+
 func (r *Router) Write(msg *stark.Message) error {
 	path := stark.GetPath(msg)
-
 	log.Println(msg)
 
 	next := path.Next()
-	if r.Conns[next] != nil {
-		if err := r.Conns[next].Write(msg); err != nil {
+	if next == "" {
+		// TODO: Capabilities routing
+		return nil
+	}
+	if r.Route[next] != nil {
+		if err := r.Route[next].Write(msg); err != nil {
 			return err
 		}
 		return nil
 	}
 
-	log.Fatalf("router/write: destination not found: %v\n", next)
-	return nil
+	return &ErrDestination{next}
 }
 
-func (r *Router) Connect(name string, conn Conn) {
-	log.Printf("router/connect(%s)\n", name)
-	r.Conns[name] = conn
+func (r *Router) Connect(conn Conn) {
+	log.Printf("router/connect\n")
 	go func() {
+		name := stark.GenerateUUID()
 		for {
 			msg, err := conn.Read()
 			if err != nil {
-				delete(r.Conns, name)
-				log.Printf("router/disconnect(%s): %v\n", name, err)
+				delete(r.Route, name)
+				log.Printf("router/disconnect: %v\n", err)
 				return
 			}
-			r.Write(msg)
+			if msg.Action == "route.hello" {
+				newName := string(msg.Data["name"])
+				log.Printf("router/hello: %s now known as %s\n", name, newName)
+				delete(r.Route, name)
+				name = newName
+				r.Route[name] = conn
+			}
+			if err = r.Write(msg); err != nil {
+				log.Printf("router: %v\n", err)
+			}
 		}
 	}()
 }

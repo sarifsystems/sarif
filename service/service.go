@@ -21,6 +21,13 @@ func Connect(name, url string) (*Service, error) {
 
 func New(name string, conn stark.Conn) (*Service, error) {
 	s := &Service{name, conn}
+	if conn != nil {
+		msg := stark.NewMessage()
+		msg.Action = "route.hello"
+		msg.Data["name"] = name
+		msg.Message = "Hello from service " + name
+		s.Write(msg)
+	}
 	return s, nil
 }
 
