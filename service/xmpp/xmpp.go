@@ -13,13 +13,13 @@ type Config struct {
 	Host string
 	User string
 	Password string
-	ReplyTo string
 }
 
 type XmppService struct {
 	service *service.Service
 	client *xmpp.Client
 	conf Config
+	lastRemote string
 }
 
 func NewXmppService(url string, conf Config) (*XmppService, error) {
@@ -33,7 +33,7 @@ func NewXmppService(url string, conf Config) (*XmppService, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &XmppService{s, client, conf}, nil
+	return &XmppService{s, client, conf, ""}, nil
 }
 
 func NewService(url string, conf map[string]interface{}) (*XmppService, error) {
@@ -41,7 +41,6 @@ func NewService(url string, conf map[string]interface{}) (*XmppService, error) {
 	confStruct.Host, _ = conf["host"].(string)
 	confStruct.User, _ = conf["user"].(string)
 	confStruct.Password, _ = conf["password"].(string)
-	confStruct.ReplyTo, _ = conf["reply_to"].(string)
 	return NewXmppService(url, confStruct)
 }
 
@@ -60,6 +59,7 @@ func (x *XmppService) Start() {
 				msg := stark.NewMessage()
 				msg.Action = "natural.process"
 				msg.Message = chat.Text
+				x.lastRemote = chat.Remote
 				err := x.service.Write(msg)
 				if err != nil {
 					log.Fatal(err)
@@ -74,8 +74,11 @@ func (x *XmppService) Start() {
 			if err != nil {
 				return
 			}
+			if x.lastRemote == "" {
+				continue
+			}
 			x.client.Send(xmpp.Chat{
-				Remote: x.conf.ReplyTo,
+				Remote: x.lastRemote,
 				Type: "chat",
 				Text: msg.Message,
 			})
