@@ -20,10 +20,18 @@ func init() {
 	transport.Register("local", Connect)
 }
 
-func NewLocalTransport(rt *router.Router, id string) *LocalTransport {
-	t := &LocalTransport{rt, id}
-	transports[id] = t
-	return t
+func NewLocalTransport(rt *router.Router, url string) (*LocalTransport, error) {
+	u, err := neturl.Parse(url)
+	if err != nil {
+		return nil, err
+	}
+	if u.Host == "" {
+		u.Host = "default"
+	}
+
+	t := &LocalTransport{rt, u.Host}
+	transports[u.Host] = t
+	return t, nil
 }
 
 func (t *LocalTransport) Connect() (stark.Conn, error) {
@@ -36,6 +44,9 @@ func Connect(url string) (stark.Conn, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err
+	}
+	if u.Host == "" {
+		u.Host = "default"
 	}
 
 	t := transports[u.Host]

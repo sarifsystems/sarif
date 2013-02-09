@@ -13,8 +13,9 @@ type Message struct {
 	UUID string `json:"uuid"`
 	Action string `json:"action"`
 	Source string `json:"source"`
-	Destination string `json:"destination"`
-	ReplyTo string `json:"reply_to"`
+
+	Destination string `json:"destination,omitempty"`
+	ReplyTo string `json:"reply_to,omitempty"`
 
 	Data map[string]interface{} `json:"data,omitempty"`
 
@@ -24,8 +25,15 @@ type Message struct {
 }
 
 func (m *Message) String() string {
-	return fmt.Sprintf(`stark.Message(%s > %s: %s "%s")`,
-		m.Source, m.Destination, m.Action, m.Message,
+	path := m.Source
+	if path == "" {
+		path = "unknown"
+	}
+	if m.Destination != "" {
+		path += " -> " + m.Destination
+	}
+	return fmt.Sprintf(`stark.Message(%s: %s "%s")`,
+		path, m.Action, m.Message,
 	)
 }
 
@@ -80,18 +88,23 @@ func (m *Message) IsValid() (bool, error) {
 	if len(m.UUID) == 0 {
 		return false, &InvalidMessageError{"No UUID specified"}
 	}
+	if len(m.Source) == 0 {
+		return false, &InvalidMessageError{"No source specified"}
+	}
 
 	return true, nil
 }
 
 func NewReply(m *Message) *Message {
 	reply := NewMessage()
-	reply.Source = m.Destination
 	reply.Destination = m.Source
 	if m.ReplyTo != "" {
 		reply.Destination = m.ReplyTo
 	}
 	reply.Cause = "reply"
 	reply.CausedBy = m.UUID
+	if m.CausedBy != "" {
+		reply.CausedBy = m.CausedBy
+	}
 	return reply
 }

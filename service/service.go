@@ -24,6 +24,14 @@ func Connect(url string, info Info) (*Service, error) {
 	return New(conn, info)
 }
 
+func MustConnect(url string, info Info) *Service {
+	s, err := Connect(url, info)
+	if err != nil {
+		panic(err)
+	}
+	return s
+}
+
 func New(conn stark.Conn, info Info) (*Service, error) {
 	s := &Service{conn, info}
 	if conn != nil {

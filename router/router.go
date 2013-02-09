@@ -67,6 +67,21 @@ func (r *Router) Write(msg *stark.Message) error {
 	return &ErrDestination{"unknown"}
 }
 
+func (r *Router) handle(conn stark.Conn, msg *stark.Message) error {
+	switch (msg.Action) {
+	case "route.hello":
+		name, _ := msg.Data["name"].(string)
+		actions, _ := msg.Data["actions"].([]string)
+		log.Printf("router/connect: %s connected\n", name)
+		r.Conns[conn] = connInfo{conn, name, actions}
+	default:
+		if err := r.Write(msg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *Router) Connect(conn stark.Conn) {
 	go func() {
 		for {
@@ -76,16 +91,7 @@ func (r *Router) Connect(conn stark.Conn) {
 				delete(r.Conns, conn)
 				return
 			}
-			if msg.Action == "route.hello" {
-				name, _ := msg.Data["name"].(string)
-				actions, _ := msg.Data["actions"].([]string)
-				log.Printf("router/connect: %s connected\n", name)
-				r.Conns[conn] = connInfo{conn, name, actions}
-				continue
-			}
-			if err = r.Write(msg); err != nil {
-				log.Printf("router: %v\n", err)
-			}
+			r.handle(conn, msg)
 		}
 	}()
 }

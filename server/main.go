@@ -17,7 +17,7 @@ import (
 )
 
 func mpdService() {
-	s, err := service.Connect("local://default", service.Info{
+	s := service.MustConnect("local://", service.Info{
 		Name: "mpd",
 		Actions: []string{
 			"music.play",
@@ -27,9 +27,6 @@ func mpdService() {
 			"music.next",
 		},
 	})
-	if err != nil {
-		log.Fatalf("mpc: %v\n", err)
-	}
 	for {
 		msg, err := s.Read()
 		if err != nil {
@@ -38,22 +35,18 @@ func mpdService() {
 		action := strings.Split(msg.Action, ".")
 		if action[0] == "music" {
 			exec.Command("mpc", action[1]).Start()
+			reply := stark.NewReply(msg)
+			reply.Action = "notify.success"
+			reply.Message = "done"
+			s.Write(reply)
 		}
-
-		reply := stark.NewReply(msg)
-		reply.Action = "notify"
-		reply.Message = "done"
-		s.Write(reply)
 	}
 }
 
 func terminalService() {
-	s, err := service.Connect("local://default", service.Info{
+	s := service.MustConnect("local://", service.Info{
 		Name: "intterminal",
 	})
-	if err != nil {
-		log.Fatalf("intterminal: %v\n", err)
-	}
 	go func() {
 		stdin := bufio.NewReader(os.Stdin)
 		for {
@@ -78,13 +71,10 @@ func terminalService() {
 }
 
 func naturalService() {
-	s, err := service.Connect("local://default", service.Info{
+	s := service.MustConnect("local://", service.Info{
 		Name: "natural",
 		Actions: []string{"natural.process"},
 	})
-	if err != nil {
-		log.Fatalf("natural: %v\n", err)
-	}
 	for {
 		msg, err := s.Read()
 		if err != nil {
@@ -110,7 +100,7 @@ func naturalService() {
 
 func main() {
 	r := router.NewRouter("router")
-	local.NewLocalTransport(r, "default")
+	local.NewLocalTransport(r, "local://")
 
 	nt, err := net.NewNetTransport(r, "tcp://")
 	if err != nil {
