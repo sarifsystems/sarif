@@ -76,7 +76,7 @@ func (r *Router) Connect(conn Conn) {
 				return
 			}
 			if msg.Action == "route.hello" {
-				newName := string(msg.Data["name"])
+				newName, _ := msg.Data["name"].(string)
 				log.Printf("router/hello: %s now known as %s\n", name, newName)
 				delete(r.Route, name)
 				name = newName

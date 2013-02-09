@@ -16,7 +16,7 @@ type Message struct {
 	Destination string `json:"destination"`
 	ReplyTo string `json:"reply_to"`
 
-	Data map[string]string `json:"data,omitempty"`
+	Data map[string]interface{} `json:"data,omitempty"`
 
 	Cause string `json:"cause,omitempty"`
 	CausedBy string `json:"caused_by,omitempty"`
@@ -58,7 +58,7 @@ func NewMessage() (*Message) {
 	m := &Message{}
 	m.Version = VERSION
 	m.UUID = GenerateUUID()
-	m.Data = make(map[string]string)
+	m.Data = make(map[string]interface{})
 	return m
 }
 

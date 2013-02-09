@@ -16,8 +16,11 @@ import (
 	"github.com/xconstruct/stark/service"
 )
 
-func mpdService(p *local.Pipe) {
-	s, err := service.New("mpd", p)
+func mpdService() {
+	s, err := service.Connect("local://default", service.Info{
+		Name: "mpd",
+		Actions: []string{"music"},
+	})
 	if err != nil {
 		log.Fatalf("mpc: %v\n", err)
 	}
@@ -35,8 +38,10 @@ func mpdService(p *local.Pipe) {
 	}
 }
 
-func terminalService(p *local.Pipe) {
-	s, err := service.New("terminal", p)
+func terminalService() {
+	s, err := service.Connect("local://default", service.Info{
+		Name: "intterminal",
+	})
 	if err != nil {
 		log.Fatalf("intterminal: %v\n", err)
 	}
@@ -63,8 +68,11 @@ func terminalService(p *local.Pipe) {
 	}
 }
 
-func naturalService(p *local.Pipe) {
-	s, err := service.New("natural", p)
+func naturalService() {
+	s, err := service.Connect("local://default", service.Info{
+		Name: "natural",
+		Actions: []string{"natural"},
+	})
 	if err != nil {
 		log.Fatalf("natural: %v\n", err)
 	}
@@ -82,7 +90,7 @@ func naturalService(p *local.Pipe) {
 			reply = stark.NewReply(msg)
 			reply.Action = "error"
 			reply.Message = "Did not understand: " + msg.Message
-			p.Write(reply)
+			s.Write(reply)
 			continue
 		}
 		reply.Source = "natural"
@@ -93,23 +101,16 @@ func naturalService(p *local.Pipe) {
 
 func main() {
 	r := router.NewRouter("router")
-
-	left, right := local.NewPipe()
-	go terminalService(left)
-	r.Connect(right)
-
-	left, right = local.NewPipe()
-	go mpdService(left)
-	r.Connect(right)
-
-	left, right = local.NewPipe()
-	go naturalService(left)
-	r.Connect(right)
+	local.NewLocalTransport(r, "default")
 
 	nt := net.NewNetTransport(r, "tcp", ":9000")
 	if err := nt.Start(); err != nil {
 		log.Fatalf("server: %v\n", err)
 	}
+
+	go terminalService()
+	go mpdService()
+	go naturalService()
 
 	select{}
 }

@@ -14,7 +14,9 @@ import (
 )
 
 func main() {
-	s, err := service.Connect("temp", "tcp://127.0.0.1:9000")
+	s, err := service.Connect("tcp://127.0.0.1:9000", service.Info{
+		Name: "terminal",
+	})
 	if err != nil {
 		log.Fatalf("terminal: %v", err)
 	}
