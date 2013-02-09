@@ -103,7 +103,10 @@ func main() {
 	r := router.NewRouter("router")
 	local.NewLocalTransport(r, "default")
 
-	nt := net.NewNetTransport(r, "tcp", ":9000")
+	nt, err := net.NewNetTransport(r, "tcp://")
+	if err != nil {
+		log.Fatalf("server: %v\n", err)
+	}
 	if err := nt.Start(); err != nil {
 		log.Fatalf("server: %v\n", err)
 	}

@@ -10,6 +10,8 @@ import (
 	"github.com/xconstruct/stark/transport"
 )
 
+const DEFAULT_PORT = "6171"
+
 func init() {
 	transport.Register("tcp", Connect)
 	transport.Register("udp", Connect)
@@ -45,8 +47,15 @@ func (c *netConn) Close() error {
 	return c.conn.Close()
 }
 
-func NewNetTransport(rt *router.Router, proto, address string) *NetTransport {
-	return &NetTransport{rt, proto, address, nil}
+func NewNetTransport(rt *router.Router, url string) (*NetTransport, error) {
+	u, err := neturl.Parse(url)
+	if err != nil {
+		return nil, err
+	}
+	if _, _, err = net.SplitHostPort(u.Host); err != nil {
+		u.Host += ":" + DEFAULT_PORT
+	}
+	return &NetTransport{rt, u.Scheme, u.Host, nil}, nil
 }
 
 func (t *NetTransport) Start() error {
@@ -89,6 +98,9 @@ func Connect(url string) (stark.Conn, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err
+	}
+	if _, _, err = net.SplitHostPort(u.Host); err != nil {
+		u.Host += ":" + DEFAULT_PORT
 	}
 
 	conn, err := net.Dial(u.Scheme, u.Host)
