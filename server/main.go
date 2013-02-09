@@ -14,6 +14,7 @@ import (
 	"github.com/xconstruct/stark/transport/local"
 	"github.com/xconstruct/stark/transport/net"
 	"github.com/xconstruct/stark/service"
+	"github.com/xconstruct/stark/service/xmpp"
 )
 
 func mpdService() {
@@ -113,6 +114,9 @@ func main() {
 	go terminalService()
 	go mpdService()
 	go naturalService()
+
+	xs, err := xmpp.NewService("local://", getConfigMap("xmpp"))
+	xs.Start()
 
 	select{}
 }
