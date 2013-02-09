@@ -7,12 +7,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/xconstruct/stark/natural"
-	"github.com/xconstruct/stark/transports/net"
+	"github.com/xconstruct/stark"
+	"github.com/xconstruct/stark/service"
+
+	_ "github.com/xconstruct/stark/transport/net"
 )
 
 func main() {
-	conn, err := net.Connect("tcp", "127.0.0.1:9000")
+	s, err := service.Connect("temp", "tcp://127.0.0.1:9000")
 	if err != nil {
 		log.Fatalf("terminal: %v", err)
 	}
@@ -22,13 +24,16 @@ func main() {
 			cmd, _ := stdin.ReadString('\n')
 			cmd = strings.TrimSpace(cmd)
 
-			msg := natural.NewMessage("temp", cmd)
-			conn.Write(msg)
+			msg := stark.NewMessage()
+			msg.Action = "natural.process"
+			msg.Destination = "natural"
+			msg.Message = cmd
+			s.Write(msg)
 		}
 	}()
 
 	for {
-		msg, err := conn.Read()
+		msg, err := s.Read()
 		if err != nil {
 			return
 		}

@@ -4,9 +4,17 @@ import (
 	"encoding/json"
 	"log"
 	"net"
+	neturl "net/url"
 	"github.com/xconstruct/stark"
 	"github.com/xconstruct/stark/router"
+	"github.com/xconstruct/stark/transport"
 )
+
+func init() {
+	transport.Register("tcp", Connect)
+	transport.Register("udp", Connect)
+	transport.Register("unix", Connect)
+}
 
 type NetTransport struct {
 	rt *router.Router
@@ -15,13 +23,13 @@ type NetTransport struct {
 	ln net.Listener
 }
 
-type NetConn struct {
+type netConn struct {
 	dec *json.Decoder
 	enc *json.Encoder
 	conn net.Conn
 }
 
-func (c *NetConn) Read() (*stark.Message, error) {
+func (c *netConn) Read() (*stark.Message, error) {
 	msg := stark.NewMessage()
 	if err := c.dec.Decode(msg); err != nil {
 		return nil, err
@@ -29,8 +37,12 @@ func (c *NetConn) Read() (*stark.Message, error) {
 	return msg, nil
 }
 
-func (c *NetConn) Write(msg *stark.Message) error {
+func (c *netConn) Write(msg *stark.Message) error {
 	return c.enc.Encode(msg)
+}
+
+func (c *netConn) Close() error {
+	return c.conn.Close()
 }
 
 func NewNetTransport(rt *router.Router, proto, address string) *NetTransport {
@@ -51,7 +63,7 @@ func (t *NetTransport) Start() error {
 				log.Printf("net/accept: %v\n", err)
 				continue
 			}
-			nc := &NetConn{
+			nc := &netConn{
 				json.NewDecoder(conn),
 				json.NewEncoder(conn),
 				conn,
@@ -73,13 +85,18 @@ func (t *NetTransport) Stop() error {
 	return err
 }
 
-func Connect(proto, address string) (*NetConn, error) {
-	conn, err := net.Dial(proto, address)
+func Connect(url string) (stark.Conn, error) {
+	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err
 	}
 
-	return &NetConn{
+	conn, err := net.Dial(u.Scheme, u.Host)
+	if err != nil {
+		return nil, err
+	}
+
+	return &netConn{
 		json.NewDecoder(conn),
 		json.NewEncoder(conn),
 		conn,

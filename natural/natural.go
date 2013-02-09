@@ -50,14 +50,3 @@ func Parse(text string) *stark.Message {
 	msg.Message = text
 	return msg
 }
-
-const ACTION_PROCESS string = "process_natural"
-
-func NewMessage(source, message string) *stark.Message {
-		msg := stark.NewMessage()
-		msg.Action = ACTION_PROCESS
-		msg.Message = message
-		msg.Source = source
-		msg.Destination = "natural"
-		return msg
-}

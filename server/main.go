@@ -11,13 +11,18 @@ import (
 	"github.com/xconstruct/stark"
 	"github.com/xconstruct/stark/natural"
 	"github.com/xconstruct/stark/router"
-	"github.com/xconstruct/stark/transports/pipe"
-	"github.com/xconstruct/stark/transports/net"
+	"github.com/xconstruct/stark/transport/local"
+	"github.com/xconstruct/stark/transport/net"
+	"github.com/xconstruct/stark/service"
 )
 
-func mpdService(p *pipe.Pipe) {
+func mpdService(p *local.Pipe) {
+	s, err := service.New("mpc", p)
+	if err != nil {
+		log.Fatalf("mpc: %v\n", err)
+	}
 	for {
-		msg, err := p.Read()
+		msg, err := s.Read()
 		if err != nil {
 			return
 		}
@@ -26,24 +31,31 @@ func mpdService(p *pipe.Pipe) {
 		reply := stark.NewReply(msg)
 		reply.Action = "notify"
 		reply.Message = "done"
-		p.Write(reply)
+		s.Write(reply)
 	}
 }
 
-func terminalService(p *pipe.Pipe) {
+func terminalService(p *local.Pipe) {
+	s, err := service.New("mpc", p)
+	if err != nil {
+		log.Fatalf("intterminal: %v\n", err)
+	}
 	go func() {
 		stdin := bufio.NewReader(os.Stdin)
 		for {
 			cmd, _ := stdin.ReadString('\n')
 			cmd = strings.TrimSpace(cmd)
 
-			msg := natural.NewMessage("terminal", cmd)
-			p.Write(msg)
+			msg := stark.NewMessage()
+			msg.Action = "natural.process"
+			msg.Message = cmd
+			msg.Destination = "natural"
+			s.Write(msg)
 		}
 	}()
 
 	for {
-		msg, err := p.Read()
+		msg, err := s.Read()
 		if err != nil {
 			return
 		}
@@ -51,13 +63,17 @@ func terminalService(p *pipe.Pipe) {
 	}
 }
 
-func naturalService(p *pipe.Pipe) {
+func naturalService(p *local.Pipe) {
+	s, err := service.New("natural", p)
+	if err != nil {
+		log.Fatalf("natural: %v\n", err)
+	}
 	for {
-		msg, err := p.Read()
+		msg, err := s.Read()
 		if err != nil {
 			return
 		}
-		if msg.Action != natural.ACTION_PROCESS {
+		if msg.Action != "natural.process" {
 			return
 		}
 
@@ -72,22 +88,22 @@ func naturalService(p *pipe.Pipe) {
 		}
 		reply.Source = "natural"
 		reply.ReplyTo = msg.Source
-		p.Write(reply)
+		s.Write(reply)
 	}
 }
 
 func main() {
 	r := router.NewRouter("router")
 
-	left, right := pipe.New()
+	left, right := local.NewPipe()
 	go terminalService(left)
-	r.Connect("terminal", right)
+	r.Connect("intterminal", right)
 
-	left, right = pipe.New()
+	left, right = local.NewPipe()
 	go mpdService(left)
 	r.Connect("mpd", right)
 
-	left, right = pipe.New()
+	left, right = local.NewPipe()
 	go naturalService(left)
 	r.Connect("natural", right)
 

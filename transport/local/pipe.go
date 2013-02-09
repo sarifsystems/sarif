@@ -1,4 +1,4 @@
-package pipe
+package local
 
 import (
 	"github.com/xconstruct/stark"
@@ -18,7 +18,12 @@ func (p *Pipe) Write(msg *stark.Message) error {
 	return nil
 }
 
-func New() (*Pipe, *Pipe) {
+// TODO
+func (p *Pipe) Close() error {
+	return nil
+}
+
+func NewPipe() (*Pipe, *Pipe) {
 	left := &Pipe{
 		make(chan *stark.Message, 10),
 		make(chan *stark.Message, 10),
