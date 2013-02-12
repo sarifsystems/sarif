@@ -1,6 +1,7 @@
 package natural
 
 import (
+	"regexp"
 	"strings"
 	"github.com/xconstruct/stark"
 )
@@ -33,6 +34,20 @@ func Parse(text string) *stark.Message {
 		if subactions[word] != "" {
 			subaction = subactions[word]
 			continue
+		}
+	}
+
+	if action == "" {
+		remind := regexp.MustCompile("remind me in ([\\d\\w]+)(:(.*))?")
+		if matches := remind.FindStringSubmatch(text); matches != nil {
+			msg := stark.NewMessage()
+			msg.Action = "remind.in"
+			msg.Message = text
+			msg.Data["in"] = matches[1]
+			if len(matches) > 3 {
+				msg.Data["reason"] = matches[3]
+			}
+			return msg
 		}
 	}
 

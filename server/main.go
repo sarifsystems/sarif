@@ -114,6 +114,7 @@ func main() {
 	go terminalService()
 	go mpdService()
 	go naturalService()
+	go reminderService()
 
 	xs, err := xmpp.NewService("local://", getConfigMap("xmpp"))
 	xs.Start()
