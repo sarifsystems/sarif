@@ -5,6 +5,10 @@ import (
 	"github.com/xconstruct/stark/transport"
 )
 
+type Handler interface {
+	Handle(*stark.Message) (*stark.Message, error)
+}
+
 type Info struct {
 	Name string
 	Actions []string
@@ -57,4 +61,31 @@ func (s *Service) Write(msg *stark.Message) error {
 		return err
 	}
 	return s.Conn.Write(msg)
+}
+
+func (s *Service) HandleLoop(handler Handler) error {
+	for {
+		msg, err := s.Read()
+		if err != nil {
+			return err
+		}
+		msg, err = handler.Handle(msg)
+		if err != nil {
+			return err
+		}
+		if msg == nil {
+			continue
+		}
+		err = s.Write(msg)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type HandleFunc func(*stark.Message) (*stark.Message, error)
+
+func (f HandleFunc) Handle(msg *stark.Message) (*stark.Message, error) {
+	return f(msg)
 }

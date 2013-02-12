@@ -13,30 +13,22 @@ func reminderService() {
 		Actions: []string{"remind.in"},
 	})
 
-	for {
-		msg, err := s.Read()
-		if err != nil {
-			return
-		}
+	s.HandleLoop(service.HandleFunc(func(msg *stark.Message) (*stark.Message, error) {
 		if msg.Action != "remind.in" {
-			continue
+			return nil, nil
 		}
 
 		in, ok := msg.Data["in"].(string)
 		if !ok {
-			reply := stark.NewReply(msg)
-			reply.Action = "error"
+			reply := stark.ReplyError(msg, nil)
 			reply.Message = "No duration specified"
-			s.Write(reply)
-			continue
+			return reply, nil
 		}
 		dur, err := time.ParseDuration(in)
 		if err != nil {
-			reply := stark.NewReply(msg)
-			reply.Action = "error"
+			reply := stark.ReplyError(msg, err)
 			reply.Message = "Cannot understand duration for reminder"
-			s.Write(reply)
-			continue
+			return reply, nil
 		}
 
 		time.AfterFunc(dur, func() {
@@ -49,5 +41,6 @@ func reminderService() {
 			}
 			s.Write(reply)
 		})
-	}
+		return nil, nil
+	}))
 }
