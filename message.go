@@ -108,13 +108,3 @@ func NewReply(m *Message) *Message {
 	}
 	return reply
 }
-
-func ReplyError(m *Message, err error) *Message {
-	reply := NewReply(m)
-	reply.Action = "error"
-	if err != nil {
-		reply.Message = err.Error()
-		reply.Data["error"] = err.Error()
-	}
-	return reply
-}

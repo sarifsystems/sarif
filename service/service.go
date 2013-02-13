@@ -84,6 +84,11 @@ func (s *Service) HandleLoop(handler Handler) error {
 	return nil
 }
 
+func Matches(action, pattern string) bool {
+	n := len(action)
+	return len(pattern) >= n && pattern[0:n] == action
+}
+
 type HandleFunc func(*stark.Message) (*stark.Message, error)
 
 func (f HandleFunc) Handle(msg *stark.Message) (*stark.Message, error) {

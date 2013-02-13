@@ -68,20 +68,17 @@ func (x *XmppService) Start() {
 		}
 	}()
 
-	go func() {
-		for {
-			msg, err := x.service.Read()
-			if err != nil {
-				return
-			}
-			if x.lastRemote == "" {
-				continue
-			}
-			x.client.Send(xmpp.Chat{
-				Remote: x.lastRemote,
-				Type: "chat",
-				Text: msg.Message,
-			})
-		}
-	}()
+	go x.service.HandleLoop(x)
+}
+
+func (x *XmppService) Handle(msg *stark.Message) (*stark.Message, error) {
+	if x.lastRemote == "" {
+		return nil, nil
+	}
+	x.client.Send(xmpp.Chat{
+		Remote: x.lastRemote,
+		Type: "chat",
+		Text: msg.Message,
+	})
+	return nil, nil
 }

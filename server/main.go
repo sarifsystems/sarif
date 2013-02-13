@@ -15,6 +15,7 @@ import (
 	"github.com/xconstruct/stark/transport/net"
 	"github.com/xconstruct/stark/service"
 	"github.com/xconstruct/stark/service/xmpp"
+	"github.com/xconstruct/stark/service/reminder"
 )
 
 func mpdService() {
@@ -114,7 +115,9 @@ func main() {
 	go terminalService()
 	go mpdService()
 	go naturalService()
-	go reminderService()
+
+	rm := reminder.NewReminder("local://")
+	rm.Start()
 
 	xs, err := xmpp.NewService("local://", getConfigMap("xmpp"))
 	xs.Start()
