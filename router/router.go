@@ -3,23 +3,24 @@ package router
 import (
 	"log"
 	"github.com/xconstruct/stark"
+	"github.com/xconstruct/stark/transport"
 )
 
 type connInfo struct {
-	conn stark.Conn
+	conn transport.Conn
 	dest string
 	actions []string
 }
 
 type Router struct {
 	Name string
-	Conns map[stark.Conn]connInfo
+	Conns map[transport.Conn]connInfo
 }
 
 func NewRouter(name string) *Router {
 	return &Router{
 		name,
-		make(map[stark.Conn]connInfo, 0),
+		make(map[transport.Conn]connInfo, 0),
 	}
 }
 
@@ -67,7 +68,7 @@ func (r *Router) Write(msg *stark.Message) error {
 	return &ErrDestination{"unknown"}
 }
 
-func (r *Router) handle(conn stark.Conn, msg *stark.Message) error {
+func (r *Router) handle(conn transport.Conn, msg *stark.Message) error {
 	switch (msg.Action) {
 	case "route.hello":
 		name, _ := msg.Data["name"].(string)
@@ -82,7 +83,7 @@ func (r *Router) handle(conn stark.Conn, msg *stark.Message) error {
 	return nil
 }
 
-func (r *Router) Connect(conn stark.Conn) {
+func (r *Router) Connect(conn transport.Conn) {
 	go func() {
 		for {
 			msg, err := conn.Read()

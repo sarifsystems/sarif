@@ -6,7 +6,6 @@ import (
 	"net"
 	neturl "net/url"
 	"github.com/xconstruct/stark"
-	"github.com/xconstruct/stark/router"
 	"github.com/xconstruct/stark/transport"
 )
 
@@ -19,7 +18,7 @@ func init() {
 }
 
 type NetTransport struct {
-	rt *router.Router
+	man transport.ConnManager
 	proto string
 	address string
 	ln net.Listener
@@ -47,7 +46,7 @@ func (c *netConn) Close() error {
 	return c.conn.Close()
 }
 
-func NewNetTransport(rt *router.Router, url string) (*NetTransport, error) {
+func NewNetTransport(man transport.ConnManager, url string) (*NetTransport, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err
@@ -55,7 +54,7 @@ func NewNetTransport(rt *router.Router, url string) (*NetTransport, error) {
 	if _, _, err = net.SplitHostPort(u.Host); err != nil {
 		u.Host += ":" + DEFAULT_PORT
 	}
-	return &NetTransport{rt, u.Scheme, u.Host, nil}, nil
+	return &NetTransport{man, u.Scheme, u.Host, nil}, nil
 }
 
 func (t *NetTransport) Start() error {
@@ -77,7 +76,7 @@ func (t *NetTransport) Start() error {
 				json.NewEncoder(conn),
 				conn,
 			}
-			t.rt.Connect(nc)
+			t.man.Connect(nc)
 		}
 	}()
 
@@ -94,7 +93,7 @@ func (t *NetTransport) Stop() error {
 	return err
 }
 
-func Connect(url string) (stark.Conn, error) {
+func Connect(url string) (transport.Conn, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err

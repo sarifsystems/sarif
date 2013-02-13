@@ -15,7 +15,7 @@ type Info struct {
 }
 
 type Service struct {
-	stark.Conn
+	transport.Conn
 	info Info
 }
 
@@ -36,7 +36,7 @@ func MustConnect(url string, info Info) *Service {
 	return s
 }
 
-func New(conn stark.Conn, info Info) (*Service, error) {
+func New(conn transport.Conn, info Info) (*Service, error) {
 	s := &Service{conn, info}
 	if conn != nil {
 		msg := stark.NewMessage()

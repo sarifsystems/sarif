@@ -3,13 +3,11 @@ package local
 import (
 	neturl "net/url"
 	"errors"
-	"github.com/xconstruct/stark"
-	"github.com/xconstruct/stark/router"
 	"github.com/xconstruct/stark/transport"
 )
 
 type LocalTransport struct {
-	rt *router.Router
+	man transport.ConnManager
 	id string
 }
 
@@ -20,7 +18,7 @@ func init() {
 	transport.Register("local", Connect)
 }
 
-func NewLocalTransport(rt *router.Router, url string) (*LocalTransport, error) {
+func NewLocalTransport(man transport.ConnManager, url string) (*LocalTransport, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err
@@ -29,18 +27,18 @@ func NewLocalTransport(rt *router.Router, url string) (*LocalTransport, error) {
 		u.Host = "default"
 	}
 
-	t := &LocalTransport{rt, u.Host}
+	t := &LocalTransport{man, u.Host}
 	transports[u.Host] = t
 	return t, nil
 }
 
-func (t *LocalTransport) Connect() (stark.Conn, error) {
+func (t *LocalTransport) Connect() (transport.Conn, error) {
 	left, right := NewPipe()
-	t.rt.Connect(left)
+	t.man.Connect(left)
 	return right, nil
 }
 
-func Connect(url string) (stark.Conn, error) {
+func Connect(url string) (transport.Conn, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err
