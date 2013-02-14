@@ -63,6 +63,17 @@ func (s *Service) Write(msg *stark.Message) error {
 	return s.Conn.Write(msg)
 }
 
+func (s *Service) Read() (*stark.Message, error) {
+	msg, err := s.Conn.Read()
+	if err != nil {
+		return nil, err
+	}
+	if msg.Action == "route.hello" {
+		return s.Read()
+	}
+	return msg, err
+}
+
 func (s *Service) HandleLoop(handler Handler) error {
 	for {
 		msg, err := s.Read()

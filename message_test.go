@@ -8,6 +8,7 @@ func TestMinimum(t *testing.T) {
 	// Specify message
 	m := NewMessage()
 	m.Action = "push"
+	m.Source = "desktop"
 	m.Destination = "sgs2"
 	m.Data["url"] = "http://google.com"
 	m.Message = "Push link http://google.com to sgs2"

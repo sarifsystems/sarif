@@ -33,11 +33,11 @@ func (e *ErrDestination) Error() string {
 }
 
 func (r *Router) Write(msg *stark.Message) error {
-	path := stark.GetPath(msg)
 	log.Println(msg)
 
+	route := stark.ParseRoute(msg.Source, msg.Destination)
 	// Exact destination found
-	next := path.Next()
+	next := route.Forward(r.Name)
 	if next != "" {
 		for _, info := range r.Conns {
 			if info.dest != next {
@@ -85,6 +85,17 @@ func (r *Router) handle(conn transport.Conn, msg *stark.Message) error {
 
 func (r *Router) Connect(conn transport.Conn) {
 	go func() {
+		msg := stark.NewMessage()
+		msg.Action = "route.hello"
+		msg.Data["name"] = r.Name
+		msg.Data["actions"] = "route.route"
+		msg.Message = "Hello from service " + r.Name
+		err := conn.Write(msg)
+		if err != nil {
+			log.Printf("router/disconnect: %v\n", err)
+			return
+		}
+
 		for {
 			msg, err := conn.Read()
 			if err != nil {

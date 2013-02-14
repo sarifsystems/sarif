@@ -4,49 +4,79 @@ import (
 	"strings"
 )
 
-const PATH_SEPARATOR string = "/"
+const PathSep string = "/"
 
 type Path struct {
-	source []string
-	destination []string
+	Parts []string
 }
 
-func NewPath(src, dest string) *Path {
+func ParsePath(path string) *Path {
 	return &Path{
-		strings.Split(src, PATH_SEPARATOR),
-		strings.Split(dest, PATH_SEPARATOR),
+		strings.Split(path, PathSep),
 	}
 }
 
-func GetPath(m *Message) *Path {
-	return NewPath(m.Source, m.Destination)
+func (p *Path) String() string {
+	return strings.Join(p.Parts, PathSep)
 }
 
-func (p *Path) Next() string {
-	return p.destination[0]
+func (p *Path) First() string {
+	if len(p.Parts) == 0{
+		return ""
+	}
+	return p.Parts[0]
 }
 
-func (p *Path) Previous() string {
-	return p.source[0]
+func (p *Path) Len() int {
+	return len(p.Parts)
 }
 
-func (p *Path) Source() string {
-	return strings.Join(p.source, PATH_SEPARATOR)
+func (p *Path) Last() string {
+	l := len(p.Parts)
+	if l == 0 {
+		return ""
+	}
+	return p.Parts[l-1]
 }
 
-func (p *Path) Destination() string {
-	return strings.Join(p.destination, PATH_SEPARATOR)
+func (p *Path) Push(hop string) {
+	p.Parts = append([]string{hop}, p.Parts...)
 }
 
-func (p *Path) Sender() string {
-	return p.source[len(p.source)-1]
+func (p *Path) Pop() string {
+	if len(p.Parts) == 0 {
+		return ""
+	}
+	next := p.Parts[0]
+	p.Parts = p.Parts[1:]
+	return next
 }
 
-func (p *Path) Receiver() string {
-	return p.destination[len(p.destination)-1]
+type Route struct {
+	Source *Path
+	Dest *Path
 }
 
-func (p *Path) Apply(m *Message) {
-	m.Source = p.Source()
-	m.Destination = p.Destination()
+func ParseRoute(src, dest string) *Route {
+	return &Route{
+		ParsePath(src),
+		ParsePath(dest),
+	}
+}
+
+func (r *Route) String() string {
+	src, dest := r.Strings()
+	return src + " -> " + dest
+}
+
+func (r *Route) Strings() (string, string) {
+	return r.Source.String(), r.Dest.String()
+}
+
+func (r *Route) Forward(hop string) string {
+	if hop == r.Dest.First() {
+		r.Dest.Pop()
+	}
+	r.Source.Push(hop)
+	return r.Dest.First()
 }
