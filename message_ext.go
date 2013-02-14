@@ -1,5 +1,7 @@
 package stark
 
+// ReplyError generates a new error reply to the passed Message.
+// 
 func ReplyError(msg *Message, err error) *Message {
 	reply := NewReply(msg)
 	reply.Action = "error"
@@ -10,6 +12,9 @@ func ReplyError(msg *Message, err error) *Message {
 	return reply
 }
 
+// ReplyUnsupported generates a new error.unsupported reply to the passed Message.
+// This is often used to signal that the replying service cannot handle the
+// specified action.
 func ReplyUnsupported(msg *Message) *Message {
 	reply := NewReply(msg)
 	reply.Action = "error.unsupported"
