@@ -48,14 +48,14 @@ var dbMeanings = []Meaning{
 	},
 	Meaning{
 		Phrase{"in", "*", ""},
-		"duration", "*", 0,
+		"in", "*", 0,
 	},
 }
 
 func GetMeanings(phrase Phrase) []Meaning {
 	meanings := make([]Meaning, 0)
 	for _, meaning := range dbMeanings {
-		if MatchesPhrase(phrase, meaning.Phrase) {
+		if MatchesPhrase(phrase, meaning.Phrase) >= 0 {
 			meanings = append(meanings, meaning)
 			continue
 		}

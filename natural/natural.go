@@ -137,26 +137,40 @@ func CombineMeanings(meanings []Meaning) (*stark.Message, error) {
 	return msg, nil
 }
 
-func MatchesWord(word, pattern Word) bool {
-	if pattern == "" {
-		return true
-	}
+func MatchesWord(word, pattern Word) int {
 	if pattern == word {
-		return true
+		return 3
 	}
 	if pattern == "*" && word != "" {
-		return true
+		return 2
 	}
-	return false
+	if pattern == "" {
+		return 1
+	}
+	return -1
 }
 
-func MatchesPhrase(phrase, pattern Phrase) bool {
-	return MatchesWord(phrase.Prev, pattern.Prev) &&
-		MatchesWord(phrase.Word, pattern.Word) &&
-		MatchesWord(phrase.Next, pattern.Next)
+func MatchesPhrase(phrase, pattern Phrase) int {
+	sum, w := 0, 0
+	if w = MatchesWord(phrase.Prev, pattern.Prev); w < 0 {
+		return -1
+	}
+	sum += w
+
+	if w = MatchesWord(phrase.Word, pattern.Word); w < 0 {
+		return -1
+	}
+	sum += w
+
+	if w = MatchesWord(phrase.Next, pattern.Next); w < 0 {
+		return -1
+	}
+	sum += w
+
+	return sum
 }
 
-func Parse(text string) *stark.Message {
+func Parse(text string) (*stark.Message, error) {
 	text = strings.TrimSpace(text)
 	words := strings.Split(text, " ")
 
@@ -179,9 +193,9 @@ func Parse(text string) *stark.Message {
 
 	msg, err := CombineMeanings(meanings)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	msg.Message = text
 
-	return msg
+	return msg, nil
 }

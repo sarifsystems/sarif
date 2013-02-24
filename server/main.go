@@ -86,11 +86,11 @@ func naturalService() {
 			return
 		}
 
-		reply := natural.Parse(msg.Message)
+		reply, err := natural.Parse(msg.Message)
 		if reply == nil {
 			reply = stark.NewReply(msg)
 			reply.Action = "error"
-			reply.Message = "Did not understand: " + msg.Message
+			reply.Message = "Did not understand: " + err.Error()
 			s.Write(reply)
 			continue
 		}
