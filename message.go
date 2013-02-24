@@ -81,6 +81,13 @@ func NewMessage() (*Message) {
 	return m
 }
 
+func NewMessageFromTemplate(msg *Message) (*Message) {
+	m := &(*msg)
+	m.Version = VERSION
+	m.UUID = GenerateUUID()
+	return m
+}
+
 // This error describes a Message which is not valid as described in the spec.
 type InvalidMessageError struct {
 	S string

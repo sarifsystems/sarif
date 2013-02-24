@@ -171,6 +171,12 @@ func MatchesPhrase(phrase, pattern Phrase) int {
 }
 
 func Parse(text string) (*stark.Message, error) {
+	if text[0] == '{' {
+		msg, _:= stark.Decode([]byte(text))
+		msg = stark.NewMessageFromTemplate(msg)
+		return msg, nil
+	}
+
 	text = strings.TrimSpace(text)
 	words := strings.Split(text, " ")
 

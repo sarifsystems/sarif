@@ -96,7 +96,9 @@ func naturalService() {
 		}
 		reply.Source = s.Name()
 		reply.ReplyTo = msg.Source
-		s.Write(reply)
+		if err := s.Write(reply); err != nil {
+			log.Fatalln(err)
+		}
 	}
 }
 
