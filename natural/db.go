@@ -22,6 +22,10 @@ var dbMeanings = []Meaning{
 		Phrase{"", "prev", ""},
 		"action", "*.prev", 0,
 	},
+	Meaning{
+		Phrase{"", "remind", ""},
+		"action", "remind.*", 0,
+	},
 
 	// Nouns
 	Meaning{
@@ -36,18 +40,24 @@ var dbMeanings = []Meaning{
 		Phrase{"", "mpd", ""},
 		"action", "music.*", 0,
 	},
+
+	// Wildcard objects
+	Meaning{
+		Phrase{"", "in", "*"},
+		"action", "*.in", 0,
+	},
+	Meaning{
+		Phrase{"in", "*", ""},
+		"duration", "*", 0,
+	},
 }
 
 func GetMeanings(phrase Phrase) []Meaning {
 	meanings := make([]Meaning, 0)
 	for _, meaning := range dbMeanings {
-		ph := meaning.Phrase
-		if ph == phrase {
+		if MatchesPhrase(phrase, meaning.Phrase) {
 			meanings = append(meanings, meaning)
 			continue
-		}
-		if ph.Prev == "" && ph.Next == "" && ph.Word == phrase.Word {
-			meanings = append(meanings, meaning)
 		}
 	}
 	return meanings

@@ -2,7 +2,6 @@ package natural
 
 import (
 	"errors"
-	"fmt"
 	"sort"
 	"strings"
 	"github.com/xconstruct/stark"
@@ -127,7 +126,34 @@ func CombineMeanings(meanings []Meaning) (*stark.Message, error) {
 
 	msg := stark.NewMessage()
 	msg.Action = action
+
+	for name, vals := range typeVals {
+		if name == "action" {
+			continue
+		}
+		msg.Data[name] = vals[0]
+	}
+
 	return msg, nil
+}
+
+func MatchesWord(word, pattern Word) bool {
+	if pattern == "" {
+		return true
+	}
+	if pattern == word {
+		return true
+	}
+	if pattern == "*" && word != "" {
+		return true
+	}
+	return false
+}
+
+func MatchesPhrase(phrase, pattern Phrase) bool {
+	return MatchesWord(phrase.Prev, pattern.Prev) &&
+		MatchesWord(phrase.Word, pattern.Word) &&
+		MatchesWord(phrase.Next, pattern.Next)
 }
 
 func Parse(text string) *stark.Message {
@@ -139,11 +165,12 @@ func Parse(text string) *stark.Message {
 	var prev, word string
 	for _, next := range words {
 		if word != "" {
-			println(prev, word, next)
 			m := GetMeanings(Phrase{Word(prev), Word(word), Word(next)})
-			fmt.Println(m)
 			best := GetBestMeaning(m)
 			if best.Type != "" {
+				if best.Value == "*" {
+					best.Value = word
+				}
 				meanings = append(meanings, best)
 			}
 		}
