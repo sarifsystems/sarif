@@ -49,5 +49,5 @@ func (t *Terminal) ListenInput() {
 
 func (t *Terminal) Serve() error {
 	go t.ListenInput()
-	return t.Serve()
+	return t.Service.Serve()
 }

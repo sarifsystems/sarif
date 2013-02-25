@@ -34,7 +34,16 @@ func (m *MPD) Handle(msg *stark.Message) (*stark.Message, error) {
 		return nil, nil
 	}
 
-	exec.Command("mpc", action[1]).Start()
+	if action[1] == "play" {
+		artist, _ := msg.Data["artist"].(string)
+		println(artist)
+		if artist != "" {
+			exec.Command("mpc", "clear").Run()
+			exec.Command("mpc", "findadd", "artist", artist).Run()
+		}
+	}
+
+	exec.Command("mpc", action[1]).Run()
 	reply := stark.NewReply(msg)
 	reply.Action = "notify.success"
 	reply.Message = "done"

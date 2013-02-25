@@ -51,7 +51,8 @@ func main() {
 			log.Println(err)
 			continue
 		}
-		go log.Println(s.Serve())
+
+		go s.Serve()
 	}
 
 	// Loop

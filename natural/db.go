@@ -50,6 +50,14 @@ var dbMeanings = []Meaning{
 		Phrase{"in", "*", ""},
 		"in", "*", 0,
 	},
+	Meaning{
+		Phrase{"", "artist", "*"},
+		"action", "music.*", 0,
+	},
+	Meaning{
+		Phrase{"artist", "*", ""},
+		"artist", "*", 0,
+	},
 }
 
 func GetMeanings(phrase Phrase) []Meaning {
