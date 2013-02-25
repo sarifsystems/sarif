@@ -3,7 +3,6 @@ package net
 
 import (
 	"encoding/json"
-	"log"
 	"net"
 	neturl "net/url"
 	"github.com/xconstruct/stark"
@@ -14,13 +13,12 @@ import (
 const DEFAULT_PORT = "6171"
 
 func init() {
-	transport.Register("tcp", Connect)
-	transport.Register("udp", Connect)
-	transport.Register("unix", Connect)
+	transport.Register(transport.Transport{"tcp", Dial, Listen})
+	transport.Register(transport.Transport{"udp", Dial, Listen})
+	transport.Register(transport.Transport{"unix", Dial, Listen})
 }
 
-type NetTransport struct {
-	man transport.ConnManager
+type NetListener struct {
 	proto string
 	address string
 	ln net.Listener
@@ -48,7 +46,7 @@ func (c *netConn) Close() error {
 	return c.conn.Close()
 }
 
-func NewNetTransport(man transport.ConnManager, url string) (*NetTransport, error) {
+func Listen(url string) (transport.Listener, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err
@@ -56,46 +54,30 @@ func NewNetTransport(man transport.ConnManager, url string) (*NetTransport, erro
 	if _, _, err = net.SplitHostPort(u.Host); err != nil {
 		u.Host += ":" + DEFAULT_PORT
 	}
-	return &NetTransport{man, u.Scheme, u.Host, nil}, nil
-}
-
-func (t *NetTransport) Start() error {
-	ln, err := net.Listen(t.proto, t.address)
-	t.ln = ln
+	ln, err := net.Listen(u.Scheme, u.Host)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	go func() {
-		for {
-			conn, err := t.ln.Accept()
-			if err != nil {
-				log.Printf("net/accept: %v\n", err)
-				continue
-			}
-			nc := &netConn{
-				json.NewDecoder(conn),
-				json.NewEncoder(conn),
-				conn,
-			}
-			t.man.Connect(nc)
-		}
-	}()
-
-	return nil
+	return &NetListener{u.Scheme, u.Host, ln}, nil
 }
 
-func (t *NetTransport) Stop() error {
-	if t.ln == nil {
-		return nil
+func (t *NetListener) Accept() (transport.Conn, error) {
+	conn, err := t.ln.Accept()
+	if err != nil {
+		return nil, err
 	}
-
-	err := t.ln.Close()
-	t.ln = nil
-	return err
+	return &netConn{
+		json.NewDecoder(conn),
+		json.NewEncoder(conn),
+		conn,
+	}, nil
 }
 
-func Connect(url string) (transport.Conn, error) {
+func (t *NetListener) Close() error {
+	return t.ln.Close()
+}
+
+func Dial(url string) (transport.Conn, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err

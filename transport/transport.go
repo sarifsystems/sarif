@@ -13,25 +13,29 @@ type Conn interface {
 	Close() error
 }
 
-// A ConnManager accepts multiple connections.
-type ConnManager interface {
-	Connect(conn Conn)
+type Listener interface {
+	Accept() (Conn, error)
+	Close() error
 }
 
-type transport struct {
-	scheme string
-	connect func(url string) (Conn, error)
+type DialFunc func(url string) (Conn, error)
+type ListenFunc func(url string) (Listener, error)
+
+type Transport struct {
+	Scheme string
+	Dial DialFunc
+	Listen ListenFunc
 }
 
-var transports map[string]transport
+var transports map[string]Transport
 
 // Register registers a new transport protocol, so that it can be used by
 // services. A transport is chosen based on the scheme (e.g. "tcp" or "local").
-func Register(scheme string, connect func(url string) (Conn, error)) {
+func Register(tp Transport) {
 	if transports == nil {
-		transports = make(map[string]transport)
+		transports = make(map[string]Transport)
 	}
-	transports[scheme] = transport{scheme, connect}
+	transports[tp.Scheme] = tp
 }
 
 // ErrTransport is returned when no transport for the chosen scheme was found.
@@ -43,18 +47,32 @@ func (e *ErrTransport) Error() string {
 	return "Unknown transport for scheme: " + e.scheme
 }
 
-// Connect creates a new connection based on the URL and choses the right
+// Dial creates a new connection based on the URL and choses the right
 // transport to use based on the scheme part.
-func Connect(url string) (Conn, error) {
+func Dial(url string) (Conn, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err
 	}
 
-	transport, ok := transports[u.Scheme]
+	tp, ok := transports[u.Scheme]
 	if !ok {
 		return nil, &ErrTransport{u.Scheme}
 	}
 
-	return transport.connect(url)
+	return tp.Dial(url)
+}
+
+func Listen(url string) (Listener, error) {
+	u, err := neturl.Parse(url)
+	if err != nil {
+		return nil, err
+	}
+
+	tp, ok := transports[u.Scheme]
+	if !ok {
+		return nil, &ErrTransport{u.Scheme}
+	}
+
+	return tp.Listen(url)
 }

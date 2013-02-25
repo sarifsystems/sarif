@@ -116,3 +116,14 @@ func (r *Router) Connect(conn transport.Conn) {
 		}
 	}()
 }
+
+func (r *Router) Listen(listener transport.Listener) error {
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			return err
+		}
+		r.Connect(conn)
+	}
+	return nil
+}

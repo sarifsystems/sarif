@@ -6,19 +6,19 @@ import (
 	"github.com/xconstruct/stark/transport"
 )
 
-type LocalTransport struct {
-	man transport.ConnManager
+type LocalListener struct {
 	id string
+	inc chan transport.Conn
 }
 
-var transports map[string]*LocalTransport
+var listeners map[string]*LocalListener
 
 func init() {
-	transports = make(map[string]*LocalTransport)
-	transport.Register("local", Connect)
+	listeners = make(map[string]*LocalListener)
+	transport.Register(transport.Transport{"local", Dial, Listen})
 }
 
-func NewLocalTransport(man transport.ConnManager, url string) (*LocalTransport, error) {
+func Listen(url string) (transport.Listener, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err
@@ -27,18 +27,20 @@ func NewLocalTransport(man transport.ConnManager, url string) (*LocalTransport, 
 		u.Host = "default"
 	}
 
-	t := &LocalTransport{man, u.Host}
-	transports[u.Host] = t
+	t := &LocalListener{u.Host, make(chan transport.Conn, 10)}
+	listeners[u.Host] = t
 	return t, nil
 }
 
-func (t *LocalTransport) Connect() (transport.Conn, error) {
-	left, right := NewPipe()
-	t.man.Connect(left)
-	return right, nil
+func (t *LocalListener) Accept() (transport.Conn, error) {
+	return <-t.inc, nil
 }
 
-func Connect(url string) (transport.Conn, error) {
+func (t *LocalListener) Close() error {
+	return nil
+}
+
+func Dial(url string) (transport.Conn, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err
@@ -47,9 +49,11 @@ func Connect(url string) (transport.Conn, error) {
 		u.Host = "default"
 	}
 
-	t := transports[u.Host]
+	t := listeners[u.Host]
 	if t == nil {
-		return nil, errors.New("Unknown local transport: " + u.Host)
+		return nil, errors.New("Unknown local listener: " + u.Host)
 	}
-	return t.Connect()
+	left, right := NewPipe()
+	t.inc <- right
+	return left, nil
 }

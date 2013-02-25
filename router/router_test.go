@@ -5,7 +5,9 @@ import (
 	"time"
 	"github.com/xconstruct/stark"
 	"github.com/xconstruct/stark/service"
-	"github.com/xconstruct/stark/transport/local"
+
+	"github.com/xconstruct/stark/transport"
+	_ "github.com/xconstruct/stark/transport/local"
 )
 
 func testSendRec(t *testing.T, sender, receiver *service.Service, path string) {
@@ -31,7 +33,8 @@ func testSendRec(t *testing.T, sender, receiver *service.Service, path string) {
 func TestSimpleRoute(t *testing.T) {
 	// Setup router
 	r := NewRouter("simple")
-	local.NewLocalTransport(r, "local://simple")
+	l, _ := transport.Listen("local://simple")
+	go r.Listen(l)
 
 	// Setup clients
 	a := service.MustConnect("local://simple", service.Info{Name: "a"})
@@ -54,10 +57,12 @@ func TestMultiRoute(t *testing.T) {
 	// Setup routers
 	r1 := NewRouter("router1")
 	r2 := NewRouter("router2")
-	local.NewLocalTransport(r1, "local://router1")
-	local.NewLocalTransport(r2, "local://router2")
+	l1, _ := transport.Listen("local://router1")
+	l2, _ := transport.Listen("local://router2")
+	go r1.Listen(l1)
+	go r2.Listen(l2)
 
-	conn, _ := local.Connect("local://router1")
+	conn, _ := transport.Dial("local://router1")
 	r2.Connect(conn)
 
 	// Setup clients

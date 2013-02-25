@@ -1,12 +1,16 @@
 package main
 
 import (
+	"encoding/json"
+	"io/ioutil"
 	"log"
+	"os"
 
 	"github.com/xconstruct/stark/router"
+	"github.com/xconstruct/stark/transport"
 
-	"github.com/xconstruct/stark/transport/local"
-	"github.com/xconstruct/stark/transport/net"
+	_ "github.com/xconstruct/stark/transport/local"
+	_ "github.com/xconstruct/stark/transport/net"
 
 	"github.com/xconstruct/stark/service/mpd"
 	"github.com/xconstruct/stark/service/natural"
@@ -16,17 +20,20 @@ import (
 )
 
 func main() {
-	r := router.NewRouter("router")
-	local.NewLocalTransport(r, "local://")
+	// Setup router
+	router := router.NewRouter("router")
 
-	nt, err := net.NewNetTransport(r, "tcp://")
-	if err != nil {
-		log.Fatalf("server: %v\n", err)
-	}
-	if err := nt.Start(); err != nil {
-		log.Fatalf("server: %v\n", err)
+	// Listen on various protocols, as defined in the config
+	listeners := getConfigMap("listeners")
+	for url, _ := range listeners {
+		listener, err := transport.Listen(url)
+		if err != nil {
+			log.Println(err)
+		}
+		go router.Listen(listener)
 	}
 
+	// Start integrated services
 	t := terminal.New("local://")
 	t.Start()
 
@@ -39,8 +46,41 @@ func main() {
 	rm := reminder.New("local://")
 	rm.Start()
 
-	xs, err := xmpp.NewService("local://", getConfigMap("xmpp"))
+	xs, _ := xmpp.NewService("local://", getConfigMap("xmpp"))
 	xs.Start()
 
-	select{}
+	// Loop
+	select {}
+}
+
+var config map[string]interface{}
+
+func readConfig() {
+	file, err := os.Open("config.json")
+	if err != nil {
+		panic(err)
+	}
+	bytes, err := ioutil.ReadAll(file)
+	if err != nil {
+		panic(err)
+	}
+	err = json.Unmarshal(bytes, &config)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func getConfig(field string) interface{} {
+	if config == nil {
+		readConfig()
+	}
+	return config[field]
+}
+
+func getConfigMap(field string) map[string]interface{} {
+	if config == nil {
+		readConfig()
+	}
+	val, _ := config[field].(map[string]interface{})
+	return val
 }

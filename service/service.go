@@ -24,7 +24,7 @@ type Service struct {
 
 // Connect creates a new service and connects it to the stark network.
 func Connect(url string, info Info) (*Service, error) {
-	conn, err := transport.Connect(url)
+	conn, err := transport.Dial(url)
 	if err != nil {
 		return nil, err
 	}
