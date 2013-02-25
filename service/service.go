@@ -1,3 +1,8 @@
+// Package service provides a wrapper class to create services without the need
+// to care about the underlying connection.
+//
+// The Service class handles such things as connecting and identifying to the router and
+// broadcasting the capabilities for you.
 package service
 
 import (
@@ -5,20 +10,19 @@ import (
 	"github.com/xconstruct/stark/transport"
 )
 
-type Handler interface {
-	Handle(*stark.Message) (*stark.Message, error)
-}
-
+// Info describes your service
 type Info struct {
-	Name string
-	Actions []string
+	Name    string
+	Actions []string // a list of actions your service wants to receive
 }
 
+// A Service manages the connection to the stark network for you.
 type Service struct {
 	transport.Conn
 	info Info
 }
 
+// Connect creates a new service and connects it to the stark network.
 func Connect(url string, info Info) (*Service, error) {
 	conn, err := transport.Connect(url)
 	if err != nil {
@@ -28,6 +32,8 @@ func Connect(url string, info Info) (*Service, error) {
 	return New(conn, info)
 }
 
+// MustConnect creates a new service and connects it to the stark network.
+// If there is a connection error, it panics.
 func MustConnect(url string, info Info) *Service {
 	s, err := Connect(url, info)
 	if err != nil {
@@ -36,6 +42,7 @@ func MustConnect(url string, info Info) *Service {
 	return s
 }
 
+// New creates a new service that listens/sends on a stark connection.
 func New(conn transport.Conn, info Info) (*Service, error) {
 	s := &Service{conn, info}
 	if conn != nil {
@@ -49,10 +56,13 @@ func New(conn transport.Conn, info Info) (*Service, error) {
 	return s, nil
 }
 
+// Name returns the name of this service as set in the Info.
 func (s *Service) Name() string {
 	return s.info.Name
 }
 
+// Write writes a message to the underlying connection and checks it for validity.
+// It also correctly sets the source of the message to the name of your service.
 func (s *Service) Write(msg *stark.Message) error {
 	if msg.Source == "" {
 		msg.Source = s.info.Name
@@ -63,6 +73,7 @@ func (s *Service) Write(msg *stark.Message) error {
 	return s.Conn.Write(msg)
 }
 
+// Read listens on the connection and returns a new message or an error.
 func (s *Service) Read() (*stark.Message, error) {
 	msg, err := s.Conn.Read()
 	if err != nil {
@@ -74,6 +85,14 @@ func (s *Service) Read() (*stark.Message, error) {
 	return msg, err
 }
 
+// Handler accepts messages and optionally returns a reply.
+type Handler interface {
+	Handle(*stark.Message) (*stark.Message, error)
+}
+
+// HandleLoop continuously listens on the connection and calls the Handler
+// if a new one was received. If the Handler returns a reply, it will be send back
+// over the connection.
 func (s *Service) HandleLoop(handler Handler) error {
 	for {
 		msg, err := s.Read()
@@ -95,13 +114,10 @@ func (s *Service) HandleLoop(handler Handler) error {
 	return nil
 }
 
-func Matches(action, pattern string) bool {
-	n := len(action)
-	return len(pattern) >= n && pattern[0:n] == action
-}
-
+// HandleFunc wraps a function to expose a Handler interface.
 type HandleFunc func(*stark.Message) (*stark.Message, error)
 
+// Handle accepts messages and optionally returns a reply.
 func (f HandleFunc) Handle(msg *stark.Message) (*stark.Message, error) {
 	return f(msg)
 }

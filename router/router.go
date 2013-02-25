@@ -1,3 +1,5 @@
+// Package router provides a service that listens on multiple
+// connections and forwards messages based on simple rules.
 package router
 
 import (
@@ -12,11 +14,14 @@ type connInfo struct {
 	actions []string
 }
 
+// A router listens on multiple connections and forwards messages based
+// on simple rules.
 type Router struct {
 	Name string
 	Conns map[transport.Conn]connInfo
 }
 
+// Creates a new router with the desired name.
 func NewRouter(name string) *Router {
 	return &Router{
 		name,
@@ -24,6 +29,7 @@ func NewRouter(name string) *Router {
 	}
 }
 
+// ErrDestination is returned when the destination for a message was not found.
 type ErrDestination struct {
 	Dest string
 }
@@ -32,6 +38,7 @@ func (e *ErrDestination) Error() string {
 	return "destination not found: " + e.Dest
 }
 
+// Write sends the message to one or more connections based on the rules.
 func (r *Router) Write(msg *stark.Message) error {
 	log.Println(msg)
 
@@ -83,6 +90,8 @@ func (r *Router) handle(conn transport.Conn, msg *stark.Message) error {
 	return nil
 }
 
+// Connect accepts a new connection and starts listening on it for incoming
+// messages.
 func (r *Router) Connect(conn transport.Conn) {
 	go func() {
 		msg := stark.NewMessage()
