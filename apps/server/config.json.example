@@ -1,8 +1,11 @@
 {
+	"listeners": {
+		"local://": true,
+		"tcp://": true
+	},
 	"xmpp": {
 		"host": "talk.google.com:443",
 		"user": "user@example.com",
 		"password": "password",
-		"reply_to": "you@example.com"
 	}
 }

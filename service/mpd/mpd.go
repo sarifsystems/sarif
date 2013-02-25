@@ -36,7 +36,6 @@ func (m *MPD) Handle(msg *stark.Message) (*stark.Message, error) {
 
 	if action[1] == "play" {
 		artist, _ := msg.Data["artist"].(string)
-		println(artist)
 		if artist != "" {
 			exec.Command("mpc", "clear").Run()
 			exec.Command("mpc", "findadd", "artist", artist).Run()
