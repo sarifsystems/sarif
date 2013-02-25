@@ -1,3 +1,4 @@
+// Package net provides a transport over tcp, udp or unix sockets.
 package net
 
 import (
@@ -9,6 +10,7 @@ import (
 	"github.com/xconstruct/stark/transport"
 )
 
+// The default port for the stark network.
 const DEFAULT_PORT = "6171"
 
 func init() {
