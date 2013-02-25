@@ -1,3 +1,3 @@
 config.json
-server/server
-terminal/terminal
+apps/server/server
+apps/terminal/terminal

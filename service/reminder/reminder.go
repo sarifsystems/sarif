@@ -8,10 +8,10 @@ import (
 )
 
 type Reminder struct {
-	serv *service.Service
+	*service.Service
 }
 
-func NewReminder(url string) *Reminder {
+func New(url string) *Reminder {
 	s := service.MustConnect(url, service.Info{
 		Name: "reminder",
 		Actions: []string{"remind.in"},
@@ -46,12 +46,11 @@ func (r *Reminder) Handle(msg *stark.Message) (*stark.Message, error) {
 		if reason != "" {
 			reply.Message += ":" + reason
 		}
-		r.serv.Write(reply)
+		r.Write(reply)
 	})
 	return nil, nil
 }
 
 func (r *Reminder) Start() {
-	go r.serv.HandleLoop(r)
+	go r.HandleLoop(r)
 }
-
