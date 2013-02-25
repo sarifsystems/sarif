@@ -13,14 +13,15 @@ import (
 )
 
 type Terminal struct {
-	serv *service.Service
+	*service.Service
 }
 
-func New(url string) *Terminal {
-	serv := service.MustConnect(url, service.Info{
+func New() *Terminal {
+	serv := service.New(service.Info{
 		Name: "terminal",
 	})
 	t := &Terminal{serv}
+	serv.Handler = t
 	return t
 }
 
@@ -42,11 +43,11 @@ func (t *Terminal) ListenInput() {
 		msg := stark.NewMessage()
 		msg.Action = "natural.process"
 		msg.Message = cmd
-		t.serv.Write(msg)
+		t.Write(msg)
 	}
 }
 
-func (t *Terminal) Start() {
-	go t.serv.HandleLoop(t)
+func (t *Terminal) Serve() error {
 	go t.ListenInput()
+	return t.Serve()
 }

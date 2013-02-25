@@ -12,8 +12,8 @@ type MPD struct {
 	*service.Service
 }
 
-func New(url string) *MPD {
-	serv := service.MustConnect(url, service.Info{
+func New() *MPD {
+	serv := service.New(service.Info{
 		Name: "mpd",
 		Actions: []string{
 			"music.play",
@@ -24,6 +24,7 @@ func New(url string) *MPD {
 		},
 	})
 	m := &MPD{serv}
+	serv.Handler = m
 	return m
 }
 
@@ -38,8 +39,4 @@ func (m *MPD) Handle(msg *stark.Message) (*stark.Message, error) {
 	reply.Action = "notify.success"
 	reply.Message = "done"
 	return reply, nil
-}
-
-func (m *MPD) Start() {
-	go m.HandleLoop(m)
 }

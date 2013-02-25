@@ -10,6 +10,11 @@ import (
 	"github.com/xconstruct/stark/transport"
 )
 
+// Handler accepts messages and optionally returns a reply.
+type Handler interface {
+	Handle(*stark.Message) (*stark.Message, error)
+}
+
 // Info describes your service
 type Info struct {
 	Name    string
@@ -20,45 +25,35 @@ type Info struct {
 type Service struct {
 	transport.Conn
 	info Info
-}
-
-// Connect creates a new service and connects it to the stark network.
-func Connect(url string, info Info) (*Service, error) {
-	conn, err := transport.Dial(url)
-	if err != nil {
-		return nil, err
-	}
-
-	return New(conn, info)
-}
-
-// MustConnect creates a new service and connects it to the stark network.
-// If there is a connection error, it panics.
-func MustConnect(url string, info Info) *Service {
-	s, err := Connect(url, info)
-	if err != nil {
-		panic(err)
-	}
-	return s
+	Handler Handler
 }
 
 // New creates a new service that listens/sends on a stark connection.
-func New(conn transport.Conn, info Info) (*Service, error) {
-	s := &Service{conn, info}
-	if conn != nil {
-		msg := stark.NewMessage()
-		msg.Action = "route.hello"
-		msg.Data["name"] = info.Name
-		msg.Data["actions"] = info.Actions
-		msg.Message = "Hello from service " + info.Name
-		s.Write(msg)
-	}
-	return s, nil
+func New(info Info) *Service {
+	return &Service{info: info}
 }
 
 // Name returns the name of this service as set in the Info.
 func (s *Service) Name() string {
 	return s.info.Name
+}
+
+func (s *Service) Dial(url string) error {
+	conn, err := transport.Dial(url)
+	if err != nil {
+		return err
+	}
+	return s.Connect(conn)
+}
+
+func (s *Service) Connect(conn transport.Conn) error {
+	s.Conn = conn
+	msg := stark.NewMessage()
+	msg.Action = "route.hello"
+	msg.Data["name"] = s.info.Name
+	msg.Data["actions"] = s.info.Actions
+	msg.Message = "Hello from service " + s.info.Name
+	return s.Write(msg)
 }
 
 // Write writes a message to the underlying connection and checks it for validity.
@@ -85,21 +80,16 @@ func (s *Service) Read() (*stark.Message, error) {
 	return msg, err
 }
 
-// Handler accepts messages and optionally returns a reply.
-type Handler interface {
-	Handle(*stark.Message) (*stark.Message, error)
-}
-
-// HandleLoop continuously listens on the connection and calls the Handler
+// Serve continuously listens on the connection and calls the Handler
 // if a new one was received. If the Handler returns a reply, it will be send back
 // over the connection.
-func (s *Service) HandleLoop(handler Handler) error {
+func (s *Service) Serve() error {
 	for {
 		msg, err := s.Read()
 		if err != nil {
 			return err
 		}
-		msg, err = handler.Handle(msg)
+		msg, err = s.Handler.Handle(msg)
 		if err != nil {
 			return err
 		}

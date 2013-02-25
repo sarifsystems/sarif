@@ -10,12 +10,13 @@ type Natural struct {
 	*service.Service
 }
 
-func New(url string) *Natural {
-	serv := service.MustConnect(url, service.Info{
+func New() *Natural {
+	serv := service.New(service.Info{
 		Name: "natural",
 		Actions: []string{"natural.process"},
 	})
 	n := &Natural{serv}
+	serv.Handler = n
 	return n
 }
 
@@ -34,8 +35,4 @@ func (n *Natural) Handle(msg *stark.Message) (*stark.Message, error) {
 	reply.Source = n.Name()
 	reply.ReplyTo = msg.Source
 	return reply, nil
-}
-
-func (n *Natural) Start() {
-	go n.HandleLoop(n)
 }

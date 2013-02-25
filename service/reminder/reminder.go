@@ -11,12 +11,13 @@ type Reminder struct {
 	*service.Service
 }
 
-func New(url string) *Reminder {
-	s := service.MustConnect(url, service.Info{
+func New() *Reminder {
+	s := service.New(service.Info{
 		Name: "reminder",
 		Actions: []string{"remind.in"},
 	})
 	r := &Reminder{s}
+	s.Handler = r
 	return r
 }
 
@@ -49,8 +50,4 @@ func (r *Reminder) Handle(msg *stark.Message) (*stark.Message, error) {
 		r.Write(reply)
 	})
 	return nil, nil
-}
-
-func (r *Reminder) Start() {
-	go r.HandleLoop(r)
 }

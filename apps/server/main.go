@@ -19,6 +19,11 @@ import (
 	"github.com/xconstruct/stark/service/xmpp"
 )
 
+type Service interface {
+	Dial(url string) error
+	Serve() error
+}
+
 func main() {
 	// Setup router
 	router := router.NewRouter("router")
@@ -33,21 +38,21 @@ func main() {
 		go router.Listen(listener)
 	}
 
-	// Start integrated services
-	t := terminal.New("local://")
-	t.Start()
-
-	m := mpd.New("local://")
-	m.Start()
-
-	n := natural.New("local://")
-	n.Start()
-
-	rm := reminder.New("local://")
-	rm.Start()
-
-	xs, _ := xmpp.NewService("local://", getConfigMap("xmpp"))
-	xs.Start()
+	services := []Service{
+		terminal.New(),
+		mpd.New(),
+		natural.New(),
+		reminder.New(),
+		xmpp.NewService(getConfigMap("xmpp")),
+	}
+	for _, s := range services {
+		err := s.Dial("local://")
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		go log.Println(s.Serve())
+	}
 
 	// Loop
 	select {}

@@ -16,35 +16,36 @@ type Config struct {
 }
 
 type XmppService struct {
-	service *service.Service
+	*service.Service
 	client *xmpp.Client
 	conf Config
 	lastRemote string
 }
 
-func NewXmppService(url string, conf Config) (*XmppService, error) {
-	s, err := service.Connect(url, service.Info{
+func New(conf Config) *XmppService {
+	s := service.New(service.Info{
 		Name: "xmpp",
 	})
-	if err != nil {
-		return nil, err
-	}
-	client, err := xmpp.NewClient(conf.Host, conf.User, conf.Password)
-	if err != nil {
-		return nil, err
-	}
-	return &XmppService{s, client, conf, ""}, nil
+	x := &XmppService{s, nil, conf, ""}
+	s.Handler = x
+	return x
 }
 
-func NewService(url string, conf map[string]interface{}) (*XmppService, error) {
+func NewService(conf map[string]interface{}) *XmppService {
 	confStruct := Config{}
 	confStruct.Host, _ = conf["host"].(string)
 	confStruct.User, _ = conf["user"].(string)
 	confStruct.Password, _ = conf["password"].(string)
-	return NewXmppService(url, confStruct)
+	return New(confStruct)
 }
 
-func (x *XmppService) Start() {
+func (x *XmppService) Serve() error {
+	client, err := xmpp.NewClient(x.conf.Host, x.conf.User, x.conf.Password)
+	if err != nil {
+		return err
+	}
+	x.client = client
+
 	go func() {
 		for {
 			event, err := x.client.Recv()
@@ -60,7 +61,7 @@ func (x *XmppService) Start() {
 				msg.Action = "natural.process"
 				msg.Message = chat.Text
 				x.lastRemote = chat.Remote
-				err := x.service.Write(msg)
+				err := x.Write(msg)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -68,7 +69,7 @@ func (x *XmppService) Start() {
 		}
 	}()
 
-	go x.service.HandleLoop(x)
+	return x.Service.Serve()
 }
 
 func (x *XmppService) Handle(msg *stark.Message) (*stark.Message, error) {
