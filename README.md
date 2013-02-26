@@ -2,10 +2,14 @@ stark
 =====
 
 Stark is a simple communication protocol to perform tasks across devices for the user.
-This is the reference implementation and spec, written in Go.
+This is the reference implementation and spec, written in Go. Take a look at the
+[blog post](http://xconstruct.net/2013/02/26/a-new-project-stark/) to see the
+motivation and how it works.
 
 Since it is currently in a prototype stage to develop the protocol, it has a limited set of features out of
-the box and there may be a lot of API breaking changes.
+the box and there may be a lot of breaking changes. No installation guide
+is currently provided since it is nowhere near usable state, but if you are interested,
+you can take a look at the "apps" folder to get started.
 
 ## In Detail ##
 
@@ -46,13 +50,8 @@ Inspired by:
 5. The desktop server connects to the smartphone and transmits the `push` task.
 6. The smartphone receives the `push` task and the notification services displays a notification with the link.
 
-## Under the Hood ##
-
-You communicate with the stark network via a "service" that connects to the next
-"router". A router manages connections to multiple services and other routers to
-transmit messages to the correct destination.
-
 ## FAQ ##
 
 > Is it named after the character, the house or the world Stark?
+
 Yes.
