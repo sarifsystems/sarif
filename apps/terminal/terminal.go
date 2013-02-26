@@ -7,8 +7,7 @@ import (
 )
 
 func main() {
-	t := terminal.New("tcp://127.0.0.1")
-	t.Start()
-
-	switch {}
+	t := terminal.New()
+	t.Dial("tcp://127.0.0.1")
+	t.Serve()
 }

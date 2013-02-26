@@ -45,6 +45,6 @@ func (m *MPD) Handle(msg *stark.Message) (*stark.Message, error) {
 	exec.Command("mpc", action[1]).Run()
 	reply := stark.NewReply(msg)
 	reply.Action = "notify.success"
-	reply.Message = "done"
+	reply.Message = "Done."
 	return reply, nil
 }
