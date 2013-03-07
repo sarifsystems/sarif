@@ -1,10 +1,9 @@
 package main
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"log"
-	"os"
+
+	"github.com/xconstruct/goconf"
 
 	"github.com/xconstruct/stark/router"
 	"github.com/xconstruct/stark/transport"
@@ -19,18 +18,30 @@ import (
 	"github.com/xconstruct/stark/service/xmpp"
 )
 
+
 type Service interface {
 	Dial(url string) error
 	Serve() error
 }
 
+type Config struct {
+	Listeners map[string]bool
+	Xmpp xmpp.Config
+}
+
 func main() {
+	// Read config
+	var cfg Config
+	ctx := conf.Build().JSON().Create()
+	if err := ctx.Read(&cfg); err != nil {
+		log.Fatalln(err)
+	}
+
 	// Setup router
 	router := router.NewRouter("router")
 
 	// Listen on various protocols, as defined in the config
-	listeners := getConfigMap("listeners")
-	for url, _ := range listeners {
+	for url, _ := range cfg.Listeners {
 		listener, err := transport.Listen(url)
 		if err != nil {
 			log.Println(err)
@@ -43,7 +54,7 @@ func main() {
 		mpd.New(),
 		natural.New(),
 		reminder.New(),
-		xmpp.NewService(getConfigMap("xmpp")),
+		xmpp.New(cfg.Xmpp),
 	}
 	for _, s := range services {
 		err := s.Dial("local://")
@@ -57,36 +68,4 @@ func main() {
 
 	// Loop
 	select {}
-}
-
-var config map[string]interface{}
-
-func readConfig() {
-	file, err := os.Open("config.json")
-	if err != nil {
-		panic(err)
-	}
-	bytes, err := ioutil.ReadAll(file)
-	if err != nil {
-		panic(err)
-	}
-	err = json.Unmarshal(bytes, &config)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func getConfig(field string) interface{} {
-	if config == nil {
-		readConfig()
-	}
-	return config[field]
-}
-
-func getConfigMap(field string) map[string]interface{} {
-	if config == nil {
-		readConfig()
-	}
-	val, _ := config[field].(map[string]interface{})
-	return val
 }
