@@ -3,12 +3,13 @@ package local
 import (
 	neturl "net/url"
 	"errors"
+	"github.com/xconstruct/stark"
 	"github.com/xconstruct/stark/transport"
 )
 
 type LocalListener struct {
 	id string
-	inc chan transport.Conn
+	inc chan stark.Conn
 }
 
 var listeners map[string]*LocalListener
@@ -27,12 +28,12 @@ func Listen(url string) (transport.Listener, error) {
 		u.Host = "default"
 	}
 
-	t := &LocalListener{u.Host, make(chan transport.Conn, 10)}
+	t := &LocalListener{u.Host, make(chan stark.Conn, 10)}
 	listeners[u.Host] = t
 	return t, nil
 }
 
-func (t *LocalListener) Accept() (transport.Conn, error) {
+func (t *LocalListener) Accept() (stark.Conn, error) {
 	return <-t.inc, nil
 }
 
@@ -40,7 +41,7 @@ func (t *LocalListener) Close() error {
 	return nil
 }
 
-func Dial(url string) (transport.Conn, error) {
+func Dial(url string) (stark.Conn, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err

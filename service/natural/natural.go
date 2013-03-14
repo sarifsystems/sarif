@@ -20,9 +20,9 @@ func New() *Natural {
 	return n
 }
 
-func (n *Natural) Handle(msg *stark.Message) (*stark.Message, error) {
+func (n *Natural) Handle(msg *stark.Message) *stark.Message {
 	if msg.Action != "natural.process" {
-		return nil, nil
+		return nil
 	}
 
 	reply, err := natural.Parse(msg.Message)
@@ -30,9 +30,9 @@ func (n *Natural) Handle(msg *stark.Message) (*stark.Message, error) {
 		reply = stark.NewReply(msg)
 		reply.Action = "error"
 		reply.Message = "Did not understand: " + err.Error()
-		return reply, nil
+		return reply
 	}
 	reply.Source = n.Name()
 	reply.ReplyTo = msg.Source
-	return reply, nil
+	return reply
 }

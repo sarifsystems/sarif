@@ -31,14 +31,6 @@ func New(conf Config) *XmppService {
 	return x
 }
 
-func NewService(conf map[string]interface{}) *XmppService {
-	confStruct := Config{}
-	confStruct.Host, _ = conf["host"].(string)
-	confStruct.User, _ = conf["user"].(string)
-	confStruct.Password, _ = conf["password"].(string)
-	return New(confStruct)
-}
-
 func (x *XmppService) Serve() error {
 	client, err := xmpp.NewClient(x.conf.Host, x.conf.User, x.conf.Password)
 	if err != nil {
@@ -68,18 +60,17 @@ func (x *XmppService) Serve() error {
 			}
 		}
 	}()
-
-	return x.Service.Serve()
+	return nil
 }
 
-func (x *XmppService) Handle(msg *stark.Message) (*stark.Message, error) {
+func (x *XmppService) Handle(msg *stark.Message) *stark.Message {
 	if x.lastRemote == "" {
-		return nil, nil
+		return nil
 	}
 	x.client.Send(xmpp.Chat{
 		Remote: x.lastRemote,
 		Type: "chat",
 		Text: msg.Message,
 	})
-	return nil, nil
+	return nil
 }

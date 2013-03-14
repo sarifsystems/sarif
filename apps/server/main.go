@@ -5,8 +5,7 @@ import (
 
 	"github.com/xconstruct/goconf"
 
-	"github.com/xconstruct/stark/router"
-	"github.com/xconstruct/stark/transport"
+	"github.com/xconstruct/stark/service"
 
 	_ "github.com/xconstruct/stark/transport/local"
 	_ "github.com/xconstruct/stark/transport/net"
@@ -19,8 +18,11 @@ import (
 )
 
 
-type Service interface {
+type Dialer interface {
 	Dial(url string) error
+}
+
+type Server interface {
 	Serve() error
 }
 
@@ -38,18 +40,17 @@ func main() {
 	}
 
 	// Setup router
-	router := router.NewRouter("router")
+	router := service.New(service.Info{Name: "router"})
+	router.Handler = service.LogHandler(service.ForwardHandler)
 
 	// Listen on various protocols, as defined in the config
 	for url, _ := range cfg.Listeners {
-		listener, err := transport.Listen(url)
-		if err != nil {
+		if err := router.Listen(url); err != nil {
 			log.Println(err)
 		}
-		go router.Listen(listener)
 	}
 
-	services := []Service{
+	services := []Dialer{
 		terminal.New(),
 		mpd.New(),
 		natural.New(),
@@ -57,13 +58,14 @@ func main() {
 		xmpp.New(cfg.Xmpp),
 	}
 	for _, s := range services {
-		err := s.Dial("local://")
-		if err != nil {
+		if err := s.Dial("local://"); err != nil {
 			log.Println(err)
 			continue
 		}
 
-		go s.Serve()
+		if serv, ok := s.(Server); ok {
+			go serv.Serve()
+		}
 	}
 
 	// Loop

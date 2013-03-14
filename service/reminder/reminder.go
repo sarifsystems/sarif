@@ -21,22 +21,22 @@ func New() *Reminder {
 	return r
 }
 
-func (r *Reminder) Handle(msg *stark.Message) (*stark.Message, error) {
+func (r *Reminder) Handle(msg *stark.Message) *stark.Message {
 	if msg.Action != "remind.in" {
-		return stark.ReplyUnsupported(msg), nil
+		return stark.ReplyUnsupported(msg)
 	}
 
 	in, ok := msg.Data["in"].(string)
 	if !ok {
 		reply := stark.ReplyError(msg, nil)
 		reply.Message = "No duration specified"
-		return reply, nil
+		return reply
 	}
 	dur, err := time.ParseDuration(in)
 	if err != nil {
 		reply := stark.ReplyError(msg, err)
 		reply.Message = "Cannot understand duration for reminder"
-		return reply, nil
+		return reply
 	}
 
 	time.AfterFunc(dur, func() {
@@ -49,5 +49,5 @@ func (r *Reminder) Handle(msg *stark.Message) (*stark.Message, error) {
 		}
 		r.Write(reply)
 	})
-	return nil, nil
+	return nil
 }

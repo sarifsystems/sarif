@@ -25,9 +25,9 @@ func New() *Terminal {
 	return t
 }
 
-func (t *Terminal) Handle(msg *stark.Message) (*stark.Message, error) {
+func (t *Terminal) Handle(msg *stark.Message) *stark.Message {
 	fmt.Println(msg.Message)
-	return nil, nil
+	return nil
 }
 
 func (t *Terminal) ListenInput() {
@@ -49,5 +49,5 @@ func (t *Terminal) ListenInput() {
 
 func (t *Terminal) Serve() error {
 	go t.ListenInput()
-	return t.Service.Serve()
+	return nil
 }

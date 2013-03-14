@@ -16,9 +16,11 @@ type Path struct {
 // A path, as defined in the spec, is a string of zero or more named hops
 // (services) separated by the path separator "/", e.g. "next/second/last".
 func ParsePath(path string) *Path {
-	return &Path{
-		strings.Split(path, PathSep),
+	parts := strings.Split(path, PathSep)
+	if len(parts) == 1 && parts[0] == "" {
+		parts = []string{}
 	}
+	return &Path{parts}
 }
 
 // String returns a spec-conform string representation of the path.

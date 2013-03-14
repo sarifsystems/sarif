@@ -28,10 +28,10 @@ func New() *MPD {
 	return m
 }
 
-func (m *MPD) Handle(msg *stark.Message) (*stark.Message, error) {
+func (m *MPD) Handle(msg *stark.Message) *stark.Message {
 	action := strings.Split(msg.Action, ".")
 	if action[0] != "music" {
-		return nil, nil
+		return nil
 	}
 
 	if action[1] == "play" {
@@ -46,5 +46,5 @@ func (m *MPD) Handle(msg *stark.Message) (*stark.Message, error) {
 	reply := stark.NewReply(msg)
 	reply.Action = "notify.success"
 	reply.Message = "Done."
-	return reply, nil
+	return reply
 }

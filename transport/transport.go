@@ -6,19 +6,12 @@ import (
 	"github.com/xconstruct/stark"
 )
 
-// Conn represents a bidirectional connection to the stark network.
-type Conn interface {
-	Read() (*stark.Message, error)
-	Write(*stark.Message) error
-	Close() error
-}
-
 type Listener interface {
-	Accept() (Conn, error)
+	Accept() (stark.Conn, error)
 	Close() error
 }
 
-type DialFunc func(url string) (Conn, error)
+type DialFunc func(url string) (stark.Conn, error)
 type ListenFunc func(url string) (Listener, error)
 
 type Transport struct {
@@ -49,7 +42,7 @@ func (e *ErrTransport) Error() string {
 
 // Dial creates a new connection based on the URL and choses the right
 // transport to use based on the scheme part.
-func Dial(url string) (Conn, error) {
+func Dial(url string) (stark.Conn, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err

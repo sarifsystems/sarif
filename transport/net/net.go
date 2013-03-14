@@ -61,7 +61,7 @@ func Listen(url string) (transport.Listener, error) {
 	return &NetListener{u.Scheme, u.Host, ln}, nil
 }
 
-func (t *NetListener) Accept() (transport.Conn, error) {
+func (t *NetListener) Accept() (stark.Conn, error) {
 	conn, err := t.ln.Accept()
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (t *NetListener) Close() error {
 	return t.ln.Close()
 }
 
-func Dial(url string) (transport.Conn, error) {
+func Dial(url string) (stark.Conn, error) {
 	u, err := neturl.Parse(url)
 	if err != nil {
 		return nil, err

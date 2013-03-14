@@ -132,3 +132,36 @@ func NewReply(m *Message) *Message {
 	}
 	return reply
 }
+
+type Reader interface {
+	Read() (*Message, error)
+}
+
+type Writer interface {
+	Write(*Message) error
+}
+
+type Closer interface {
+	Close() error
+}
+
+type ReadWriter interface {
+	Reader
+	Writer
+}
+
+// Conn represents a bidirectional connection to the stark network.
+type Conn interface {
+	ReadWriter
+	Closer
+}
+
+type Handler interface {
+	Handle(*Message) *Message
+}
+
+type HandleFunc func(*Message) *Message
+
+func (f HandleFunc) Handle(msg *Message) *Message {
+	return f(msg)
+}
