@@ -8,43 +8,43 @@ import (
 )
 
 type Config struct {
-	DeviceName string
-	DeviceId   string
-	Domain     string
-	Server     string
-	TlsConfig  *tls.Config
+	DeviceName  string
+	DeviceId    string
+	Domain      string
+	Server      string
+	Certificate string
+	Key         string
+	Authority   string
 }
 
-func (cfg *Config) LoadFromEnv() error {
+func (cfg *Config) LoadFromEnv() {
 	if cfg.Server == "" {
 		cfg.Server = os.Getenv("STARK_HOST")
 	}
-	if cfg.TlsConfig == nil {
-		cert := os.Getenv("STARK_CERT")
-		key := os.Getenv("STARK_KEY")
-		ca := os.Getenv("STARK_CA")
-		tcfg, err := LoadTlsCertificates(cert, key, ca)
-		if err != nil {
-			return err
-		}
-		cfg.TlsConfig = tcfg
+	if cfg.Certificate == "" {
+		cfg.Certificate = os.Getenv("STARK_CERT")
 	}
-	return nil
+	if cfg.Key == "" {
+		cfg.Key = os.Getenv("STARK_KEY")
+	}
+	if cfg.Authority == "" {
+		cfg.Authority = os.Getenv("STARK_CA")
+	}
 }
 
-func LoadTlsCertificates(certFile, keyFile, caFile string) (*tls.Config, error) {
+func (cfg *Config) LoadTlsCertificates() (*tls.Config, error) {
 	tcfg := &tls.Config{}
-	if certFile != "" && keyFile != "" {
-		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if cfg.Certificate != "" && cfg.Key != "" {
+		cert, err := tls.LoadX509KeyPair(cfg.Certificate, cfg.Key)
 		if err != nil {
 			return tcfg, err
 		}
 		tcfg.Certificates = []tls.Certificate{cert}
 	}
 
-	if caFile != "" {
+	if cfg.Authority != "" {
 		roots := x509.NewCertPool()
-		cert, err := ioutil.ReadFile(caFile)
+		cert, err := ioutil.ReadFile(cfg.Authority)
 		if err != nil {
 			return tcfg, err
 		}

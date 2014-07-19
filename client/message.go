@@ -60,3 +60,14 @@ func (orig Message) Reply(m Message) Message {
 	}
 	return m
 }
+
+func (m Message) PayloadGetString(key string) string {
+	if pmap, ok := m.Payload.(map[string]interface{}); ok {
+		if val, ok := pmap[key]; ok {
+			if str, ok := val.(string); ok {
+				return str
+			}
+		}
+	}
+	return ""
+}

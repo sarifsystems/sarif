@@ -1,7 +1,6 @@
 package client
 
 import (
-	_ "crypto/md5"
 	"strings"
 
 	mqtt "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
@@ -17,7 +16,7 @@ type Client struct {
 	subscriptions []subscription
 }
 
-type MessageHandler func(msg Message)
+type MessageHandler func(client *Client, msg Message)
 
 type subscription struct {
 	Action  string
@@ -38,7 +37,11 @@ func (c *Client) Connect() error {
 	opts.SetBroker(c.cfg.Server)
 	opts.SetClientId(c.cfg.DeviceId)
 	opts.SetCleanSession(true)
-	opts.SetTlsConfig(c.cfg.TlsConfig)
+	tlscfg, err := c.cfg.LoadTlsCertificates()
+	if err != nil {
+		return err
+	}
+	opts.SetTlsConfig(tlscfg)
 	opts.SetTraceLevel(mqtt.Critical)
 
 	c.client = mqtt.NewClient(opts)
@@ -95,12 +98,12 @@ func (c *Client) handleRawMessage(client *mqtt.MqttClient, raw mqtt.Message) {
 
 	for _, sub := range c.subscriptions {
 		if strings.HasPrefix(m.Action+"/", sub.Action+"/") {
-			sub.Handler(m)
+			sub.Handler(c, m)
 		}
 	}
 }
 
-func (c *Client) handlePing(msg Message) {
+func (c *Client) handlePing(_ *Client, msg Message) {
 	err := c.Publish(msg.Reply(Message{
 		Action: "ack",
 	}))

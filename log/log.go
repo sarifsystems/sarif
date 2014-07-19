@@ -23,7 +23,7 @@ type Logger struct {
 func New() *Logger {
 	return &Logger{
 		LevelDebug,
-		log.New(os.Stdout, "[stark] ", 0),
+		log.New(os.Stdout, "", 0),
 	}
 }
 
