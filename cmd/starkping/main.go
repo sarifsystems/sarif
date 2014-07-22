@@ -1,28 +1,20 @@
 package main
 
 import (
-	"github.com/xconstruct/stark/client"
-	"github.com/xconstruct/stark/log"
+	"github.com/xconstruct/stark/core"
+	"github.com/xconstruct/stark/proto"
 )
 
-func assert(err error) {
-	if err != nil {
-		log.Default.Fatalln(err)
-	}
-}
-
 func main() {
-	cfg := client.Config{
-		DeviceName: "starkping",
-	}
-	assert(cfg.LoadFromEnv())
+	ctx, err := core.NewContext()
+	ctx.Must(err)
 
-	c := client.New(cfg)
-	assert(c.Connect())
+	c, err := ctx.Client()
+	ctx.Must(err)
 
-	err := c.Publish(client.Message{
+	ctx.Must(c.Publish(proto.Message{
 		Action: "ping",
-	})
+	}))
+
 	select {}
-	assert(err)
 }

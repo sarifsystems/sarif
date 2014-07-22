@@ -1,9 +1,11 @@
-package client
+package proto
 
 import (
 	"encoding/json"
 	"errors"
 )
+
+const VERSION = "0.2.0"
 
 type Message struct {
 	Version string      `json:"v"`

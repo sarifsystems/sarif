@@ -1,35 +1,51 @@
 package hostscan
 
 import (
-	"database/sql"
-	"github.com/xconstruct/stark/client"
-	"github.com/xconstruct/stark/log"
+	"github.com/xconstruct/stark/core"
+	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/proto/client"
 )
 
 type Service struct {
-	scan *HostScan
+	scan   *HostScan
+	client *client.Client
+	ctx    *core.Context
 }
 
-func NewService(db *sql.DB) *Service {
-	s := &Service{
-		&HostScan{db},
+func NewService(ctx *core.Context) (*Service, error) {
+	db, err := ctx.Database()
+	if err != nil {
+		return nil, err
 	}
-	return s
+
+	client, err := ctx.Client()
+	if err != nil {
+		return nil, err
+	}
+
+	SetupSchema(db.Driver(), db.DB)
+
+	s := &Service{
+		New(db.DB),
+		client,
+		ctx,
+	}
+	return s, nil
 }
 
-func (s *Service) Enable(client *client.Client) error {
-	return client.Subscribe("devices/fetch_last_status", s.HandleLastStatus)
+func (s *Service) Enable() error {
+	return s.client.Subscribe("devices/fetch_last_status", s.HandleLastStatus)
 }
 
-func (s *Service) HandleLastStatus(c *client.Client, msg client.Message) {
+func (s *Service) HandleLastStatus(msg proto.Message) {
 	if name := msg.PayloadGetString("host"); name != "" {
 		host, err := s.scan.LastStatus(name)
-		log.Default.Debugln(host)
+		s.ctx.Log.Debugln(host)
 		if err != nil {
-			log.Default.Warnln(err)
+			s.ctx.Log.Warnln(err)
 			return
 		}
-		c.Publish(msg.Reply(client.Message{
+		s.client.Publish(msg.Reply(proto.Message{
 			Action: "devices/last_status",
 			Payload: map[string]interface{}{
 				"host": host,
@@ -40,12 +56,12 @@ func (s *Service) HandleLastStatus(c *client.Client, msg client.Message) {
 	}
 
 	hosts, err := s.scan.LastStatusAll()
-	log.Default.Debugln(hosts)
+	s.ctx.Log.Debugln(hosts)
 	if err != nil {
-		log.Default.Warnln(err)
+		s.ctx.Log.Warnln(err)
 		return
 	}
-	c.Publish(msg.Reply(client.Message{
+	s.client.Publish(msg.Reply(proto.Message{
 		Action: "devices/last_status",
 		Payload: map[string]interface{}{
 			"hosts": hosts,

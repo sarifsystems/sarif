@@ -2,29 +2,20 @@ package main
 
 import (
 	"fmt"
-	"github.com/xconstruct/stark/conf"
-	"github.com/xconstruct/stark/database"
-	"github.com/xconstruct/stark/log"
+	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/services/hostscan"
 )
 
-func assert(err error) {
-	if err != nil {
-		log.Default.Fatalln(err)
-	}
-}
-
 func main() {
-	cfg, err := conf.ReadDefault()
-	assert(err)
+	ctx, err := core.NewContext()
+	ctx.Must(err)
 
-	db, err := database.Open(cfg)
-	assert(err)
-	defer db.Close()
+	db, err := ctx.Database()
+	ctx.Must(err)
 
-	assert(hostscan.SetupSchema(cfg.Db.Driver, db))
-	h := hostscan.New(db)
+	ctx.Must(hostscan.SetupSchema(db.Driver(), db.DB))
+	h := hostscan.New(db.DB)
 	hosts, err := h.Update()
-	assert(err)
+	ctx.Must(err)
 	fmt.Println(hosts)
 }
