@@ -11,6 +11,9 @@ const (
 	LevelDebug LogLevel = iota
 	LevelInfo
 	LevelWarn
+	LevelError
+	LevelFatal
+	LevelCritical
 )
 
 var Default = New()
@@ -74,4 +77,49 @@ func (l *Logger) Warnf(format string, v ...interface{}) {
 		return
 	}
 	l.Logger.Printf("WARN: "+format, v...)
+}
+
+func (l *Logger) Errorln(v ...interface{}) {
+	if l.level > LevelError {
+		return
+	}
+	v = append([]interface{}{"ERROR"}, v...)
+	l.Logger.Println(v...)
+}
+
+func (l *Logger) Errorf(format string, v ...interface{}) {
+	if l.level > LevelError {
+		return
+	}
+	l.Logger.Printf("ERROR: "+format, v...)
+}
+
+func (l *Logger) Fatalln(v ...interface{}) {
+	if l.level > LevelFatal {
+		return
+	}
+	v = append([]interface{}{"FATAL"}, v...)
+	l.Logger.Fatalln(v...)
+}
+
+func (l *Logger) Fatalf(format string, v ...interface{}) {
+	if l.level > LevelFatal {
+		return
+	}
+	l.Logger.Fatalf("FATAL: "+format, v...)
+}
+
+func (l *Logger) Criticalln(v ...interface{}) {
+	if l.level > LevelCritical {
+		return
+	}
+	v = append([]interface{}{"CRITICAL"}, v...)
+	l.Logger.Panicln(v...)
+}
+
+func (l *Logger) Criticalf(format string, v ...interface{}) {
+	if l.level > LevelCritical {
+		return
+	}
+	l.Logger.Panicf("CRITICAL: "+format, v...)
 }
