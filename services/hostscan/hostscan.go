@@ -3,8 +3,10 @@ package hostscan
 import (
 	"database/sql"
 	"fmt"
+	"net"
 	"os/exec"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -58,8 +60,26 @@ func New(db *sql.DB) *HostScan {
 	return &HostScan{db}
 }
 
+func (h *HostScan) FindLocalNetwork() (string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+	for _, addr := range addrs {
+		a := addr.String()
+		if strings.HasPrefix(a, "192.168.") {
+			return a, nil
+		}
+	}
+	return "", nil
+}
+
 func (h *HostScan) ScanCurrentHosts() ([]Host, error) {
-	cmd := exec.Command("nmap", "-T3", "-sn", "-oG", "-", "192.168.1.3-255")
+	addr, err := h.FindLocalNetwork()
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.Command("nmap", "-T3", "-sn", "-oG", "-", addr)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
