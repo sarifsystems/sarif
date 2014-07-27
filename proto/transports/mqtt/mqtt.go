@@ -18,6 +18,10 @@ type Config struct {
 	Authority   string
 }
 
+func GetDefaults() Config {
+	return Config{}
+}
+
 func (cfg *Config) LoadTlsCertificates() (*tls.Config, error) {
 	tcfg := &tls.Config{}
 	if cfg.Certificate != "" && cfg.Key != "" {
@@ -79,8 +83,8 @@ func (t *Transport) Publish(msg proto.Message) error {
 	if err != nil {
 		return err
 	}
-	log.Default.Debugln("[mqtt] sending message", string(raw))
 	topic := proto.GetTopic(msg.Action, msg.Device, msg.Domain)
+	log.Default.Debugf("[mqtt] sending to %s: %v", topic, string(raw))
 	r := t.client.Publish(mqtt.QOS_ZERO, topic, raw)
 	<-r
 	return nil
@@ -92,13 +96,14 @@ func (t *Transport) handleRawMessage(client *mqtt.MqttClient, raw mqtt.Message) 
 		log.Default.Warnln(err)
 		return
 	}
-	log.Default.Debugln("receiving message", string(raw.Payload()))
+	log.Default.Debugf("[mqtt] receiving from %s: %v", raw.Topic(), string(raw.Payload()))
 	t.handler(m)
 }
 
 func (t *Transport) Subscribe(action, device, domain string) error {
-	log.Default.Debugf("[client] subscribing to %s@%s/%s", action, domain, device)
-	filter, err := mqtt.NewTopicFilter(proto.GetTopic(action, device, domain), 0)
+	topic := proto.GetTopic(action, device, domain) + "/#"
+	log.Default.Debugln("[mqtt] subscribing to", topic)
+	filter, err := mqtt.NewTopicFilter(topic, 0)
 	if err != nil {
 		return err
 	}
