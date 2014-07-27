@@ -4,6 +4,7 @@ import (
 	"github.com/xconstruct/stark/core"
 
 	_ "github.com/xconstruct/stark/services/hostscan"
+	_ "github.com/xconstruct/stark/services/router"
 )
 
 type Config struct {
