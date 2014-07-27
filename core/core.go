@@ -1,6 +1,9 @@
 package core
 
 import (
+	"os"
+	"os/signal"
+
 	"github.com/xconstruct/stark/conf"
 	"github.com/xconstruct/stark/database"
 	"github.com/xconstruct/stark/log"
@@ -9,73 +12,137 @@ import (
 )
 
 type Context struct {
-	cfg    *conf.Config
-	client *client.Client
-	db     *database.DB
-	Log    *log.Logger
+	AppName  string
+	Config   *conf.Config
+	Proto    *client.Client
+	Database *database.DB
+	Log      *log.Logger
+
+	instances map[string]ModuleInstance
 }
 
-func NewContext() (*Context, error) {
-	return &Context{
-		Log: log.Default,
-	}, nil
+func NewContext(appName string) (*Context, error) {
+	c := &Context{
+		AppName:   appName,
+		Log:       log.Default,
+		instances: make(map[string]ModuleInstance),
+	}
+
+	if err := c.initConfig(); err != nil {
+		return c, err
+	}
+	if err := c.initDatabase(); err != nil {
+		return c, err
+	}
+	if err := c.initProto(); err != nil {
+		return c, err
+	}
+
+	return c, nil
 }
 
-func (c *Context) Config() (*conf.Config, error) {
-	if c.cfg != nil {
-		return c.cfg, nil
+func (c *Context) Close() {
+	if c.Config.IsModified() {
+		f := c.GetDefaultDir() + "/config.json"
+		c.Log.Debugf("[core] writing config to '%s'", f)
+		c.Must(conf.Write(f, c.Config))
 	}
-
-	cfg, err := conf.ReadDefault()
-	if err != nil {
-		return nil, err
-	}
-	c.cfg = &cfg
-	return c.cfg, nil
 }
 
-func (c *Context) Database() (*database.DB, error) {
-	if c.db != nil {
-		return c.db, nil
+func (c *Context) GetDefaultDir() string {
+	path := os.Getenv("XDG_CONFIG_HOME")
+	if path != "" {
+		return path + "/" + c.AppName
 	}
 
-	cfg, err := c.Config()
-	if err != nil {
-		return nil, err
+	home := os.Getenv("HOME")
+	if home != "" {
+		return home + "/.config/" + c.AppName
 	}
-	db, err := database.Open(*cfg)
-	if err != nil {
-		return nil, err
-	}
-	c.db = db
-	return c.db, nil
+
+	return "."
 }
 
-func (c *Context) Client() (*client.Client, error) {
-	if c.client != nil {
-		return c.client, nil
+func (c *Context) initConfig() error {
+	f := c.GetDefaultDir() + "/config.json"
+	c.Log.Debugf("[core] reading config from '%s'", f)
+	cfg, err := conf.Read(f)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+		cfg = conf.New()
+	}
+	c.Config = cfg
+	return nil
+}
+
+func (c *Context) initDatabase() error {
+	cfg := database.Config{
+		Driver: "sqlite3",
+		Source: c.GetDefaultDir() + "/" + c.AppName + ".db",
 	}
 
-	cfg, err := c.Config()
+	if err := c.Config.Get("database", &cfg); err != nil {
+		return err
+	}
+
+	db, err := database.Open(cfg)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	client := client.New("server")
-	client.SetTransport(mqtt.New(mqtt.Config{
-		Server:      cfg.Proto.Server,
-		Certificate: cfg.Proto.Certificate,
-		Key:         cfg.Proto.Key,
-		Authority:   cfg.Proto.Authority,
-	}))
-	if err := client.Connect(); err != nil {
-		return nil, err
+	c.Database = db
+	return nil
+}
+
+func (c *Context) initProto() error {
+	cfg := mqtt.Config{}
+	if err := c.Config.Get("mqtt", &cfg); err != nil {
+		return err
 	}
-	c.client = client
-	return client, nil
+
+	c.Proto = client.New(c.AppName)
+	c.Proto.SetTransport(mqtt.New(cfg))
+	return nil
 }
 
 func (c *Context) Must(err error) {
 	if err != nil {
 		c.Log.Fatalln(err)
 	}
+}
+
+func (c *Context) EnableModule(name string) error {
+	i, ok := c.instances[name]
+	if ok {
+		return nil
+	}
+
+	m, err := GetModule(name)
+	if err != nil {
+		return err
+	}
+	i, err = m.NewInstance(c)
+	c.instances[name] = i
+	if err != nil {
+		return err
+	}
+	c.Log.Infof("[core] module '%s' enabled", name)
+	return i.Enable()
+}
+
+func (c *Context) DisableModule(name string) error {
+	i, ok := c.instances[name]
+	if !ok {
+		return nil
+	}
+	c.instances[name] = nil
+	c.Log.Infof("[core] module '%s' disabled", name)
+	return i.Disable()
+}
+
+func (c *Context) WaitUntilInterrupt() {
+	ch := make(chan os.Signal, 2)
+	signal.Notify(ch, os.Interrupt)
+	<-ch
 }

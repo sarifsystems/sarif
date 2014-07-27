@@ -6,57 +6,67 @@ import (
 	"path"
 )
 
+type ErrNotFound struct {
+	Section string
+}
+
+func (e ErrNotFound) Error() string {
+	return "conf: section '" + e.Section + "' not found"
+}
+
 type Config struct {
-	Db struct {
-		Driver string
-		Source string
-	}
-	Proto struct {
-		Domain      string
-		Server      string
-		Certificate string
-		Key         string
-		Authority   string
+	modified bool
+	sections map[string]*json.RawMessage
+}
+
+func New() *Config {
+	return &Config{
+		false,
+		make(map[string]*json.RawMessage),
 	}
 }
 
-func GetDefaults() Config {
-	var cfg Config
-	cfg.Db.Driver = "sqlite3"
-	cfg.Db.Source = GetDefaultDir() + "/stark.db"
-	return cfg
+func (cfg *Config) Get(section string, v interface{}) error {
+	raw, ok := cfg.sections[section]
+	if !ok {
+		return cfg.Set(section, v)
+	}
+	return json.Unmarshal(*raw, v)
 }
 
-func Read(file string) (Config, error) {
-	if file == "" {
-		file = GetDefaultPath()
-	}
+func (cfg *Config) Exists(section string) bool {
+	_, ok := cfg.sections[section]
+	return ok
+}
 
-	var cfg Config
+func (cfg *Config) Set(section string, v interface{}) error {
+	raw, err := json.MarshalIndent(&v, "", "\t")
+	if err != nil {
+		return err
+	}
+	rawjson := json.RawMessage(raw)
+	cfg.sections[section] = &rawjson
+	cfg.modified = true
+	return nil
+}
+
+func (cfg *Config) IsModified() bool {
+	return cfg.modified
+}
+
+func Read(file string) (*Config, error) {
+	cfg := New()
 	f, err := os.Open(file)
 	if err != nil {
 		return cfg, err
 	}
 	defer f.Close()
 	dec := json.NewDecoder(f)
-	err = dec.Decode(&cfg)
+	err = dec.Decode(&cfg.sections)
 	return cfg, err
 }
 
-func ReadDefault() (Config, error) {
-	cfg, err := Read(GetDefaultPath())
-	if err != nil && os.IsNotExist(err) {
-		cfg = GetDefaults()
-		err = Write(GetDefaultPath(), cfg)
-	}
-	return cfg, err
-}
-
-func Write(file string, cfg Config) error {
-	if file == "" {
-		file = GetDefaultPath()
-	}
-
+func Write(file string, cfg *Config) error {
 	if err := os.MkdirAll(path.Dir(file), 0700); err != nil {
 		return err
 	}
@@ -67,28 +77,10 @@ func Write(file string, cfg Config) error {
 	}
 	defer f.Close()
 
-	encoded, err := json.MarshalIndent(&cfg, "", "\t")
+	encoded, err := json.MarshalIndent(&cfg.sections, "", "\t")
 	if err != nil {
 		return err
 	}
 	_, err = f.Write(encoded)
 	return err
-}
-
-func GetDefaultPath() string {
-	return GetDefaultDir() + "/config.json"
-}
-
-func GetDefaultDir() string {
-	path := os.Getenv("XDG_CONFIG_HOME")
-	if path != "" {
-		return path + "/stark"
-	}
-
-	home := os.Getenv("HOME")
-	if home != "" {
-		return home + "/.config/stark"
-	}
-
-	return "."
 }

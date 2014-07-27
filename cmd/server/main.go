@@ -2,16 +2,25 @@ package main
 
 import (
 	"github.com/xconstruct/stark/core"
-	"github.com/xconstruct/stark/services/hostscan"
+
+	_ "github.com/xconstruct/stark/services/hostscan"
 )
 
+type Config struct {
+	EnabledModules []string
+}
+
 func main() {
-	ctx, err := core.NewContext()
+	ctx, err := core.NewContext("stark")
 	ctx.Must(err)
+	defer ctx.Close()
 
-	h, err := hostscan.NewService(ctx)
-	ctx.Must(err)
-	ctx.Must(h.Enable())
+	var cfg Config
+	ctx.Must(ctx.Config.Get("server", &cfg))
 
-	select {}
+	for _, module := range cfg.EnabledModules {
+		ctx.Must(ctx.EnableModule(module))
+	}
+
+	ctx.WaitUntilInterrupt()
 }

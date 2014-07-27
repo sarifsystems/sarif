@@ -7,11 +7,10 @@ import (
 )
 
 func main() {
-	ctx, err := core.NewContext()
+	ctx, err := core.NewContext("stark")
 	ctx.Must(err)
 
-	db, err := ctx.Database()
-	ctx.Must(err)
+	db := ctx.Database
 
 	ctx.Must(hostscan.SetupSchema(db.Driver(), db.DB))
 	h := hostscan.New(db.DB)

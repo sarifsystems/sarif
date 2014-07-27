@@ -5,9 +5,12 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"os"
 	"path"
-
-	"github.com/xconstruct/stark/conf"
 )
+
+type Config struct {
+	Driver string
+	Source string
+}
 
 type DB struct {
 	driver string
@@ -18,15 +21,15 @@ func (db *DB) Driver() string {
 	return db.driver
 }
 
-func Open(cfg conf.Config) (*DB, error) {
-	driver := cfg.Db.Driver
+func Open(cfg Config) (*DB, error) {
+	driver := cfg.Driver
 	if driver == "sqlite3" {
-		err := os.MkdirAll(path.Dir(cfg.Db.Source), 0700)
+		err := os.MkdirAll(path.Dir(cfg.Source), 0700)
 		if err != nil && !os.IsNotExist(err) {
 			return nil, err
 		}
 	}
-	sdb, err := sql.Open(driver, cfg.Db.Source)
+	sdb, err := sql.Open(driver, cfg.Source)
 	if err != nil {
 		return nil, err
 	}

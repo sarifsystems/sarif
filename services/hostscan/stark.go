@@ -5,39 +5,47 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/proto/client"
 )
 
+var Module = core.Module{
+	Name:        "hostscan",
+	Version:     "1.0",
+	NewInstance: NewInstance,
+}
+
+func init() {
+	core.RegisterModule(Module)
+}
+
 type Service struct {
-	scan   *HostScan
-	client *client.Client
-	ctx    *core.Context
+	scan *HostScan
+	ctx  *core.Context
 }
 
 func NewService(ctx *core.Context) (*Service, error) {
-	db, err := ctx.Database()
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := ctx.Client()
-	if err != nil {
-		return nil, err
-	}
+	db := ctx.Database
 
 	SetupSchema(db.Driver(), db.DB)
 
 	s := &Service{
 		New(db.DB),
-		client,
 		ctx,
 	}
 	return s, nil
 }
 
+func NewInstance(ctx *core.Context) (core.ModuleInstance, error) {
+	s, err := NewService(ctx)
+	return s, err
+}
+
 func (s *Service) Enable() error {
 	time.AfterFunc(5*time.Second, s.scheduledUpdate)
-	return s.client.Subscribe("devices/fetch_last_status", s.HandleLastStatus)
+	return s.ctx.Proto.Subscribe("devices/fetch_last_status", s.HandleLastStatus)
+}
+
+func (s *Service) Disable() error {
+	return nil
 }
 
 func (s *Service) scheduledUpdate() {
@@ -58,7 +66,7 @@ func (s *Service) HandleLastStatus(msg proto.Message) {
 			s.ctx.Log.Warnln(err)
 			return
 		}
-		s.client.Publish(msg.Reply(proto.Message{
+		s.ctx.Proto.Publish(msg.Reply(proto.Message{
 			Action: "devices/last_status",
 			Payload: map[string]interface{}{
 				"host": host,
@@ -74,7 +82,7 @@ func (s *Service) HandleLastStatus(msg proto.Message) {
 		s.ctx.Log.Warnln(err)
 		return
 	}
-	s.client.Publish(msg.Reply(proto.Message{
+	s.ctx.Proto.Publish(msg.Reply(proto.Message{
 		Action: "devices/last_status",
 		Payload: map[string]interface{}{
 			"hosts": hosts,
