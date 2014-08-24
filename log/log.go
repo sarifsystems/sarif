@@ -38,7 +38,7 @@ func (l *Logger) Debugf(format string, v ...interface{}) {
 	if l.level > LevelDebug {
 		return
 	}
-	l.Logger.Printf("DEBUG: "+format, v...)
+	l.Logger.Printf("DEBUG "+format, v...)
 }
 
 func (l *Logger) Debugln(v ...interface{}) {
@@ -53,7 +53,7 @@ func (l *Logger) Infof(format string, v ...interface{}) {
 	if l.level > LevelInfo {
 		return
 	}
-	l.Logger.Printf("INFO: "+format, v...)
+	l.Logger.Printf("INFO "+format, v...)
 }
 
 func (l *Logger) Infoln(v ...interface{}) {
@@ -76,7 +76,7 @@ func (l *Logger) Warnf(format string, v ...interface{}) {
 	if l.level > LevelWarn {
 		return
 	}
-	l.Logger.Printf("WARN: "+format, v...)
+	l.Logger.Printf("WARN "+format, v...)
 }
 
 func (l *Logger) Errorln(v ...interface{}) {
@@ -91,7 +91,7 @@ func (l *Logger) Errorf(format string, v ...interface{}) {
 	if l.level > LevelError {
 		return
 	}
-	l.Logger.Printf("ERROR: "+format, v...)
+	l.Logger.Printf("ERROR "+format, v...)
 }
 
 func (l *Logger) Fatalln(v ...interface{}) {
@@ -106,7 +106,7 @@ func (l *Logger) Fatalf(format string, v ...interface{}) {
 	if l.level > LevelFatal {
 		return
 	}
-	l.Logger.Fatalf("FATAL: "+format, v...)
+	l.Logger.Fatalf("FATAL "+format, v...)
 }
 
 func (l *Logger) Criticalln(v ...interface{}) {
@@ -121,5 +121,5 @@ func (l *Logger) Criticalf(format string, v ...interface{}) {
 	if l.level > LevelCritical {
 		return
 	}
-	l.Logger.Panicf("CRITICAL: "+format, v...)
+	l.Logger.Panicf("CRITICAL "+format, v...)
 }
