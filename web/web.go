@@ -43,7 +43,7 @@ func (s *Server) Start() error {
 func (s *Server) handleStreamStark(ws *websocket.Conn) {
 	defer ws.Close()
 	mtp := s.ctx.Proto.NewEndpoint()
-	s.ctx.Log.Infoln("[web-ws] incoming")
+	s.ctx.Log.Infoln("[web-socket] new connection")
 
 	webtp := proto.NewByteEndpoint(ws)
 	webtp.RegisterHandler(func(msg proto.Message) {
@@ -53,9 +53,9 @@ func (s *Server) handleStreamStark(ws *websocket.Conn) {
 	})
 	mtp.RegisterHandler(func(msg proto.Message) {
 		if err := webtp.Publish(msg); err != nil {
-			s.ctx.Log.Errorln("[web-ws] ", err)
+			s.ctx.Log.Errorln("[web-socket] ", err)
 		}
 	})
 	err := webtp.Listen()
-	s.ctx.Log.Errorln("[web-ws] ", err)
+	s.ctx.Log.Errorln("[web-socket] ", err)
 }

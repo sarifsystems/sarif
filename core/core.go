@@ -7,6 +7,7 @@ import (
 	"github.com/xconstruct/stark/conf"
 	"github.com/xconstruct/stark/database"
 	"github.com/xconstruct/stark/log"
+	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/proto/client"
 	"github.com/xconstruct/stark/proto/mux"
 	"github.com/xconstruct/stark/proto/transports/mqtt"
@@ -102,11 +103,19 @@ func (c *Context) initProto() error {
 	if err := c.Config.Get("mqtt", &cfg); err != nil {
 		return err
 	}
+	c.Proto = mux.NewTransportMux()
+
+	if cfg.Server == "" {
+		c.Log.Warnln("[core] config 'mqtt.Server' empty, falling back to local broker")
+		c.Proto.RegisterPublisher(func(msg proto.Message) error {
+			c.Proto.Handle(msg)
+			return nil
+		})
+		return nil
+	}
 
 	m := mqtt.New(cfg)
-	c.Proto = mux.NewTransportMux()
-	c.Proto.RegisterPublisher(m.Publish)
-	m.RegisterHandler(c.Proto.Handle)
+	proto.Connect(m, c.Proto)
 	return m.Connect()
 }
 
