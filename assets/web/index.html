@@ -6,10 +6,11 @@
 		<script src="/js/app.js" type="text/javascript" charset="utf-8"></script>
 	</head>
 	<body>
-		<h1>Hello, world!</h1>
+		<h1>Example client</h1>
 
-		<input type="text" id="input-publish" />
+		<input type="text" id="input-publish" placeholder="action (ex. 'ping') ..."/>
 
+		<h2>Received Messages</h2>
 		<pre><code id="response"></code></pre>
 
 		<script type="text/javascript" charset="utf-8">
@@ -23,8 +24,7 @@
 							corr: msg.id,
 						});
 					}
-					console.log(msg);
-					document.getElementById('response').innerHTML = JSON.stringify(msg, undefined, 4);
+					document.getElementById('response').innerHTML += '\n' + JSON.stringify(msg, undefined, 4);
 				}
 				s.onOpen = function(msg) {
 					s.SubscribeGlobal("ping");
@@ -36,6 +36,7 @@
 					if (e.keyCode != 13) {
 						return;
 					}
+					document.getElementById('response').innerHTML = "";
 					s.Publish({
 						action: this.value,
 					});

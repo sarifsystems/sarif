@@ -47,7 +47,7 @@ func NewContext(appName string) (*Context, error) {
 func (c *Context) Close() {
 	if c.Config.IsModified() {
 		f := c.GetDefaultDir() + "/config.json"
-		c.Log.Debugf("[core] writing config to '%s'", f)
+		c.Log.Infof("[core] writing config to '%s'", f)
 		c.Must(conf.Write(f, c.Config))
 	}
 }
@@ -75,6 +75,11 @@ func (c *Context) initConfig() error {
 			return err
 		}
 		cfg = conf.New()
+		c.Log.Warnf("[core] config not found, writing defaults to '%s'", f)
+		if err := conf.Write(f, cfg); err != nil {
+			return err
+		}
+
 	}
 	c.Config = cfg
 	return nil

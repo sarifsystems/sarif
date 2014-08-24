@@ -19,7 +19,9 @@ type Server struct {
 }
 
 func New(ctx *core.Context) (*Server, error) {
-	var cfg Config
+	cfg := Config{
+		Interface: "0.0.0.0:5000",
+	}
 	err := ctx.Config.Get("web", &cfg)
 	s := &Server{
 		cfg,
@@ -57,5 +59,5 @@ func (s *Server) handleStreamStark(ws *websocket.Conn) {
 		}
 	})
 	err := webtp.Listen()
-	s.ctx.Log.Errorln("[web-socket] ", err)
+	s.ctx.Log.Errorln("[web-socket] closed: ", err)
 }
