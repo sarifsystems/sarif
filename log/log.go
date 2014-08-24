@@ -26,7 +26,7 @@ type Logger struct {
 func New() *Logger {
 	return &Logger{
 		LevelDebug,
-		log.New(os.Stdout, "", 0),
+		log.New(os.Stdout, "", log.LstdFlags),
 	}
 }
 
@@ -61,7 +61,7 @@ func (l *Logger) Infoln(v ...interface{}) {
 		return
 	}
 	v = append([]interface{}{"INFO"}, v...)
-	l.Logger.Println(v)
+	l.Logger.Println(v...)
 }
 
 func (l *Logger) Warnln(v ...interface{}) {

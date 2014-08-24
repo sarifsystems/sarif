@@ -5,6 +5,7 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/proto/client"
 )
 
 var Module = core.Module{
@@ -18,8 +19,9 @@ func init() {
 }
 
 type Service struct {
-	scan *HostScan
-	ctx  *core.Context
+	scan  *HostScan
+	ctx   *core.Context
+	proto *client.Client
 }
 
 func NewService(ctx *core.Context) (*Service, error) {
@@ -30,6 +32,7 @@ func NewService(ctx *core.Context) (*Service, error) {
 	s := &Service{
 		New(db.DB),
 		ctx,
+		nil,
 	}
 	return s, nil
 }
@@ -41,7 +44,9 @@ func NewInstance(ctx *core.Context) (core.ModuleInstance, error) {
 
 func (s *Service) Enable() error {
 	time.AfterFunc(5*time.Second, s.scheduledUpdate)
-	return s.ctx.Proto.Subscribe("devices/fetch_last_status", s.HandleLastStatus)
+	s.proto = s.ctx.NewProtoClient("hostscan")
+	s.proto.RegisterHandler(s.HandleLastStatus)
+	return s.proto.SubscribeGlobal("devices/fetch_last_status")
 }
 
 func (s *Service) Disable() error {
@@ -59,6 +64,10 @@ func (s *Service) scheduledUpdate() {
 }
 
 func (s *Service) HandleLastStatus(msg proto.Message) {
+	if msg.Action != "devices/fetch_last_status" {
+		return
+	}
+
 	if name := msg.PayloadGetString("host"); name != "" {
 		host, err := s.scan.LastStatus(name)
 		s.ctx.Log.Debugln(host)
@@ -66,7 +75,7 @@ func (s *Service) HandleLastStatus(msg proto.Message) {
 			s.ctx.Log.Warnln(err)
 			return
 		}
-		s.ctx.Proto.Publish(msg.Reply(proto.Message{
+		s.proto.Publish(msg.Reply(proto.Message{
 			Action: "devices/last_status",
 			Payload: map[string]interface{}{
 				"host": host,
@@ -82,7 +91,7 @@ func (s *Service) HandleLastStatus(msg proto.Message) {
 		s.ctx.Log.Warnln(err)
 		return
 	}
-	s.ctx.Proto.Publish(msg.Reply(proto.Message{
+	s.proto.Publish(msg.Reply(proto.Message{
 		Action: "devices/last_status",
 		Payload: map[string]interface{}{
 			"hosts": hosts,

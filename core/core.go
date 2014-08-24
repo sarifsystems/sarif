@@ -8,13 +8,14 @@ import (
 	"github.com/xconstruct/stark/database"
 	"github.com/xconstruct/stark/log"
 	"github.com/xconstruct/stark/proto/client"
+	"github.com/xconstruct/stark/proto/mux"
 	"github.com/xconstruct/stark/proto/transports/mqtt"
 )
 
 type Context struct {
 	AppName  string
 	Config   *conf.Config
-	Proto    *client.Client
+	Proto    *mux.TransportMux
 	Database *database.DB
 	Log      *log.Logger
 
@@ -27,6 +28,7 @@ func NewContext(appName string) (*Context, error) {
 		Log:       log.Default,
 		instances: make(map[string]ModuleInstance),
 	}
+	c.Log.SetLevel(log.LevelInfo)
 
 	if err := c.initConfig(); err != nil {
 		return c, err
@@ -101,9 +103,15 @@ func (c *Context) initProto() error {
 		return err
 	}
 
-	c.Proto = client.New(c.AppName)
-	c.Proto.SetTransport(mqtt.New(cfg))
-	return nil
+	m := mqtt.New(cfg)
+	c.Proto = mux.NewTransportMux()
+	c.Proto.RegisterPublisher(m.Publish)
+	m.RegisterHandler(c.Proto.Handle)
+	return m.Connect()
+}
+
+func (c *Context) NewProtoClient(deviceName string) *client.Client {
+	return client.New(deviceName, c.Proto.NewEndpoint())
 }
 
 func (c *Context) Must(err error) {

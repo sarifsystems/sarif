@@ -3,60 +3,29 @@ package client
 import (
 	"github.com/xconstruct/stark/log"
 	"github.com/xconstruct/stark/proto"
-	"strings"
 )
 
 type Client struct {
-	DeviceName    string
-	DeviceId      string
-	subscriptions []subscription
-	transport     Transport
-	connected     bool
+	DeviceName string
+	DeviceId   string
+	endpoint   proto.Endpoint
+	handler    proto.Handler
 }
 
-type Transport interface {
-	Connect(deviceId string, msg proto.MessageHandler) error
-	Publish(msg proto.Message) error
-	Subscribe(action, device, domain string) error
-}
-
-type subscription struct {
-	Action  string
-	Handler proto.MessageHandler
-}
-
-func New(deviceName string) *Client {
+func New(deviceName string, e proto.Endpoint) *Client {
 	c := &Client{
 		deviceName,
 		deviceName + "-" + proto.GenerateId(),
-		make([]subscription, 0),
+		e,
 		nil,
-		false,
 	}
+	c.SetEndpoint(e)
 	return c
 }
 
-func (c *Client) SetTransport(t Transport) {
-	c.transport = t
-}
-
-func (c *Client) Connect() error {
-	if err := c.transport.Connect(c.DeviceId, c.handleMessage); err != nil {
-		return err
-	}
-	c.connected = true
-
-	if err := c.Subscribe("ping", c.handlePing); err != nil {
-		return err
-	}
-
-	if err := c.transport.Subscribe("", c.DeviceName, ""); err != nil {
-		return err
-	}
-	if err := c.transport.Subscribe("", c.DeviceId, ""); err != nil {
-		return err
-	}
-	return nil
+func (c *Client) SetEndpoint(e proto.Endpoint) {
+	c.endpoint = e
+	e.RegisterHandler(c.handle)
 }
 
 func (c *Client) FillMessage(msg *proto.Message) {
@@ -72,25 +41,19 @@ func (c *Client) FillMessage(msg *proto.Message) {
 }
 
 func (c *Client) Publish(msg proto.Message) error {
-	if !c.connected {
-		err := c.Connect()
-		if err != nil {
-			return err
-		}
-	}
 	c.FillMessage(&msg)
-	return c.transport.Publish(msg)
+	return c.endpoint.Publish(msg)
 }
 
-func (c *Client) handleMessage(msg proto.Message) {
-	for _, sub := range c.subscriptions {
-		if strings.HasPrefix(msg.Action+"/", sub.Action+"/") {
-			go sub.Handler(msg)
-		}
+func (c *Client) handle(msg proto.Message) {
+	if msg.Action == "ping" {
+		c.handlePing(msg)
 	}
+	c.handler(msg)
 }
 
 func (c *Client) handlePing(msg proto.Message) {
+	log.Default.Debugf("[client] %s got ack", c.DeviceId)
 	err := c.Publish(msg.Reply(proto.Message{
 		Action: "ack",
 	}))
@@ -99,14 +62,30 @@ func (c *Client) handlePing(msg proto.Message) {
 	}
 }
 
-func (c *Client) Subscribe(action string, handler proto.MessageHandler) error {
-	if !c.connected {
-		err := c.Connect()
-		if err != nil {
-			return err
-		}
+func (c *Client) RegisterHandler(h proto.Handler) {
+	c.handler = h
+	c.SubscribeGlobal("ping")
+}
+
+func (c *Client) SubscribeGlobal(action string) error {
+	if err := c.SubscribeSelf(action); err != nil {
+		return err
 	}
-	log.Default.Debugf("[client] subscribing to '%s'", action)
-	c.subscriptions = append(c.subscriptions, subscription{action, handler})
-	return c.transport.Subscribe(action, "", "")
+	return c.Publish(proto.Message{
+		Action: "proto/sub",
+		Payload: map[string]interface{}{
+			"action": action,
+			"device": "",
+		},
+	})
+}
+
+func (c *Client) SubscribeSelf(action string) error {
+	return c.Publish(proto.Message{
+		Action: "proto/sub",
+		Payload: map[string]interface{}{
+			"action": action,
+			"device": c.DeviceId,
+		},
+	})
 }

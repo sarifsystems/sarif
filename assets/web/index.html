@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Hello, world!</title>
+		<meta charset="utf-8" />
+		<script src="/js/app.js" type="text/javascript" charset="utf-8"></script>
+	</head>
+	<body>
+		<h1>Hello, world!</h1>
+
+		<input type="text" id="input-publish" />
+
+		<pre><code id="response"></code></pre>
+
+		<script type="text/javascript" charset="utf-8">
+			document.addEventListener("DOMContentLoaded", function(event) {
+				s = new StarkClient("webtest");
+				s.onMessage = function(msg) {
+					if (msg.action == "ping") {
+						s.Publish({
+							action: "ack",
+							device: msg.src,
+							corr: msg.id,
+						});
+					}
+					console.log(msg);
+					document.getElementById('response').innerHTML = JSON.stringify(msg, undefined, 4);
+				}
+				s.onOpen = function(msg) {
+					s.SubscribeGlobal("ping");
+					s.SubscribeSelf("");
+				}
+				s.Connect();
+
+				document.getElementById('input-publish').onkeydown = function (e) {
+					if (e.keyCode != 13) {
+						return;
+					}
+					s.Publish({
+						action: this.value,
+					});
+				};
+			});
+		</script>
+	</body>
+</html>

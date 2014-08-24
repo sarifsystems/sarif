@@ -12,11 +12,9 @@ type Message struct {
 	Id      string      `json:"id"`
 	Action  string      `json:"action"`
 	Source  string      `json:"src"`
+	Device  string      `json:"device,omitempty"`
 	Payload interface{} `json:"p,omitempty"`
 	CorrId  string      `json:"corr,omitempty"`
-
-	Device string `json:"-"`
-	Domain string `json:"-"`
 }
 
 func (m Message) Encode() ([]byte, error) {

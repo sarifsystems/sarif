@@ -53,7 +53,7 @@ func TestValid(t *testing.T) {
 		t.Error("Message without action passes as valid")
 	}
 
-	m = Message{Version: "", Id: "12345678", Action: "testaction", Source: ""}
+	m = Message{Version: "0.2", Id: "12345678", Action: "testaction", Source: ""}
 	if err := m.IsValid(); err == nil {
 		t.Error("Message without source passes as valid")
 	}
@@ -71,5 +71,26 @@ func TestReply(t *testing.T) {
 	}
 	if reply.Device != orig.Source {
 		t.Error("Reply has wrong device:", reply.Device)
+	}
+}
+
+func TestPayload(t *testing.T) {
+	msg := Message{
+		Version: VERSION,
+		Id:      GenerateId(),
+		Action:  "proto/sub",
+		Source:  "original",
+		Payload: map[string]interface{}{
+			"stringpayload": "hello, world!",
+		},
+	}
+	got := msg.PayloadGetString("stringpayload")
+	if got != "hello, world!" {
+		t.Errorf("Message payload string wrong, got '%v'", got)
+	}
+
+	got = msg.PayloadGetString("nonexistent")
+	if got != "" {
+		t.Errorf("Nonexistent message payload wrong, got '%v'", got)
 	}
 }

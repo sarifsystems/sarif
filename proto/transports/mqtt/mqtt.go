@@ -3,12 +3,17 @@ package mqtt
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"io/ioutil"
 
 	mqtt "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 
 	"github.com/xconstruct/stark/log"
 	"github.com/xconstruct/stark/proto"
+)
+
+var (
+	ErrNotConnected = errors.New("[mqtt] transport is not connected")
 )
 
 type Config struct {
@@ -49,22 +54,22 @@ func (cfg *Config) LoadTlsCertificates() (*tls.Config, error) {
 type Transport struct {
 	client  *mqtt.MqttClient
 	cfg     Config
-	handler proto.MessageHandler
+	handler proto.Handler
 }
 
 func New(cfg Config) *Transport {
 	return &Transport{nil, cfg, nil}
 }
 
-func (t *Transport) Connect(deviceId string, handler proto.MessageHandler) error {
-	log.Default.Debugf("[mqtt] connecting to %s", t.cfg.Server)
-	t.handler = handler
+func (t *Transport) Connect() error {
+	log.Default.Infof("[mqtt] connecting to %s", t.cfg.Server)
 
 	opts := mqtt.NewClientOptions()
 	opts.SetBroker(t.cfg.Server)
-	opts.SetClientId(deviceId)
+	opts.SetClientId(proto.GenerateId())
 	opts.SetCleanSession(true)
 	opts.SetTraceLevel(mqtt.Critical)
+	opts.SetOnConnectionLost(t.onConnectionLost)
 	tlscfg, err := t.cfg.LoadTlsCertificates()
 	if err != nil {
 		return err
@@ -78,16 +83,51 @@ func (t *Transport) Connect(deviceId string, handler proto.MessageHandler) error
 	return nil
 }
 
+func (t *Transport) IsConnected() bool {
+	return t.client != nil && t.client.IsConnected()
+}
+
 func (t *Transport) Publish(msg proto.Message) error {
+	if !t.IsConnected() {
+		return ErrNotConnected
+	}
+	if msg.Action == "proto/sub" {
+		action := msg.PayloadGetString("action")
+		device := msg.PayloadGetString("device")
+		if err := t.subscribe(proto.GetTopic(action, device) + "/#"); err != nil {
+			return err
+		}
+	}
+
 	raw, err := msg.Encode()
 	if err != nil {
 		return err
 	}
-	topic := proto.GetTopic(msg.Action, msg.Device, msg.Domain)
+
+	topic := proto.GetTopic(msg.Action, msg.Device)
 	log.Default.Debugf("[mqtt] sending to %s: %v", topic, string(raw))
 	r := t.client.Publish(mqtt.QOS_ZERO, topic, raw)
 	<-r
 	return nil
+}
+
+func (t *Transport) subscribe(topic string) error {
+	if !t.IsConnected() {
+		return ErrNotConnected
+	}
+	log.Default.Debugln("[mqtt] subscribing to", topic)
+	filter, err := mqtt.NewTopicFilter(topic, 0)
+	if err != nil {
+		return err
+	}
+	if _, err := t.client.StartSubscription(t.handleRawMessage, filter); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *Transport) RegisterHandler(h proto.Handler) {
+	t.handler = h
 }
 
 func (t *Transport) handleRawMessage(client *mqtt.MqttClient, raw mqtt.Message) {
@@ -100,16 +140,6 @@ func (t *Transport) handleRawMessage(client *mqtt.MqttClient, raw mqtt.Message) 
 	t.handler(m)
 }
 
-func (t *Transport) Subscribe(action, device, domain string) error {
-	topic := proto.GetTopic(action, device, domain) + "/#"
-	log.Default.Debugln("[mqtt] subscribing to", topic)
-	filter, err := mqtt.NewTopicFilter(topic, 0)
-	if err != nil {
-		return err
-	}
-	if _, err := t.client.StartSubscription(t.handleRawMessage, filter); err != nil {
-		return err
-	}
-
-	return nil
+func (t *Transport) onConnectionLost(client *mqtt.MqttClient, reason error) {
+	log.Default.Infoln("[mqtt] lost connection:", reason)
 }

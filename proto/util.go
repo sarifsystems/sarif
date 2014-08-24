@@ -14,12 +14,10 @@ func GenerateId() string {
 	return string(bytes)
 }
 
-func GetTopic(action, device, domain string) string {
+func GetTopic(action, device string) string {
 	t := "stark"
 	if device != "" {
 		t += "/dev/" + device
-	} else if domain != "" {
-		t += "/domain/" + domain
 	} else {
 		t += "/special/all"
 	}

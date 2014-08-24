@@ -1,8 +1,9 @@
 package proto
 
-type MessageHandler func(msg Message)
+type Handler func(msg Message)
+type Publisher func(msg Message) error
 
-type Client interface {
+type Endpoint interface {
 	Publish(msg Message) error
-	Subscribe(action string, handler MessageHandler) error
+	RegisterHandler(h Handler)
 }
