@@ -5,10 +5,10 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/log"
-	"github.com/xconstruct/stark/web"
 
 	_ "github.com/xconstruct/stark/services/hostscan"
 	_ "github.com/xconstruct/stark/services/router"
+	_ "github.com/xconstruct/stark/web"
 )
 
 var verbose = flag.Bool("v", false, "verbose debug output")
@@ -28,16 +28,14 @@ func main() {
 		ctx.Log.SetLevel(log.LevelDebug)
 	}
 
-	var cfg Config
+	cfg := Config{
+		EnabledModules: []string{"web"},
+	}
 	ctx.Must(ctx.Config.Get("server", &cfg))
 
 	for _, module := range cfg.EnabledModules {
 		ctx.Must(ctx.EnableModule(module))
 	}
-
-	w, err := web.New(ctx)
-	ctx.Must(err)
-	ctx.Must(w.Start())
 
 	ctx.WaitUntilInterrupt()
 }

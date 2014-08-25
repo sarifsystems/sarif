@@ -9,6 +9,16 @@ import (
 	"github.com/xconstruct/stark/proto"
 )
 
+var Module = core.Module{
+	Name:        "web",
+	Version:     "1.0",
+	NewInstance: NewInstance,
+}
+
+func init() {
+	core.RegisterModule(Module)
+}
+
 type Config struct {
 	Interface string
 }
@@ -30,7 +40,11 @@ func New(ctx *core.Context) (*Server, error) {
 	return s, err
 }
 
-func (s *Server) Start() error {
+func NewInstance(ctx *core.Context) (core.ModuleInstance, error) {
+	return New(ctx)
+}
+
+func (s *Server) Enable() error {
 	http.Handle("/", http.FileServer(http.Dir("assets/web")))
 	http.Handle("/stream/stark", websocket.Handler(s.handleStreamStark))
 
@@ -39,6 +53,10 @@ func (s *Server) Start() error {
 		err := http.ListenAndServe(s.cfg.Interface, nil)
 		s.ctx.Log.Warnln(err)
 	}()
+	return nil
+}
+
+func (s *Server) Disable() error {
 	return nil
 }
 

@@ -53,9 +53,10 @@ func (c *Client) handle(msg proto.Message) {
 }
 
 func (c *Client) handlePing(msg proto.Message) {
-	log.Default.Debugf("[client] %s got ack", c.DeviceId)
+	log.Default.Debugf("[client] %s got ping", c.DeviceId)
 	err := c.Publish(msg.Reply(proto.Message{
 		Action: "ack",
+		CorrId: msg.Id,
 	}))
 	if err != nil {
 		log.Default.Warnln(err)
