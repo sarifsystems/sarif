@@ -9,6 +9,7 @@ import (
 	_ "github.com/xconstruct/stark/services/hostscan"
 	_ "github.com/xconstruct/stark/services/router"
 	_ "github.com/xconstruct/stark/web"
+	_ "github.com/xconstruct/stark/xmpp"
 )
 
 var verbose = flag.Bool("v", false, "verbose debug output")
