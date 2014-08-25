@@ -33,12 +33,12 @@ func TestMessageEncoding(t *testing.T) {
 
 func TestValid(t *testing.T) {
 	var m Message
-	m = Message{Version: "0.2", Id: "12345678", Action: "testaction", Source: "testsource"}
+	m = Message{Version: VERSION, Id: "12345678", Action: "testaction", Source: "testsource"}
 	if err := m.IsValid(); err != nil {
 		t.Error(err)
 	}
 
-	m = Message{Version: "0.2", Id: "", Action: "testaction", Source: "testsource"}
+	m = Message{Version: VERSION, Id: "", Action: "testaction", Source: "testsource"}
 	if err := m.IsValid(); err == nil {
 		t.Error("Message without id passes as valid")
 	}
@@ -48,12 +48,12 @@ func TestValid(t *testing.T) {
 		t.Error("Message without version passes as valid")
 	}
 
-	m = Message{Version: "0.2", Id: "12345678", Action: "", Source: "testsource"}
+	m = Message{Version: VERSION, Id: "12345678", Action: "", Source: "testsource"}
 	if err := m.IsValid(); err == nil {
 		t.Error("Message without action passes as valid")
 	}
 
-	m = Message{Version: "0.2", Id: "12345678", Action: "testaction", Source: ""}
+	m = Message{Version: VERSION, Id: "12345678", Action: "testaction", Source: ""}
 	if err := m.IsValid(); err == nil {
 		t.Error("Message without source passes as valid")
 	}
@@ -69,8 +69,8 @@ func TestReply(t *testing.T) {
 	if reply.CorrId != orig.Id {
 		t.Error("Reply has wrong corrId:", reply.CorrId)
 	}
-	if reply.Device != orig.Source {
-		t.Error("Reply has wrong device:", reply.Device)
+	if reply.Destination != orig.Source {
+		t.Error("Reply has wrong device:", reply.Destination)
 	}
 }
 

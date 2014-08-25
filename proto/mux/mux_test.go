@@ -31,8 +31,8 @@ func TestMuxSingle(t *testing.T) {
 	for _, test := range tests {
 		fired = false
 		mux.Handle(proto.Message{
-			Action: test.action,
-			Device: test.device,
+			Action:      test.action,
+			Destination: test.device,
 		})
 		time.Sleep(time.Millisecond)
 		if test.should && !fired {
@@ -75,8 +75,8 @@ func TestMuxMultiple(t *testing.T) {
 	for _, test := range tests {
 		oneFired, twoFired = false, false
 		mux.Handle(proto.Message{
-			Action: test.action,
-			Device: test.device,
+			Action:      test.action,
+			Destination: test.device,
 		})
 		time.Sleep(time.Millisecond)
 		if test.oneShould && !oneFired {

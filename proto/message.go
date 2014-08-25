@@ -5,16 +5,16 @@ import (
 	"errors"
 )
 
-const VERSION = "0.2.0"
+const VERSION = "0.3"
 
 type Message struct {
-	Version string      `json:"v"`
-	Id      string      `json:"id"`
-	Action  string      `json:"action"`
-	Source  string      `json:"src"`
-	Device  string      `json:"device,omitempty"`
-	Payload interface{} `json:"p,omitempty"`
-	CorrId  string      `json:"corr,omitempty"`
+	Version     string      `json:"v"`
+	Id          string      `json:"id"`
+	Action      string      `json:"action"`
+	Source      string      `json:"src"`
+	Destination string      `json:"dst,omitempty"`
+	Payload     interface{} `json:"p,omitempty"`
+	CorrId      string      `json:"corr,omitempty"`
 }
 
 func (m Message) Encode() ([]byte, error) {
@@ -55,8 +55,8 @@ func (orig Message) Reply(m Message) Message {
 	if m.CorrId == "" {
 		m.CorrId = orig.Id
 	}
-	if m.Device == "" {
-		m.Device = orig.Source
+	if m.Destination == "" {
+		m.Destination = orig.Source
 	}
 	return m
 }

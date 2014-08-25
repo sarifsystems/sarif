@@ -31,7 +31,7 @@ StarkClient.prototype.Connect = function(msg) {
 }
 
 StarkClient.prototype.Publish = function(msg) {
-	msg.v = msg.v || "0.2.0"
+	msg.v = msg.v || "0.3"
 	msg.id = msg.id || GenerateId()
 	msg.src = msg.src || this.deviceId
 

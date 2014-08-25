@@ -13,7 +13,7 @@ type Subscription struct {
 }
 
 func (s Subscription) Matches(msg proto.Message) bool {
-	if msg.Device != s.Device {
+	if msg.Destination != s.Device {
 		return false
 	}
 	if s.Action != "" && !strings.HasPrefix(msg.Action+"/", s.Action+"/") {

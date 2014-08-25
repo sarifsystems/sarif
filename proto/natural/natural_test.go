@@ -20,13 +20,13 @@ func TestParseSimple(t *testing.T) {
 		}},
 
 		simple{"ping device=me", true, proto.Message{
-			Action: "ping",
-			Device: "me",
+			Action:      "ping",
+			Destination: "me",
 		}},
 
 		simple{"ping device=me host=another", true, proto.Message{
-			Action: "ping",
-			Device: "me",
+			Action:      "ping",
+			Destination: "me",
 			Payload: map[string]interface{}{
 				"host": "another",
 			},

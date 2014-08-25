@@ -104,7 +104,7 @@ func (t *Transport) Publish(msg proto.Message) error {
 		return err
 	}
 
-	topic := proto.GetTopic(msg.Action, msg.Device)
+	topic := proto.GetTopic(msg.Action, msg.Destination)
 	log.Default.Debugf("[mqtt] sending to %s: %v", topic, string(raw))
 	r := t.client.Publish(mqtt.QOS_ZERO, topic, raw)
 	<-r
