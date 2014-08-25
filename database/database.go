@@ -1,10 +1,16 @@
+// Copyright (C) 2014 Constantin Schomburg <me@cschomburg.com>
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file.
+
 package database
 
 import (
 	"database/sql"
-	_ "github.com/mattn/go-sqlite3"
 	"os"
 	"path"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Config struct {
