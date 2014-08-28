@@ -1,6 +1,9 @@
 stark
 =====
 
+[![API Documentation](http://img.shields.io/badge/api-GoDoc-blue.svg?style=flat-square)](http://godoc.org/github.com/xconstruct/stark)
+[![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](http://opensource.org/licenses/MIT)
+
 Stark is a simple communication protocol to perform tasks across devices for the user.
 This is the reference implementation and spec, written in Go.
 
