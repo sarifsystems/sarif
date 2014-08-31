@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	ErrNotConnected = errors.New("[mqtt] transport is not connected")
+	ErrNotConnected = errors.New("MQTT transport is not connected")
 )
 
 type Config struct {
@@ -60,14 +60,20 @@ type Transport struct {
 	client  *mqtt.MqttClient
 	cfg     Config
 	handler proto.Handler
+	log     log.Interface
 }
 
 func New(cfg Config) *Transport {
-	return &Transport{nil, cfg, nil}
+	return &Transport{
+		nil,
+		cfg,
+		nil,
+		log.Default,
+	}
 }
 
 func (t *Transport) Connect() error {
-	log.Default.Infof("[mqtt] connecting to %s", t.cfg.Server)
+	t.log.Infof("mqtt connecting to %s", t.cfg.Server)
 
 	opts := mqtt.NewClientOptions()
 	opts.SetBroker(t.cfg.Server)
@@ -110,7 +116,7 @@ func (t *Transport) Publish(msg proto.Message) error {
 	}
 
 	topic := proto.GetTopic(msg.Action, msg.Destination)
-	log.Default.Debugf("[mqtt] sending to %s: %v", topic, string(raw))
+	t.log.Debugf("mqtt sending to %s: %v", topic, string(raw))
 	r := t.client.Publish(mqtt.QOS_ZERO, topic, raw)
 	<-r
 	return nil
@@ -120,7 +126,7 @@ func (t *Transport) subscribe(topic string) error {
 	if !t.IsConnected() {
 		return ErrNotConnected
 	}
-	log.Default.Debugln("[mqtt] subscribing to", topic)
+	t.log.Debugln("mqtt subscribing to", topic)
 	filter, err := mqtt.NewTopicFilter(topic, 0)
 	if err != nil {
 		return err
@@ -138,13 +144,13 @@ func (t *Transport) RegisterHandler(h proto.Handler) {
 func (t *Transport) handleRawMessage(client *mqtt.MqttClient, raw mqtt.Message) {
 	m, err := proto.DecodeMessage(raw.Payload())
 	if err != nil {
-		log.Default.Warnln(err)
+		t.log.Warnln(err)
 		return
 	}
-	log.Default.Debugf("[mqtt] receiving from %s: %v", raw.Topic(), string(raw.Payload()))
+	t.log.Debugf("mqtt receiving from %s: %v", raw.Topic(), string(raw.Payload()))
 	t.handler(m)
 }
 
 func (t *Transport) onConnectionLost(client *mqtt.MqttClient, reason error) {
-	log.Default.Infoln("[mqtt] lost connection:", reason)
+	t.log.Infoln("mqtt transport lost connection:", reason)
 }

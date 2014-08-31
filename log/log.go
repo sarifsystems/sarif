@@ -10,6 +10,19 @@ import (
 	"os"
 )
 
+type Interface interface {
+	Debugln(v ...interface{})
+	Debugf(format string, v ...interface{})
+	Infoln(v ...interface{})
+	Infof(format string, v ...interface{})
+	Warnln(v ...interface{})
+	Warnf(format string, v ...interface{})
+	Errorln(v ...interface{})
+	Errorf(format string, v ...interface{})
+	Fatal(v ...interface{})
+	Fatalf(format string, v ...interface{})
+}
+
 type LogLevel int
 
 const (
@@ -21,17 +34,20 @@ const (
 	LevelCritical
 )
 
-var Default = New()
+var Default = New(
+	LevelDebug,
+	log.New(os.Stderr, "", log.LstdFlags),
+)
 
 type Logger struct {
 	level LogLevel
 	*log.Logger
 }
 
-func New() *Logger {
+func New(level LogLevel, l *log.Logger) *Logger {
 	return &Logger{
-		LevelDebug,
-		log.New(os.Stdout, "", log.LstdFlags),
+		level,
+		l,
 	}
 }
 

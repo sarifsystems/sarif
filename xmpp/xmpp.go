@@ -12,7 +12,6 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/proto/client"
 	"github.com/xconstruct/stark/proto/natural"
 )
 
@@ -41,7 +40,7 @@ type conversation struct {
 type Client struct {
 	cfg           Config
 	ctx           *core.Context
-	proto         *client.Client
+	proto         *proto.Client
 	xmpp          *xmpp.Conn
 	conversations []conversation
 	lastMessage   proto.Message

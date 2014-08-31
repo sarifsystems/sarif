@@ -13,7 +13,6 @@ import (
 	"github.com/xconstruct/stark/database"
 	"github.com/xconstruct/stark/log"
 	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/proto/client"
 	"github.com/xconstruct/stark/proto/mux"
 	"github.com/xconstruct/stark/proto/transports/mqtt"
 )
@@ -129,8 +128,8 @@ func (c *Context) initProto() error {
 	return m.Connect()
 }
 
-func (c *Context) NewProtoClient(deviceName string) *client.Client {
-	return client.New(deviceName, c.Proto.NewEndpoint())
+func (c *Context) NewProtoClient(deviceName string) *proto.Client {
+	return proto.NewClient(deviceName, c.Proto.NewEndpoint())
 }
 
 func (c *Context) Must(err error) {

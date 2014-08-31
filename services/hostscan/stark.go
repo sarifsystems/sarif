@@ -10,7 +10,6 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/proto/client"
 )
 
 var Module = core.Module{
@@ -26,7 +25,7 @@ func init() {
 type Service struct {
 	scan  *HostScan
 	ctx   *core.Context
-	proto *client.Client
+	proto *proto.Client
 }
 
 func NewService(ctx *core.Context) (*Service, error) {
