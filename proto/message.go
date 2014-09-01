@@ -13,13 +13,13 @@ import (
 const VERSION = "0.3"
 
 type Message struct {
-	Version     string      `json:"v"`
-	Id          string      `json:"id"`
-	Action      string      `json:"action"`
-	Source      string      `json:"src"`
-	Destination string      `json:"dst,omitempty"`
-	Payload     interface{} `json:"p,omitempty"`
-	CorrId      string      `json:"corr,omitempty"`
+	Version     string                 `json:"v"`
+	Id          string                 `json:"id"`
+	Action      string                 `json:"action"`
+	Source      string                 `json:"src"`
+	Destination string                 `json:"dst,omitempty"`
+	Payload     map[string]interface{} `json:"p,omitempty"`
+	CorrId      string                 `json:"corr,omitempty"`
 }
 
 func (m Message) Encode() ([]byte, error) {
@@ -67,12 +67,27 @@ func (orig Message) Reply(m Message) Message {
 }
 
 func (m Message) PayloadGetString(key string) string {
-	if pmap, ok := m.Payload.(map[string]interface{}); ok {
-		if val, ok := pmap[key]; ok {
-			if str, ok := val.(string); ok {
-				return str
-			}
+	if val, ok := m.Payload[key]; ok {
+		if str, ok := val.(string); ok {
+			return str
 		}
 	}
 	return ""
+}
+
+func (m Message) DecodePayload(v interface{}) error {
+	raw, err := json.Marshal(m.Payload)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(raw, v)
+}
+
+func (m *Message) EncodePayload(v interface{}) error {
+	raw, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	m.Payload = nil
+	return json.Unmarshal(raw, m.Payload)
 }

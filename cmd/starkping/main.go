@@ -6,49 +6,66 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 )
 
-func main() {
-	ctx, err := core.NewContext("stark")
-	ctx.Must(err)
+type PingService struct {
+	pings map[string]time.Time
+	proto *proto.Client
+}
 
-	pings := make(map[string]time.Time)
+func NewPingService(ep proto.Endpoint) *PingService {
+	return &PingService{
+		make(map[string]time.Time),
+		proto.NewClient("starkping", ep),
+	}
+}
 
-	cl := ctx.NewProtoClient("starkping")
-	cl.RegisterHandler(func(msg proto.Message) {
-		if msg.Action == "ping" {
-			ctx.Must(cl.Publish(proto.Message{
-				Action: "ack",
-				CorrId: msg.Id,
-			}))
-		} else if msg.Action == "ack" {
-			sent, ok := pings[msg.CorrId]
-			if !ok {
-				return
-			}
+func (s *PingService) Enable() error {
+	s.proto.RegisterHandler(s.Handle)
+	return s.proto.SubscribeSelf("ack")
+}
 
-			ctx.Log.Printf("%s from %s: time=%.1fms",
-				msg.Action,
-				msg.Source,
-				time.Since(sent).Seconds()*1e3,
-			)
-		}
-	})
-	ctx.Must(cl.SubscribeSelf("ack"))
-
-	for now := range time.Tick(1 * time.Second) {
-		id := proto.GenerateId()
-		pings[id] = now
-		msg := proto.Message{
-			Id:     id,
-			Action: "ping",
-		}
-		ctx.Must(cl.Publish(msg))
+func (s *PingService) Handle(msg proto.Message) {
+	if msg.Action != "ack" {
+		return
+	}
+	sent, ok := s.pings[msg.CorrId]
+	if !ok {
+		return
 	}
 
-	select {}
+	fmt.Printf("%s from %s: time=%.1fms\n",
+		msg.Action,
+		msg.Source,
+		time.Since(sent).Seconds()*1e3,
+	)
+}
+
+func (s *PingService) Ping(device string) error {
+	id := proto.GenerateId()
+	s.pings[id] = time.Now()
+	msg := proto.Message{
+		Id:          id,
+		Action:      "ping",
+		Destination: device,
+	}
+	return s.proto.Publish(msg)
+}
+
+func main() {
+	app, err := core.NewApp("stark")
+	app.Must(err)
+
+	ctx := app.NewContext()
+	srv := NewPingService(ctx.Proto)
+	ctx.Must(srv.Enable())
+
+	for _ = range time.Tick(1 * time.Second) {
+		ctx.Must(srv.Ping(""))
+	}
 }

@@ -26,22 +26,22 @@ type Config struct {
 func main() {
 	flag.Parse()
 
-	ctx, err := core.NewContext("stark")
-	ctx.Must(err)
-	defer ctx.Close()
+	app, err := core.NewApp("stark")
+	app.Must(err)
+	defer app.Close()
 
 	if *verbose {
-		ctx.Log.SetLevel(log.LevelDebug)
+		app.Log.SetLevel(log.LevelDebug)
 	}
 
 	cfg := Config{
 		EnabledModules: []string{"web"},
 	}
-	ctx.Must(ctx.Config.Get("server", &cfg))
+	app.Must(app.Config.Get("server", &cfg))
 
 	for _, module := range cfg.EnabledModules {
-		ctx.Must(ctx.EnableModule(module))
+		app.Must(app.EnableModule(module))
 	}
 
-	ctx.WaitUntilInterrupt()
+	app.WaitUntilInterrupt()
 }

@@ -66,7 +66,7 @@ func (c *Client) Enable() (err error) {
 		return err
 	}
 
-	c.proto = c.ctx.NewProtoClient("xmpp")
+	c.proto = proto.NewClient("xmpp", c.ctx.Proto)
 	c.proto.RegisterHandler(c.handleProtoMessage)
 	if err := c.proto.SubscribeSelf(""); err != nil {
 		return err

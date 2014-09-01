@@ -48,7 +48,7 @@ func NewInstance(ctx *core.Context) (core.ModuleInstance, error) {
 
 func (s *Service) Enable() error {
 	time.AfterFunc(5*time.Second, s.scheduledUpdate)
-	s.proto = s.ctx.NewProtoClient("hostscan")
+	s.proto = proto.NewClient("hostscan", s.ctx.Proto)
 	s.proto.RegisterHandler(s.HandleLastStatus)
 	return s.proto.SubscribeGlobal("devices/fetch_last_status")
 }

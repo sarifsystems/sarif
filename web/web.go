@@ -12,6 +12,7 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/proto/mux"
 )
 
 var Module = core.Module{
@@ -29,8 +30,9 @@ type Config struct {
 }
 
 type Server struct {
-	cfg Config
-	ctx *core.Context
+	cfg   Config
+	ctx   *core.Context
+	proto *mux.TransportMux
 }
 
 func New(ctx *core.Context) (*Server, error) {
@@ -41,7 +43,9 @@ func New(ctx *core.Context) (*Server, error) {
 	s := &Server{
 		cfg,
 		ctx,
+		mux.NewTransportMux(),
 	}
+	proto.Connect(ctx.Proto, s.proto)
 	return s, err
 }
 
@@ -67,16 +71,18 @@ func (s *Server) Disable() error {
 
 func (s *Server) handleStreamStark(ws *websocket.Conn) {
 	defer ws.Close()
-	mtp := s.ctx.Proto.NewEndpoint()
+	mtp := s.proto.NewEndpoint()
 	s.ctx.Log.Infoln("[web-socket] new connection")
 
 	webtp := proto.NewByteEndpoint(ws)
 	webtp.RegisterHandler(func(msg proto.Message) {
+		s.ctx.Log.Debugln("[web-socket] received", msg)
 		if err := mtp.Publish(msg); err != nil {
 			s.ctx.Log.Errorln("[web-mtp] ", err)
 		}
 	})
 	mtp.RegisterHandler(func(msg proto.Message) {
+		s.ctx.Log.Debugln("[web-mtp] received", msg)
 		if err := webtp.Publish(msg); err != nil {
 			s.ctx.Log.Errorln("[web-socket] ", err)
 		}

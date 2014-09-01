@@ -17,7 +17,7 @@ import (
 	"github.com/xconstruct/stark/proto/transports/mqtt"
 )
 
-type Context struct {
+type App struct {
 	AppName  string
 	Config   *conf.Config
 	Proto    *mux.TransportMux
@@ -27,75 +27,75 @@ type Context struct {
 	instances map[string]ModuleInstance
 }
 
-func NewContext(appName string) (*Context, error) {
-	c := &Context{
+func NewApp(appName string) (*App, error) {
+	app := &App{
 		AppName:   appName,
 		Log:       log.Default,
 		instances: make(map[string]ModuleInstance),
 	}
-	c.Log.SetLevel(log.LevelInfo)
+	app.Log.SetLevel(log.LevelInfo)
 
-	if err := c.initConfig(); err != nil {
-		return c, err
+	if err := app.initConfig(); err != nil {
+		return app, err
 	}
-	if err := c.initDatabase(); err != nil {
-		return c, err
+	if err := app.initDatabase(); err != nil {
+		return app, err
 	}
-	if err := c.initProto(); err != nil {
-		return c, err
+	if err := app.initProto(); err != nil {
+		return app, err
 	}
 
-	return c, nil
+	return app, nil
 }
 
-func (c *Context) Close() {
-	if c.Config.IsModified() {
-		f := c.GetDefaultDir() + "/config.json"
-		c.Log.Infof("[core] writing config to '%s'", f)
-		c.Must(conf.Write(f, c.Config))
+func (app *App) Close() {
+	if app.Config.IsModified() {
+		f := app.GetDefaultDir() + "/config.json"
+		app.Log.Infof("[core] writing config to '%s'", f)
+		app.Must(conf.Write(f, app.Config))
 	}
 }
 
-func (c *Context) GetDefaultDir() string {
+func (app *App) GetDefaultDir() string {
 	path := os.Getenv("XDG_CONFIG_HOME")
 	if path != "" {
-		return path + "/" + c.AppName
+		return path + "/" + app.AppName
 	}
 
 	home := os.Getenv("HOME")
 	if home != "" {
-		return home + "/.config/" + c.AppName
+		return home + "/.config/" + app.AppName
 	}
 
 	return "."
 }
 
-func (c *Context) initConfig() error {
-	f := c.GetDefaultDir() + "/config.json"
-	c.Log.Debugf("[core] reading config from '%s'", f)
+func (app *App) initConfig() error {
+	f := app.GetDefaultDir() + "/config.json"
+	app.Log.Debugf("[core] reading config from '%s'", f)
 	cfg, err := conf.Read(f)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return err
 		}
 		cfg = conf.New()
-		c.Log.Warnf("[core] config not found, writing defaults to '%s'", f)
+		app.Log.Warnf("[core] config not found, writing defaults to '%s'", f)
 		if err := conf.Write(f, cfg); err != nil {
 			return err
 		}
 
 	}
-	c.Config = cfg
+	app.Config = cfg
 	return nil
 }
 
-func (c *Context) initDatabase() error {
+func (app *App) initDatabase() error {
 	cfg := database.Config{
 		Driver: "sqlite3",
-		Source: c.GetDefaultDir() + "/" + c.AppName + ".db",
+		Source: app.GetDefaultDir() + "/" + app.AppName + ".db",
 	}
 
-	if err := c.Config.Get("database", &cfg); err != nil {
+	if err := app.Config.Get("database", &cfg); err != nil {
 		return err
 	}
 
@@ -103,43 +103,39 @@ func (c *Context) initDatabase() error {
 	if err != nil {
 		return err
 	}
-	c.Database = db
+	app.Database = db
 	return nil
 }
 
-func (c *Context) initProto() error {
+func (app *App) initProto() error {
 	cfg := mqtt.Config{}
-	if err := c.Config.Get("mqtt", &cfg); err != nil {
+	if err := app.Config.Get("mqtt", &cfg); err != nil {
 		return err
 	}
-	c.Proto = mux.NewTransportMux()
+	app.Proto = mux.NewTransportMux()
 
 	if cfg.Server == "" {
-		c.Log.Warnln("[core] config 'mqtt.Server' empty, falling back to local broker")
-		c.Proto.RegisterPublisher(func(msg proto.Message) error {
-			c.Proto.Handle(msg)
+		app.Log.Warnln("[core] config 'mqtt.Server' empty, falling back to local broker")
+		app.Proto.RegisterPublisher(func(msg proto.Message) error {
+			app.Proto.Handle(msg)
 			return nil
 		})
 		return nil
 	}
 
 	m := mqtt.New(cfg)
-	proto.Connect(m, c.Proto)
+	proto.Connect(m, app.Proto)
 	return m.Connect()
 }
 
-func (c *Context) NewProtoClient(deviceName string) *proto.Client {
-	return proto.NewClient(deviceName, c.Proto.NewEndpoint())
-}
-
-func (c *Context) Must(err error) {
+func (app *App) Must(err error) {
 	if err != nil {
-		c.Log.Fatalln(err)
+		app.Log.Fatalln(err)
 	}
 }
 
-func (c *Context) EnableModule(name string) error {
-	i, ok := c.instances[name]
+func (app *App) EnableModule(name string) error {
+	i, ok := app.instances[name]
 	if ok {
 		return nil
 	}
@@ -148,27 +144,37 @@ func (c *Context) EnableModule(name string) error {
 	if err != nil {
 		return err
 	}
-	i, err = m.NewInstance(c)
-	c.instances[name] = i
+	ctx := app.NewContext()
+	i, err = m.NewInstance(ctx)
+	app.instances[name] = i
 	if err != nil {
 		return err
 	}
-	c.Log.Infof("[core] module '%s' enabled", name)
+	app.Log.Infof("[core] module '%s' enabled", name)
 	return i.Enable()
 }
 
-func (c *Context) DisableModule(name string) error {
-	i, ok := c.instances[name]
+func (app *App) DisableModule(name string) error {
+	i, ok := app.instances[name]
 	if !ok {
 		return nil
 	}
-	c.instances[name] = nil
-	c.Log.Infof("[core] module '%s' disabled", name)
+	app.instances[name] = nil
+	app.Log.Infof("[core] module '%s' disabled", name)
 	return i.Disable()
 }
 
-func (c *Context) WaitUntilInterrupt() {
+func (app *App) WaitUntilInterrupt() {
 	ch := make(chan os.Signal, 2)
 	signal.Notify(ch, os.Interrupt)
 	<-ch
+}
+
+func (app *App) NewContext() *Context {
+	return &Context{
+		app.Database,
+		app.Log,
+		app.Proto.NewEndpoint(),
+		app.Config,
+	}
 }
