@@ -20,7 +20,7 @@
 					if (msg.action == "ping") {
 						s.Publish({
 							action: "ack",
-							device: msg.src,
+							dst: msg.src,
 							corr: msg.id,
 						});
 					}

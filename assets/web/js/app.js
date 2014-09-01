@@ -15,7 +15,7 @@ StarkClient.prototype.Connect = function(msg) {
 	}
 
 	this.socket.onmessage = function(raw) {
-		console.log(raw);
+		console.log("receive", raw.data);
 		msg = JSON.parse(raw.data);
 		if (client.onMessage) {
 			client.onMessage(msg);
@@ -36,7 +36,7 @@ StarkClient.prototype.Publish = function(msg) {
 	msg.src = msg.src || this.deviceId
 
 	raw = JSON.stringify(msg);
-	console.log(raw)
+	console.log("publish", raw)
 	this.socket.send(raw);
 }
 
