@@ -91,4 +91,21 @@ func TestService(t *testing.T) {
 	if lastReply.PayloadGetString("source") != "Hannover" {
 		t.Errorf("Unexpected location: %s", lastReply.PayloadGetString("source"))
 	}
+
+	lastReply = nil
+
+	err = ep.Publish(proto.Message{
+		Action: "location/last",
+		Payload: map[string]interface{}{
+			"address": "Hannover, Germany",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(lastReply)
+	if lastReply.PayloadGetString("source") != "Hannover" {
+		t.Errorf("Unexpected location: %s", lastReply.PayloadGetString("source"))
+	}
 }

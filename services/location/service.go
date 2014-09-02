@@ -86,6 +86,49 @@ type locationLastMessage struct {
 	Accuracy  float64
 }
 
+var MsgNotFound = proto.Message{
+	Action: "location/notfound",
+	Payload: map[string]interface{}{
+		"text": "Requested location could not be found",
+	},
+}
+
+func (s *Service) queryLocationLast(pl locationLastMessage) proto.Message {
+	if pl.Address != "" {
+		geo, err := Geocode(pl.Address)
+		if err != nil {
+			return proto.InternalError(err)
+		}
+		if len(geo) == 0 {
+			return MsgNotFound
+		}
+		first := geo[0]
+		pl.Address = first.Pretty()
+		pl.Bounds = first.BoundingBox
+	}
+
+	if len(pl.Bounds) == 4 {
+		loc, err := s.DB.GetLastLocationInBounds(
+			pl.Bounds[0], pl.Bounds[1], pl.Bounds[2], pl.Bounds[3])
+
+		if err == sql.ErrNoRows {
+			return MsgNotFound
+		}
+		if err != nil {
+			return proto.InternalError(err)
+		}
+		loc.Address = pl.Address
+		reply := proto.Message{Action: "location/found"}
+		if err := reply.EncodePayload(loc); err != nil {
+			s.ctx.Log.Errorln(err)
+			return proto.InternalError(err)
+		}
+		return reply
+	}
+
+	return proto.BadRequest(nil)
+}
+
 func (s *Service) handleLocationLast(msg proto.Message) {
 	var pl locationLastMessage
 	if err := msg.DecodePayload(&pl); err != nil {
@@ -96,34 +139,9 @@ func (s *Service) handleLocationLast(msg proto.Message) {
 		}
 		return
 	}
-
 	s.ctx.Log.Debugln(pl)
-	var reply proto.Message
-	if len(pl.Bounds) == 4 {
-		loc, err := s.DB.GetLastLocationInBounds(
-			pl.Bounds[0], pl.Bounds[1], pl.Bounds[2], pl.Bounds[3])
 
-		if err == sql.ErrNoRows {
-			reply = proto.Message{
-				Action: "location/notfound",
-				Payload: map[string]interface{}{
-					"text": "Requested location could not be found",
-				},
-			}
-		} else if err != nil {
-			reply = proto.InternalError(err)
-		} else {
-			reply = proto.Message{
-				Action: "location/found",
-			}
-			if err := reply.EncodePayload(loc); err != nil {
-				s.ctx.Log.Errorln(err)
-			}
-		}
-	} else {
-		reply = msg.Reply(proto.BadRequest(nil))
-	}
-
+	reply := s.queryLocationLast(pl)
 	if reply.Action != "" {
 		reply = msg.Reply(reply)
 		if err := s.proto.Publish(reply); err != nil {
