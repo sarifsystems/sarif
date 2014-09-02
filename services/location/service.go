@@ -16,7 +16,7 @@ import (
 var Module = core.Module{
 	Name:        "location",
 	Version:     "1.0",
-	NewInstance: nil,
+	NewInstance: NewInstance,
 }
 
 func init() {
