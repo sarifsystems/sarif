@@ -2,7 +2,7 @@ Roadmap
 =======
 
 1. [x] initial architecture
-2. [ ] deploy first long running services
+2. [x] deploy first long running services
 3. [ ] initial desktop/Android clients to make the whole thing useful
 4. [ ] web dashboard
 5. [ ] rich media GUI clients
@@ -20,8 +20,10 @@ To Do
 		+ [x] automatic scanning
 		+ [x] simple query
 	- location
-		+ [ ] working save
-		+ [ ] working retrieval "when did i last visit"
+		+ [x] working save
+		+ [x] working retrieval "when did i last visit"
+		+ [ ] geofencing: create/list zones
+		+ [ ] geofencing: publish events on zone/enter leave
 	- scheduler
 		+ [ ] working prototype
 		+ [ ] parse 'send' messages
