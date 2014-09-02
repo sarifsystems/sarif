@@ -28,11 +28,13 @@ func (s Subscription) Matches(msg proto.Message) bool {
 }
 
 type Mux struct {
+	concurrent    bool
 	subscriptions []Subscription
 }
 
 func New() *Mux {
 	return &Mux{
+		false,
 		make([]Subscription, 0),
 	}
 }
@@ -48,7 +50,11 @@ func (m *Mux) RegisterHandler(action, device string, h proto.Handler) {
 func (m *Mux) Handle(msg proto.Message) {
 	for _, s := range m.subscriptions {
 		if s.Matches(msg) {
-			go s.Handler(msg)
+			if m.concurrent {
+				go s.Handler(msg)
+			} else {
+				s.Handler(msg)
+			}
 		}
 	}
 }

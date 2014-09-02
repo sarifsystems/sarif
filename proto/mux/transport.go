@@ -36,11 +36,13 @@ func (e *Endpoint) RegisterHandler(h proto.Handler) {
 }
 
 func NewTransportMux() *TransportMux {
-	return &TransportMux{
+	m := &TransportMux{
 		nil,
 		make([]*Endpoint, 0),
 		New(),
 	}
+	m.Mux.concurrent = true
+	return m
 }
 
 func (m *TransportMux) RegisterPublisher(p proto.Publisher) {

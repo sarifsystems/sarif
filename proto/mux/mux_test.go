@@ -7,7 +7,6 @@ package mux
 
 import (
 	"testing"
-	"time"
 
 	"github.com/xconstruct/stark/proto"
 )
@@ -39,7 +38,6 @@ func TestMuxSingle(t *testing.T) {
 			Action:      test.action,
 			Destination: test.device,
 		})
-		time.Sleep(time.Millisecond)
 		if test.should && !fired {
 			t.Error("did not fire", test)
 		}
@@ -83,7 +81,6 @@ func TestMuxMultiple(t *testing.T) {
 			Action:      test.action,
 			Destination: test.device,
 		})
-		time.Sleep(time.Millisecond)
 		if test.oneShould && !oneFired {
 			t.Error("one did not fire", test)
 		}
