@@ -11,6 +11,8 @@ import (
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/log"
 
+	_ "github.com/go-sql-driver/mysql"
+
 	_ "github.com/xconstruct/stark/services/hostscan"
 	_ "github.com/xconstruct/stark/services/location"
 	_ "github.com/xconstruct/stark/services/router"
