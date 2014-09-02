@@ -76,10 +76,9 @@ func (t *Transport) Connect() error {
 	t.log.Infof("mqtt connecting to %s", t.cfg.Server)
 
 	opts := mqtt.NewClientOptions()
-	opts.SetBroker(t.cfg.Server)
+	opts.AddBroker(t.cfg.Server)
 	opts.SetClientId(proto.GenerateId())
 	opts.SetCleanSession(true)
-	opts.SetTraceLevel(mqtt.Critical)
 	opts.SetOnConnectionLost(t.onConnectionLost)
 	tlscfg, err := t.cfg.LoadTlsCertificates()
 	if err != nil {
