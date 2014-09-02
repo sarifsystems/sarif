@@ -59,7 +59,11 @@ func (c *Client) handle(msg Message) {
 	if msg.Action == "ping" {
 		c.handlePing(msg)
 	}
-	c.handler(msg)
+	if c.handler == nil {
+		c.log.Errorln("client: no handler defined")
+	} else {
+		c.handler(msg)
+	}
 }
 
 func (c *Client) handlePing(msg Message) {

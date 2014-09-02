@@ -16,10 +16,27 @@ func Subscribe(action, device string) Message {
 }
 
 func BadRequest(reason error) Message {
+	str := "Bad Request"
+	if reason != nil {
+		str += " - " + reason.Error()
+	}
 	return Message{
 		Action: "nack/400",
 		Payload: map[string]interface{}{
-			"text": reason,
+			"text": str,
+		},
+	}
+}
+
+func InternalError(reason error) Message {
+	str := "Internal Error"
+	if reason != nil {
+		str += " - " + reason.Error()
+	}
+	return Message{
+		Action: "nack/500",
+		Payload: map[string]interface{}{
+			"text": str,
 		},
 	}
 }

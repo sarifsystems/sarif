@@ -13,9 +13,10 @@ import (
 )
 
 func main() {
-	ctx, err := core.NewContext("stark")
-	ctx.Must(err)
+	app, err := core.NewApp("stark")
+	app.Must(err)
 
+	ctx := app.NewContext()
 	db := ctx.Database
 
 	ctx.Must(hostscan.SetupSchema(db.Driver(), db.DB))

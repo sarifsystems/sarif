@@ -12,6 +12,7 @@ import (
 	"github.com/xconstruct/stark/log"
 
 	_ "github.com/xconstruct/stark/services/hostscan"
+	_ "github.com/xconstruct/stark/services/location"
 	_ "github.com/xconstruct/stark/services/router"
 	_ "github.com/xconstruct/stark/web"
 	_ "github.com/xconstruct/stark/xmpp"
