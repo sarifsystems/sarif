@@ -38,8 +38,8 @@ type Database interface {
 
 const schema = `
 CREATE TABLE IF NOT EXISTS locations (
-	id INT(10) NOT NULL AUTO_INCREMENT
-	timestamp TIMESTAMP NOT NULL,
+	id INT(10) NOT NULL AUTO_INCREMENT,
+	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	latitude DECIMAL(9,6) NOT NULL,
 	longitude DECIMAL(9,6) NOT NULL,
 	accuracy FLOAT NOT NULL,

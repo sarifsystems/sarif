@@ -56,7 +56,7 @@ func (s *Service) Enable() error {
 
 	s.proto = proto.NewClient("location", s.ctx.Proto)
 	s.proto.RegisterHandler(mux.Handle)
-	return s.proto.SubscribeGlobal("location/update")
+	return s.proto.SubscribeGlobal("location")
 }
 
 func (s *Service) Disable() error {
