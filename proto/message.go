@@ -83,11 +83,23 @@ func (m Message) DecodePayload(v interface{}) error {
 	return json.Unmarshal(raw, v)
 }
 
+type stringer interface {
+	String() string
+}
+
 func (m *Message) EncodePayload(v interface{}) error {
 	raw, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
 	m.Payload = nil
-	return json.Unmarshal(raw, m.Payload)
+	if err := json.Unmarshal(raw, &m.Payload); err != nil {
+		return err
+	}
+	if _, ok := m.Payload["text"]; !ok {
+		if s, ok := v.(stringer); ok {
+			m.Payload["text"] = s.String()
+		}
+	}
+	return nil
 }

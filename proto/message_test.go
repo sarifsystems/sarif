@@ -99,3 +99,38 @@ func TestPayload(t *testing.T) {
 		t.Errorf("Nonexistent message payload wrong, got '%v'", got)
 	}
 }
+
+type simpleStruct struct {
+	Key    string
+	Number int
+}
+
+func (s simpleStruct) String() string {
+	return "My key is " + s.Key
+}
+
+func TestEncodePayload(t *testing.T) {
+	msg := Message{}
+	exp := simpleStruct{"value", 35}
+	if err := msg.EncodePayload(exp); err != nil {
+		t.Fatal(err)
+	}
+
+	if v := msg.PayloadGetString("Key"); v != "value" {
+		t.Error("encode: wrong Key:", v)
+	}
+	if v := msg.PayloadGetString("text"); v != "My key is value" {
+		t.Error("encode: wrong text:", v)
+	}
+
+	var got simpleStruct
+	if err := msg.DecodePayload(&got); err != nil {
+		t.Fatal(err)
+	}
+
+	if got != exp {
+		t.Log(exp)
+		t.Log(got)
+		t.Error("decoded payload differs")
+	}
+}
