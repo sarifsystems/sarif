@@ -41,3 +41,11 @@ func Open(cfg Config) (*DB, error) {
 	}
 	return &DB{driver, sdb}, nil
 }
+
+func OpenInMemory() (*DB, error) {
+	sdb, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		return nil, err
+	}
+	return &DB{"sqlite3", sdb}, nil
+}

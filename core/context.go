@@ -21,6 +21,22 @@ type Context struct {
 
 func (ctx *Context) Must(err error) {
 	if err != nil {
-		ctx.Log.Errorln(err)
+		ctx.Log.Fatalln(err)
 	}
+}
+
+func NewTestContext() (*Context, proto.Endpoint) {
+	var err error
+	ctx := &Context{}
+	ctx.Config = conf.New()
+	ctx.Log = log.Default
+
+	if ctx.Database, err = database.OpenInMemory(); err != nil {
+		log.Default.Fatalln(err)
+	}
+
+	a, b := proto.NewPipe()
+	ctx.Proto = a
+
+	return ctx, b
 }
