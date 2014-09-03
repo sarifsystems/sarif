@@ -7,6 +7,7 @@ package xmpp
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/agl/xmpp"
 
@@ -60,20 +61,34 @@ func NewInstance(ctx *core.Context) (core.ModuleInstance, error) {
 }
 
 func (c *Client) Enable() (err error) {
-	cfg := &xmpp.Config{}
-	c.xmpp, err = xmpp.Dial(c.cfg.Server, c.cfg.User, c.cfg.Domain, c.cfg.Password, cfg)
-	if err != nil {
-		return err
-	}
-
 	c.proto = proto.NewClient("xmpp", c.ctx.Proto)
 	c.proto.RegisterHandler(c.handleProtoMessage)
 	if err := c.proto.SubscribeSelf(""); err != nil {
 		return err
 	}
 
+	return c.connectXmpp()
+}
+
+func (c *Client) connectXmpp() (err error) {
+	cfg := &xmpp.Config{}
+	c.xmpp, err = xmpp.Dial(c.cfg.Server, c.cfg.User, c.cfg.Domain, c.cfg.Password, cfg)
+	if err != nil {
+		return err
+	}
 	go c.listen()
 	return c.xmpp.SignalPresence("")
+}
+
+func (c *Client) reconnectLoop() {
+	for {
+		if err := c.connectXmpp(); err != nil {
+			c.ctx.Log.Debugln("[xmpp] reconnect error:", err)
+			time.Sleep(5 * time.Second)
+		}
+		c.ctx.Log.Infoln("[xmpp] reconnected")
+		return
+	}
 }
 
 func (c *Client) Disable() error {
@@ -109,7 +124,8 @@ func (c *Client) listen() {
 	for {
 		stanza, err := c.xmpp.Next()
 		if err != nil {
-			c.ctx.Log.Fatalln("[xmpp]", err)
+			c.reconnectLoop()
+			return
 		}
 
 		switch v := stanza.Value.(type) {
