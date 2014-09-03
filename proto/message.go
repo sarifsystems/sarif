@@ -8,6 +8,7 @@ package proto
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 )
 
 const VERSION = "0.3"
@@ -64,6 +65,13 @@ func (orig Message) Reply(m Message) Message {
 		m.Destination = orig.Source
 	}
 	return m
+}
+
+func (m Message) IsAction(action string) bool {
+	if action != "" && !strings.HasPrefix(m.Action+"/", action+"/") {
+		return false
+	}
+	return true
 }
 
 func (m Message) PayloadGetString(key string) string {
