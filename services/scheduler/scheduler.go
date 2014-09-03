@@ -11,6 +11,7 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/util"
 )
 
 var Module = core.Module{
@@ -84,7 +85,7 @@ func (s *Scheduler) handle(msg proto.Message) {
 	if t.Reply.Action == "" {
 		text := msg.PayloadGetString("text")
 		if text == "" {
-			text = "Reminder from " + FuzzyTime(time.Now()) + " finished."
+			text = "Reminder from " + util.FuzzyTime(time.Now()) + " finished."
 		}
 		t.Reply = proto.Message{
 			Action:      "schedule/finished",

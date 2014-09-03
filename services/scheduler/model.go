@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/util"
 )
 
 type Task struct {
@@ -24,18 +25,9 @@ type Task struct {
 	FinishedOn time.Time     `json:"finished,omitempty"`
 }
 
-func FuzzyTime(t time.Time) string {
-	ny, nm, nd := time.Now().Date()
-	ty, tm, td := t.Date()
-	if ty == ny && tm == nm && td == nd {
-		return t.Format("15:04:05")
-	}
-	return t.Format("02 Jan 2006 at 15:04")
-}
-
 func (t Task) String() string {
 	return fmt.Sprintf("On %s schedule task '%s'.",
-		FuzzyTime(t.Time),
+		util.FuzzyTime(t.Time),
 		t.Reply,
 	)
 }

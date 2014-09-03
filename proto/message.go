@@ -104,7 +104,7 @@ func (m *Message) EncodePayload(v interface{}) error {
 	if err := json.Unmarshal(raw, &m.Payload); err != nil {
 		return err
 	}
-	if _, ok := m.Payload["text"]; !ok {
+	if m.PayloadGetString("text") == "" {
 		if s, ok := v.(stringer); ok {
 			m.Payload["text"] = s.String()
 		}

@@ -13,6 +13,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
+	_ "github.com/xconstruct/stark/services/events"
 	_ "github.com/xconstruct/stark/services/hostscan"
 	_ "github.com/xconstruct/stark/services/location"
 	_ "github.com/xconstruct/stark/services/router"
