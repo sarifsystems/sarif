@@ -3,22 +3,20 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package mux
-
-import "github.com/xconstruct/stark/proto"
+package proto
 
 type TransportMux struct {
-	publisher proto.Publisher
-	endpoints []*Endpoint
+	publisher Publisher
+	endpoints []*MuxEndpoint
 }
 
-type Endpoint struct {
+type MuxEndpoint struct {
 	mux     *TransportMux
-	handler proto.Handler
+	handler Handler
 	subs    []Subscription
 }
 
-func (e *Endpoint) Publish(msg proto.Message) error {
+func (e *MuxEndpoint) Publish(msg Message) error {
 	if msg.Action == "proto/sub" {
 		e.subs = append(e.subs, Subscription{
 			Action: msg.PayloadGetString("action"),
@@ -28,19 +26,19 @@ func (e *Endpoint) Publish(msg proto.Message) error {
 	return e.mux.publisher(msg)
 }
 
-func (e *Endpoint) RegisterHandler(h proto.Handler) {
+func (e *MuxEndpoint) RegisterHandler(h Handler) {
 	e.handler = h
 }
 
 func NewTransportMux() *TransportMux {
 	m := &TransportMux{
 		nil,
-		make([]*Endpoint, 0),
+		make([]*MuxEndpoint, 0),
 	}
 	return m
 }
 
-func (m *TransportMux) Handle(msg proto.Message) {
+func (m *TransportMux) Handle(msg Message) {
 	for _, e := range m.endpoints {
 		if e.handler == nil {
 			continue
@@ -54,12 +52,12 @@ func (m *TransportMux) Handle(msg proto.Message) {
 	}
 }
 
-func (m *TransportMux) RegisterPublisher(p proto.Publisher) {
+func (m *TransportMux) RegisterPublisher(p Publisher) {
 	m.publisher = p
 }
 
-func (m *TransportMux) NewEndpoint() *Endpoint {
-	e := &Endpoint{m, nil, make([]Subscription, 0)}
+func (m *TransportMux) NewEndpoint() *MuxEndpoint {
+	e := &MuxEndpoint{m, nil, make([]Subscription, 0)}
 	m.endpoints = append(m.endpoints, e)
 	return e
 }

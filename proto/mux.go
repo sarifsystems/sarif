@@ -3,21 +3,19 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package mux
+package proto
 
 import (
 	"strings"
-
-	"github.com/xconstruct/stark/proto"
 )
 
 type Subscription struct {
 	Action  string
 	Device  string
-	Handler proto.Handler
+	Handler Handler
 }
 
-func (s Subscription) Matches(msg proto.Message) bool {
+func (s Subscription) Matches(msg Message) bool {
 	if msg.Destination != s.Device {
 		return false
 	}
@@ -32,14 +30,14 @@ type Mux struct {
 	subscriptions []Subscription
 }
 
-func New() *Mux {
+func NewMux() *Mux {
 	return &Mux{
 		false,
 		make([]Subscription, 0),
 	}
 }
 
-func (m *Mux) RegisterHandler(action, device string, h proto.Handler) {
+func (m *Mux) RegisterHandler(action, device string, h Handler) {
 	m.subscriptions = append(m.subscriptions, Subscription{
 		action,
 		device,
@@ -47,7 +45,7 @@ func (m *Mux) RegisterHandler(action, device string, h proto.Handler) {
 	})
 }
 
-func (m *Mux) Handle(msg proto.Message) {
+func (m *Mux) Handle(msg Message) {
 	for _, s := range m.subscriptions {
 		if s.Matches(msg) {
 			if m.concurrent {

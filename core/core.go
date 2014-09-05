@@ -13,14 +13,13 @@ import (
 	"github.com/xconstruct/stark/database"
 	"github.com/xconstruct/stark/log"
 	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/proto/mux"
 	"github.com/xconstruct/stark/proto/transports/mqtt"
 )
 
 type App struct {
 	AppName  string
 	Config   *conf.Config
-	Proto    *mux.TransportMux
+	Proto    *proto.TransportMux
 	Database *database.DB
 	Log      *log.Logger
 
@@ -112,7 +111,7 @@ func (app *App) initProto() error {
 	if err := app.Config.Get("mqtt", &cfg); err != nil {
 		return err
 	}
-	app.Proto = mux.NewTransportMux()
+	app.Proto = proto.NewTransportMux()
 
 	if cfg.Server == "" {
 		app.Log.Warnln("[core] config 'mqtt.Server' empty, falling back to local broker")

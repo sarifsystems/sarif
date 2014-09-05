@@ -12,7 +12,6 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/proto/mux"
 )
 
 var Module = core.Module{
@@ -32,7 +31,7 @@ type Config struct {
 type Server struct {
 	cfg   Config
 	ctx   *core.Context
-	proto *mux.TransportMux
+	proto *proto.TransportMux
 }
 
 func New(ctx *core.Context) (*Server, error) {
@@ -43,7 +42,7 @@ func New(ctx *core.Context) (*Server, error) {
 	s := &Server{
 		cfg,
 		ctx,
-		mux.NewTransportMux(),
+		proto.NewTransportMux(),
 	}
 	proto.Connect(ctx.Proto, s.proto)
 	return s, err

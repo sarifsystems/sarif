@@ -10,7 +10,6 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/proto/mux"
 )
 
 var Module = core.Module{
@@ -50,7 +49,7 @@ func (s *Service) Enable() error {
 		return err
 	}
 
-	mux := mux.New()
+	mux := proto.NewMux()
 	mux.RegisterHandler("location/update", "", s.handleLocationUpdate)
 	mux.RegisterHandler("location/last", "", s.handleLocationLast)
 

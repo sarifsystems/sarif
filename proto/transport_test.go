@@ -3,13 +3,11 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package mux
+package proto
 
 import (
 	"testing"
 	"time"
-
-	"github.com/xconstruct/stark/proto"
 )
 
 type multiEp struct {
@@ -30,16 +28,16 @@ func TestTransportMuxMultiple(t *testing.T) {
 	}
 
 	mux := NewTransportMux()
-	mux.RegisterPublisher(func(msg proto.Message) error {
+	mux.RegisterPublisher(func(msg Message) error {
 		return nil
 	})
 	oneFired, twoFired := false, false
 
 	epOne := mux.NewEndpoint()
-	epOne.RegisterHandler(func(msg proto.Message) {
+	epOne.RegisterHandler(func(msg Message) {
 		oneFired = true
 	})
-	epOne.Publish(proto.Message{
+	epOne.Publish(Message{
 		Action: "proto/sub",
 		Payload: map[string]interface{}{
 			"action": "ping",
@@ -48,17 +46,17 @@ func TestTransportMuxMultiple(t *testing.T) {
 	})
 
 	epTwo := mux.NewEndpoint()
-	epTwo.RegisterHandler(func(msg proto.Message) {
+	epTwo.RegisterHandler(func(msg Message) {
 		twoFired = true
 	})
-	epTwo.Publish(proto.Message{
+	epTwo.Publish(Message{
 		Action: "proto/sub",
 		Payload: map[string]interface{}{
 			"action": "ping",
 			"device": "two",
 		},
 	})
-	epTwo.Publish(proto.Message{
+	epTwo.Publish(Message{
 		Action: "proto/sub",
 		Payload: map[string]interface{}{
 			"action": "ping",
@@ -68,7 +66,7 @@ func TestTransportMuxMultiple(t *testing.T) {
 
 	for _, test := range tests {
 		oneFired, twoFired = false, false
-		mux.Handle(proto.Message{
+		mux.Handle(Message{
 			Action:      test.action,
 			Destination: test.device,
 		})

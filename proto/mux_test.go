@@ -3,12 +3,10 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package mux
+package proto
 
 import (
 	"testing"
-
-	"github.com/xconstruct/stark/proto"
 )
 
 type single struct {
@@ -27,14 +25,14 @@ func TestMuxSingle(t *testing.T) {
 		{"ack", "", false},
 	}
 
-	mux := New()
+	mux := NewMux()
 	fired := false
-	mux.RegisterHandler("ping", "one", func(msg proto.Message) {
+	mux.RegisterHandler("ping", "one", func(msg Message) {
 		fired = true
 	})
 	for _, test := range tests {
 		fired = false
-		mux.Handle(proto.Message{
+		mux.Handle(Message{
 			Action:      test.action,
 			Destination: test.device,
 		})
@@ -64,20 +62,20 @@ func TestMuxMultiple(t *testing.T) {
 		{"ack", "", false, false},
 	}
 
-	mux := New()
+	mux := NewMux()
 	oneFired, twoFired := false, false
-	mux.RegisterHandler("ping", "one", func(msg proto.Message) {
+	mux.RegisterHandler("ping", "one", func(msg Message) {
 		oneFired = true
 	})
-	mux.RegisterHandler("ping", "two", func(msg proto.Message) {
+	mux.RegisterHandler("ping", "two", func(msg Message) {
 		twoFired = true
 	})
-	mux.RegisterHandler("ping", "", func(msg proto.Message) {
+	mux.RegisterHandler("ping", "", func(msg Message) {
 		twoFired = true
 	})
 	for _, test := range tests {
 		oneFired, twoFired = false, false
-		mux.Handle(proto.Message{
+		mux.Handle(Message{
 			Action:      test.action,
 			Destination: test.device,
 		})
