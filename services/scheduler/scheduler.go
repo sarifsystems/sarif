@@ -42,7 +42,6 @@ func NewService(ctx *core.Context) (*Scheduler, error) {
 		ctx:   ctx,
 		proto: proto.NewClient("scheduler", ctx.Proto),
 	}
-	s.proto.RegisterHandler(s.handle)
 	return s, nil
 }
 
@@ -50,7 +49,7 @@ func (s *Scheduler) Enable() error {
 	if err := s.DB.Setup(); err != nil {
 		return err
 	}
-	if err := s.proto.SubscribeGlobal("schedule"); err != nil {
+	if err := s.proto.Subscribe("schedule", "", s.handle); err != nil {
 		return err
 	}
 	s.recalculateTimer()

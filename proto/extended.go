@@ -5,6 +5,24 @@
 
 package proto
 
+import "strings"
+
+type Subscription struct {
+	Action  string
+	Device  string
+	Handler Handler
+}
+
+func (s Subscription) Matches(msg Message) bool {
+	if msg.Destination != s.Device {
+		return false
+	}
+	if s.Action != "" && !strings.HasPrefix(msg.Action+"/", s.Action+"/") {
+		return false
+	}
+	return true
+}
+
 func Subscribe(action, device string) Message {
 	return Message{
 		Action: "proto/sub",

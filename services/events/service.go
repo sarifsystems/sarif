@@ -39,7 +39,6 @@ func NewService(ctx *core.Context) (*Service, error) {
 		ctx:   ctx,
 		proto: proto.NewClient("events", ctx.Proto),
 	}
-	s.proto.RegisterHandler(s.handle)
 	return s, nil
 }
 
@@ -47,7 +46,10 @@ func (s *Service) Enable() error {
 	if err := s.DB.Setup(); err != nil {
 		return err
 	}
-	if err := s.proto.SubscribeGlobal("event"); err != nil {
+	if err := s.proto.Subscribe("event/new", "", s.handleEventNew); err != nil {
+		return err
+	}
+	if err := s.proto.Subscribe("event/last", "", s.handleEventLast); err != nil {
 		return err
 	}
 	return nil
@@ -59,18 +61,6 @@ var MessageEventNotFound = proto.Message{
 	Payload: map[string]interface{}{
 		"text": "No event found.",
 	},
-}
-
-func (s *Service) handle(msg proto.Message) {
-	if !msg.IsAction("event") {
-		return
-	}
-
-	if msg.IsAction("event/new") {
-		s.handleEventNew(msg)
-	} else if msg.IsAction("event/last") {
-		s.handleEventLast(msg)
-	}
 }
 
 func fixEvent(e *Event) {

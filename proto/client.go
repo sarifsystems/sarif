@@ -6,36 +6,35 @@
 package proto
 
 import (
+	"errors"
+
 	"github.com/xconstruct/stark/log"
 )
 
 type Client struct {
-	DeviceName string
-	DeviceId   string
-	endpoint   Endpoint
-	handler    Handler
-	log        log.Interface
+	DeviceId string
+	endpoint Endpoint
+	handler  Handler
+	log      log.Interface
+	subs     []Subscription
 }
 
-func NewClient(deviceName string, e Endpoint) *Client {
+func NewClient(deviceId string, e Endpoint) *Client {
 	c := &Client{
-		deviceName,
-		deviceName + "-" + GenerateId(),
+		deviceId,
 		e,
 		nil,
 		log.Default,
+		make([]Subscription, 0),
 	}
-	c.SetEndpoint(e)
+	c.endpoint = e
+	e.RegisterHandler(c.handle)
+	c.Subscribe("ping", "", c.handlePing)
 	return c
 }
 
 func (c *Client) SetLogger(l log.Interface) {
 	c.log = l
-}
-
-func (c *Client) SetEndpoint(e Endpoint) {
-	c.endpoint = e
-	e.RegisterHandler(c.handle)
 }
 
 func (c *Client) FillMessage(msg *Message) {
@@ -56,13 +55,10 @@ func (c *Client) Publish(msg Message) error {
 }
 
 func (c *Client) handle(msg Message) {
-	if msg.Action == "ping" {
-		c.handlePing(msg)
-	}
-	if c.handler == nil {
-		c.log.Errorln("client: no handler defined")
-	} else {
-		c.handler(msg)
+	for _, s := range c.subs {
+		if s.Matches(msg) {
+			s.Handler(msg)
+		}
 	}
 }
 
@@ -77,30 +73,29 @@ func (c *Client) handlePing(msg Message) {
 	}
 }
 
-func (c *Client) RegisterHandler(h Handler) {
-	c.handler = h
-	c.SubscribeGlobal("ping")
-}
-
-func (c *Client) SubscribeGlobal(action string) error {
-	if err := c.SubscribeSelf(action); err != nil {
-		return err
+func (c *Client) Subscribe(action, device string, h Handler) error {
+	if h == nil {
+		return errors.New("Invalid argument: no handler specified")
 	}
-	return c.Publish(Message{
-		Action: "proto/sub",
-		Payload: map[string]interface{}{
-			"action": action,
-			"device": "",
-		},
-	})
-}
+	if device == "" && action != "" {
+		if err := c.Subscribe(action, c.DeviceId, h); err != nil {
+			return err
+		}
+	}
+	if device == "self" {
+		device = c.DeviceId
+	}
 
-func (c *Client) SubscribeSelf(action string) error {
+	c.subs = append(c.subs, Subscription{
+		action,
+		device,
+		h,
+	})
 	return c.Publish(Message{
 		Action: "proto/sub",
 		Payload: map[string]interface{}{
 			"action": action,
-			"device": c.DeviceId,
+			"device": device,
 		},
 	})
 }

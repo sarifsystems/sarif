@@ -31,7 +31,7 @@ type Config struct {
 type Server struct {
 	cfg   Config
 	ctx   *core.Context
-	proto *proto.TransportMux
+	proto *proto.Mux
 }
 
 func New(ctx *core.Context) (*Server, error) {
@@ -42,7 +42,7 @@ func New(ctx *core.Context) (*Server, error) {
 	s := &Server{
 		cfg,
 		ctx,
-		proto.NewTransportMux(),
+		proto.NewMux(),
 	}
 	proto.Connect(ctx.Proto, s.proto)
 	return s, err

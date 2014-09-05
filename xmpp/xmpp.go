@@ -62,8 +62,7 @@ func NewInstance(ctx *core.Context) (core.ModuleInstance, error) {
 
 func (c *Client) Enable() (err error) {
 	c.proto = proto.NewClient("xmpp", c.ctx.Proto)
-	c.proto.RegisterHandler(c.handleProtoMessage)
-	if err := c.proto.SubscribeSelf(""); err != nil {
+	if err := c.proto.Subscribe("", "self", c.handleProtoMessage); err != nil {
 		return err
 	}
 

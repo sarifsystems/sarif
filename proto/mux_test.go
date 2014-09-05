@@ -7,45 +7,10 @@ package proto
 
 import (
 	"testing"
+	"time"
 )
 
-type single struct {
-	action string
-	device string
-	should bool
-}
-
-func TestMuxSingle(t *testing.T) {
-	tests := []single{
-		{"ping", "one", true},
-		{"ping", "two", false},
-		{"ping", "", false},
-		{"ack", "one", false},
-		{"ack", "two", false},
-		{"ack", "", false},
-	}
-
-	mux := NewMux()
-	fired := false
-	mux.RegisterHandler("ping", "one", func(msg Message) {
-		fired = true
-	})
-	for _, test := range tests {
-		fired = false
-		mux.Handle(Message{
-			Action:      test.action,
-			Destination: test.device,
-		})
-		if test.should && !fired {
-			t.Error("did not fire", test)
-		}
-		if !test.should && fired {
-			t.Error("should not fire", test)
-		}
-	}
-}
-
-type multi struct {
+type multiEp struct {
 	action    string
 	device    string
 	oneShould bool
@@ -53,7 +18,7 @@ type multi struct {
 }
 
 func TestMuxMultiple(t *testing.T) {
-	tests := []multi{
+	tests := []multiEp{
 		{"ping", "one", true, false},
 		{"ping", "two", false, true},
 		{"ping", "", false, true},
@@ -63,22 +28,49 @@ func TestMuxMultiple(t *testing.T) {
 	}
 
 	mux := NewMux()
+	mux.RegisterPublisher(func(msg Message) error {
+		return nil
+	})
 	oneFired, twoFired := false, false
-	mux.RegisterHandler("ping", "one", func(msg Message) {
+
+	epOne := mux.NewEndpoint()
+	epOne.RegisterHandler(func(msg Message) {
 		oneFired = true
 	})
-	mux.RegisterHandler("ping", "two", func(msg Message) {
+	epOne.Publish(Message{
+		Action: "proto/sub",
+		Payload: map[string]interface{}{
+			"action": "ping",
+			"device": "one",
+		},
+	})
+
+	epTwo := mux.NewEndpoint()
+	epTwo.RegisterHandler(func(msg Message) {
 		twoFired = true
 	})
-	mux.RegisterHandler("ping", "", func(msg Message) {
-		twoFired = true
+	epTwo.Publish(Message{
+		Action: "proto/sub",
+		Payload: map[string]interface{}{
+			"action": "ping",
+			"device": "two",
+		},
 	})
+	epTwo.Publish(Message{
+		Action: "proto/sub",
+		Payload: map[string]interface{}{
+			"action": "ping",
+			"device": "",
+		},
+	})
+
 	for _, test := range tests {
 		oneFired, twoFired = false, false
 		mux.Handle(Message{
 			Action:      test.action,
 			Destination: test.device,
 		})
+		time.Sleep(time.Millisecond)
 		if test.oneShould && !oneFired {
 			t.Error("one did not fire", test)
 		}

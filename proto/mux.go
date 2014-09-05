@@ -5,54 +5,59 @@
 
 package proto
 
-import (
-	"strings"
-)
-
-type Subscription struct {
-	Action  string
-	Device  string
-	Handler Handler
-}
-
-func (s Subscription) Matches(msg Message) bool {
-	if msg.Destination != s.Device {
-		return false
-	}
-	if s.Action != "" && !strings.HasPrefix(msg.Action+"/", s.Action+"/") {
-		return false
-	}
-	return true
-}
-
 type Mux struct {
-	concurrent    bool
-	subscriptions []Subscription
+	publisher Publisher
+	endpoints []*MuxEndpoint
+}
+
+type MuxEndpoint struct {
+	mux     *Mux
+	handler Handler
+	subs    []Subscription
+}
+
+func (e *MuxEndpoint) Publish(msg Message) error {
+	if msg.Action == "proto/sub" {
+		e.subs = append(e.subs, Subscription{
+			Action: msg.PayloadGetString("action"),
+			Device: msg.PayloadGetString("device"),
+		})
+	}
+	return e.mux.publisher(msg)
+}
+
+func (e *MuxEndpoint) RegisterHandler(h Handler) {
+	e.handler = h
 }
 
 func NewMux() *Mux {
-	return &Mux{
-		false,
-		make([]Subscription, 0),
+	m := &Mux{
+		nil,
+		make([]*MuxEndpoint, 0),
 	}
-}
-
-func (m *Mux) RegisterHandler(action, device string, h Handler) {
-	m.subscriptions = append(m.subscriptions, Subscription{
-		action,
-		device,
-		h,
-	})
+	return m
 }
 
 func (m *Mux) Handle(msg Message) {
-	for _, s := range m.subscriptions {
-		if s.Matches(msg) {
-			if m.concurrent {
-				go s.Handler(msg)
-			} else {
-				s.Handler(msg)
+	for _, e := range m.endpoints {
+		if e.handler == nil {
+			continue
+		}
+		for _, s := range e.subs {
+			if s.Matches(msg) {
+				e.handler(msg)
+				break
 			}
 		}
 	}
+}
+
+func (m *Mux) RegisterPublisher(p Publisher) {
+	m.publisher = p
+}
+
+func (m *Mux) NewEndpoint() *MuxEndpoint {
+	e := &MuxEndpoint{m, nil, make([]Subscription, 0)}
+	m.endpoints = append(m.endpoints, e)
+	return e
 }

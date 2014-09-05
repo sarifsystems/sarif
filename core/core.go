@@ -19,7 +19,7 @@ import (
 type App struct {
 	AppName  string
 	Config   *conf.Config
-	Proto    *proto.TransportMux
+	Proto    *proto.Mux
 	Database *database.DB
 	Log      *log.Logger
 
@@ -111,7 +111,7 @@ func (app *App) initProto() error {
 	if err := app.Config.Get("mqtt", &cfg); err != nil {
 		return err
 	}
-	app.Proto = proto.NewTransportMux()
+	app.Proto = proto.NewMux()
 
 	if cfg.Server == "" {
 		app.Log.Warnln("[core] config 'mqtt.Server' empty, falling back to local broker")

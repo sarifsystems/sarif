@@ -49,13 +49,14 @@ func (s *Service) Enable() error {
 		return err
 	}
 
-	mux := proto.NewMux()
-	mux.RegisterHandler("location/update", "", s.handleLocationUpdate)
-	mux.RegisterHandler("location/last", "", s.handleLocationLast)
-
 	s.proto = proto.NewClient("location", s.ctx.Proto)
-	s.proto.RegisterHandler(mux.Handle)
-	return s.proto.SubscribeGlobal("location")
+	if err := s.proto.Subscribe("location/update", "", s.handleLocationUpdate); err != nil {
+		return err
+	}
+	if err := s.proto.Subscribe("location/last", "", s.handleLocationLast); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Service) Disable() error {
