@@ -5,8 +5,6 @@
 
 package proto
 
-import "strings"
-
 type Subscription struct {
 	Action  string
 	Device  string
@@ -17,7 +15,7 @@ func (s Subscription) Matches(msg Message) bool {
 	if msg.Destination != s.Device {
 		return false
 	}
-	if s.Action != "" && !strings.HasPrefix(msg.Action+"/", s.Action+"/") {
+	if !msg.IsAction(s.Action) {
 		return false
 	}
 	return true

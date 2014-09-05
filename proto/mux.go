@@ -17,7 +17,7 @@ type MuxEndpoint struct {
 }
 
 func (e *MuxEndpoint) Publish(msg Message) error {
-	if msg.Action == "proto/sub" {
+	if msg.IsAction("proto/sub") {
 		e.subs = append(e.subs, Subscription{
 			Action: msg.PayloadGetString("action"),
 			Device: msg.PayloadGetString("device"),

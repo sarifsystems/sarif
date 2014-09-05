@@ -91,11 +91,5 @@ func (c *Client) Subscribe(action, device string, h Handler) error {
 		device,
 		h,
 	})
-	return c.Publish(Message{
-		Action: "proto/sub",
-		Payload: map[string]interface{}{
-			"action": action,
-			"device": device,
-		},
-	})
+	return c.Publish(Subscribe(action, device))
 }
