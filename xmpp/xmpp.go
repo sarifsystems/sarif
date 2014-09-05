@@ -34,23 +34,24 @@ type Config struct {
 }
 
 type conversation struct {
-	MessageId string
-	Remote    string
+	Remote      string
+	Proto       *proto.Client
+	LastMessage proto.Message
+	Xmpp        *Client
 }
 
 type Client struct {
 	cfg           Config
 	ctx           *core.Context
-	proto         *proto.Client
+	mux           *proto.Mux
 	xmpp          *xmpp.Conn
-	conversations []conversation
-	lastMessage   proto.Message
+	conversations map[string]*conversation
 }
 
 func New(ctx *core.Context) (*Client, error) {
 	c := &Client{
 		ctx:           ctx,
-		conversations: make([]conversation, 0),
+		conversations: make(map[string]*conversation, 0),
 	}
 	err := ctx.Config.Get("xmpp", &c.cfg)
 	return c, err
@@ -61,11 +62,8 @@ func NewInstance(ctx *core.Context) (core.ModuleInstance, error) {
 }
 
 func (c *Client) Enable() (err error) {
-	c.proto = proto.NewClient("xmpp", c.ctx.Proto)
-	if err := c.proto.Subscribe("", "self", c.handleProtoMessage); err != nil {
-		return err
-	}
-
+	c.mux = proto.NewMux()
+	proto.Connect(c.ctx.Proto, c.mux)
 	return c.connectXmpp()
 }
 
@@ -94,28 +92,12 @@ func (c *Client) Disable() error {
 	return nil
 }
 
-func (c *Client) handleProtoMessage(msg proto.Message) {
-	if msg.CorrId == "" {
-		c.ctx.Log.Debugln("[xmpp] received proto msg: ", msg)
-		return
-	}
-
-	var cv *conversation
-	for _, v := range c.conversations {
-		if v.MessageId == msg.CorrId {
-			cv = &v
-			break
-		}
-	}
-	if cv == nil {
-		c.ctx.Log.Debugln("[xmpp] received proto msg: ", msg)
-	}
-
-	c.lastMessage = msg
+func (cv *conversation) handleProtoMessage(msg proto.Message) {
+	cv.LastMessage = msg
 	text := natural.FormatSimple(msg)
-	c.ctx.Log.Debugf("[xmpp] send '%s' to '%s'", text, cv.Remote)
-	if err := c.xmpp.Send(cv.Remote, text); err != nil {
-		c.ctx.Log.Errorln("[xmpp] send:", err)
+	cv.Xmpp.ctx.Log.Debugf("[xmpp] send '%s' to '%s'", text, cv.Remote)
+	if err := cv.Xmpp.xmpp.Send(cv.Remote, text); err != nil {
+		cv.Xmpp.ctx.Log.Errorln("[xmpp] send:", err)
 	}
 }
 
@@ -136,14 +118,34 @@ func (c *Client) listen() {
 	}
 }
 
+func (c *Client) newConversation(remote string) *conversation {
+	ep := c.mux.NewEndpoint()
+	client := proto.NewClient("xmpp-"+proto.GenerateId(), ep)
+	cv := &conversation{
+		Remote: remote,
+		Proto:  client,
+		Xmpp:   c,
+	}
+	if err := client.Subscribe("", "self", cv.handleProtoMessage); err != nil {
+		c.ctx.Log.Errorln("[xmpp] new:", err)
+	}
+	c.conversations[cv.Remote] = cv
+	return cv
+}
+
 func (c *Client) handleChatMessage(chat *xmpp.ClientMessage) {
 	c.ctx.Log.Debugln("[xmpp] chat: ", chat)
 	if chat.Body == "" {
 		return
 	}
 
+	cv, ok := c.conversations[chat.From]
+	if !ok {
+		cv = c.newConversation(chat.From)
+	}
+
 	if chat.Body == "full" {
-		text := fmt.Sprintf("%v", c.lastMessage)
+		text := fmt.Sprintf("%v", cv.LastMessage)
 		if err := c.xmpp.Send(chat.From, text); err != nil {
 			c.ctx.Log.Errorln("[xmpp] send:", err)
 		}
@@ -168,13 +170,7 @@ func (c *Client) handleChatMessage(chat *xmpp.ClientMessage) {
 		msg.Payload["text"] = chat.Body
 	}
 
-	msg.Id = proto.GenerateId()
-	c.conversations = append(c.conversations, conversation{
-		MessageId: msg.Id,
-		Remote:    chat.From,
-	})
-
-	if err := c.proto.Publish(msg); err != nil {
+	if err := cv.Proto.Publish(msg); err != nil {
 		c.ctx.Log.Errorln("[xmpp] publish: ", err)
 	}
 }
