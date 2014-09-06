@@ -51,7 +51,11 @@ func (c *Client) FillMessage(msg *Message) {
 
 func (c *Client) Publish(msg Message) error {
 	c.FillMessage(&msg)
-	return c.endpoint.Publish(msg)
+	if err := c.endpoint.Publish(msg); err != nil {
+		c.log.Errorf("[client %s] publish error: %v, %v", c.DeviceId, err)
+		return err
+	}
+	return nil
 }
 
 func (c *Client) handle(msg Message) {
@@ -92,4 +96,20 @@ func (c *Client) Subscribe(action, device string, h Handler) error {
 		h,
 	})
 	return c.Publish(Subscribe(action, device))
+}
+
+func (c *Client) Reply(orig, reply Message) error {
+	return c.Publish(orig.Reply(reply))
+}
+
+func (c *Client) ReplyBadRequest(orig Message, err error) error {
+	c.log.Warnf("[client %s] bad request: %v, %v", c.DeviceId, orig, err)
+	reply := orig.Reply(BadRequest(err))
+	return c.Publish(reply)
+}
+
+func (c *Client) ReplyInternalError(orig Message, err error) error {
+	c.log.Errorln("[client %s] internal error: %v, %v", c.DeviceId, orig, err)
+	reply := orig.Reply(InternalError(err))
+	return c.Publish(reply)
 }

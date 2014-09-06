@@ -37,7 +37,7 @@ func BadRequest(reason error) Message {
 		str += " - " + reason.Error()
 	}
 	return Message{
-		Action: "nack/400",
+		Action: "err/badrequest",
 		Payload: map[string]interface{}{
 			"text": str,
 		},
@@ -50,7 +50,7 @@ func InternalError(reason error) Message {
 		str += " - " + reason.Error()
 	}
 	return Message{
-		Action: "nack/500",
+		Action: "err/internal",
 		Payload: map[string]interface{}{
 			"text": str,
 		},

@@ -41,6 +41,14 @@ func DecodeMessage(raw []byte) (Message, error) {
 	return m, nil
 }
 
+func CreateMessage(action string, payload interface{}) Message {
+	msg := Message{Action: action}
+	if err := msg.EncodePayload(&payload); err != nil {
+		panic(err)
+	}
+	return msg
+}
+
 func (m Message) IsValid() error {
 	if m.Version == "" {
 		return errors.New("Invalid stark message: missing version")
