@@ -12,9 +12,6 @@ To Do
 
 * documentation
 * test coverage
-* core:
-	- mux
-		+ [ ] fix duplicated messages on subscription
 * services:
 	- hostscan
 		+ [x] automatic scanning
@@ -22,11 +19,12 @@ To Do
 	- location
 		+ [x] working save
 		+ [x] working retrieval "when did i last visit"
-		+ [ ] geofencing: create/list zones
-		+ [ ] geofencing: publish events on zone/enter leave
+		+ [x] geofencing: create zones
+		+ [x] geofencing: publish events on zone/enter leave
+		+ [ ] geofencing: list zones
 	- scheduler
-		+ [ ] working prototype
-		+ [ ] parse 'send' messages
+		+ [x] working prototype
+		+ [x] parse 'reply' messages
 	- selfspy
 		+ [ ] import option for sqlite file
 	- contacts
@@ -41,11 +39,11 @@ To Do
 		+ [ ] parsing google
 		+ [ ] parsing wolfram alpha
 	- natural
-		+ [ ] more complex parsing
+		+ [x] more complex parsing
 		+ [ ] dynamic changes
 	- event stream
+		+ [x] store/query
 		+ [ ] grouping of all updates (selfspy, music tracks, location, ..)
-		+ [ ] query
 		+ [ ] daily digest + graphs
 * clients:
 	- private web interface
