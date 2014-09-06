@@ -22,7 +22,7 @@ func TestStoreRetrieve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := db.Store(Location{
+	err := db.StoreLocation(Location{
 		Latitude:  52.3744779,
 		Longitude: 9.7385532,
 		Accuracy:  10,
@@ -32,7 +32,9 @@ func TestStoreRetrieve(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	last, err := db.GetLastLocationInBounds(52, 53, 9, 10)
+	g := Geofence{}
+	g.SetBounds([]float64{52, 53, 9, 10})
+	last, err := db.GetLastLocationInGeofence(g)
 	if err != nil {
 		t.Error(err)
 	}
@@ -40,7 +42,9 @@ func TestStoreRetrieve(t *testing.T) {
 		t.Errorf("Unexpected location: %s", last.Source)
 	}
 
-	_, err = db.GetLastLocationInBounds(52, 53, 10, 11)
+	g = Geofence{}
+	g.SetBounds([]float64{52, 53, 10, 11})
+	_, err = db.GetLastLocationInGeofence(g)
 	if err != sql.ErrNoRows {
 		t.Error(err)
 	}
@@ -107,5 +111,103 @@ func TestService(t *testing.T) {
 	t.Log(lastReply)
 	if lastReply.PayloadGetString("source") != "Hannover" {
 		t.Errorf("Unexpected location: %s", lastReply.PayloadGetString("source"))
+	}
+}
+
+func TestGeofence(t *testing.T) {
+	ctx, ep := core.NewTestContext()
+
+	var lastReply proto.Message
+	ep.RegisterHandler(func(msg proto.Message) {
+		lastReply = msg
+	})
+
+	srv, err := NewService(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = srv.Enable(); err != nil {
+		t.Fatal(err)
+	}
+
+	err = ep.Publish(proto.Message{
+		Action: "location/fence/create",
+		Payload: map[string]interface{}{
+			"name":    "City",
+			"lat_min": 5.1,
+			"lat_max": 5.3,
+			"lng_min": 6.1,
+			"lng_max": 6.3,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !lastReply.IsAction("location/fence/created") {
+		t.Fatal("expected a successful fence, not:", lastReply)
+	}
+
+	// outside of the fence
+	err = ep.Publish(proto.Message{
+		Action: "location/update",
+		Payload: map[string]interface{}{
+			"latitude":  5.2,
+			"longitude": 6.0,
+			"accuracy":  20,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// inside of the fence
+	err = ep.Publish(proto.Message{
+		Action: "location/update",
+		Payload: map[string]interface{}{
+			"latitude":  5.2,
+			"longitude": 6.2,
+			"accuracy":  20,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !lastReply.IsAction("location/fence/enter") {
+		t.Error("expected fence/enter, not:", lastReply)
+	}
+
+	// still inside
+	err = ep.Publish(proto.Message{
+		Action: "location/update",
+		Payload: map[string]interface{}{
+			"latitude":  5.2,
+			"longitude": 6.2,
+			"accuracy":  20,
+		},
+	})
+	lastReply = proto.Message{}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if lastReply.Action != "" {
+		t.Error("expected no message, but got", lastReply)
+	}
+
+	// back outside
+	lastReply = proto.Message{}
+	err = ep.Publish(proto.Message{
+		Action: "location/update",
+		Payload: map[string]interface{}{
+			"latitude":  5.4,
+			"longitude": 6.0,
+			"accuracy":  20,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !lastReply.IsAction("location/fence/leave") {
+		t.Error("expected fence/leave, not:", lastReply)
 	}
 }
