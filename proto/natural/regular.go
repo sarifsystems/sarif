@@ -6,7 +6,6 @@
 package natural
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -71,15 +70,13 @@ func LoadRegularSchemata(text string) (RegularSchemata, error) {
 		if err != nil {
 			return schemata, err
 		}
-
-		fmt.Println(schemata[i].Regexp)
 	}
 
 	return schemata, nil
 }
 
 func (s RegularSchema) Parse(text string) (proto.Message, bool) {
-	msg := s.Message
+	msg := s.Message.Copy()
 	match := s.Regexp.FindStringSubmatch(text)
 	if match == nil {
 		return msg, false

@@ -111,3 +111,13 @@ func (m *Message) EncodePayload(v interface{}) error {
 	}
 	return nil
 }
+
+func (m Message) Copy() Message {
+	c := m
+	if m.Payload != nil {
+		if err := c.EncodePayload(m.Payload); err != nil {
+			panic(err)
+		}
+	}
+	return c
+}
