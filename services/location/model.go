@@ -60,51 +60,51 @@ type Database interface {
 	GetGeofencesInLocation(l Location) ([]Geofence, error)
 }
 
-const schema = `
-CREATE TABLE IF NOT EXISTS locations (
-	id INT(10) NOT NULL AUTO_INCREMENT,
-	timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	latitude DECIMAL(9,6) NOT NULL,
-	longitude DECIMAL(9,6) NOT NULL,
-	accuracy FLOAT NOT NULL,
-	source VARCHAR(10) NOT NULL,
-	PRIMARY KEY (id),
-	UNIQUE KEY latitude (latitude,longitude)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+var schema = []string{
+	`CREATE TABLE IF NOT EXISTS locations (
+		id INT(10) NOT NULL AUTO_INCREMENT,
+		timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		latitude DECIMAL(9,6) NOT NULL,
+		longitude DECIMAL(9,6) NOT NULL,
+		accuracy FLOAT NOT NULL,
+		source VARCHAR(10) NOT NULL,
+		PRIMARY KEY (id),
+		UNIQUE KEY latitude (latitude,longitude)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8;`,
 
-CREATE TABLE IF NOT EXISTS location_geofences (
-	id INT(10) NOT NULL AUTO_INCREMENT,
-	lat_min DECIMAL(9,6) NOT NULL,
-	lat_max DECIMAL(9,6) NOT NULL,
-	lng_min DECIMAL(9,6) NOT NULL,
-	lng_max DECIMAL(9,6) NOT NULL,
-	name VARCHAR(100) NOT NULL,
-	PRIMARY KEY (id),
-	UNIQUE KEY bounds (lat_min, lat_max, lng_min, lng_max)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-`
+	`CREATE TABLE IF NOT EXISTS location_geofences (
+		id INT(10) NOT NULL AUTO_INCREMENT,
+		lat_min DECIMAL(9,6) NOT NULL,
+		lat_max DECIMAL(9,6) NOT NULL,
+		lng_min DECIMAL(9,6) NOT NULL,
+		lng_max DECIMAL(9,6) NOT NULL,
+		name VARCHAR(100) NOT NULL,
+		PRIMARY KEY (id),
+		UNIQUE KEY bounds (lat_min, lat_max, lng_min, lng_max)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8;`,
+}
 
-const schemaSqlite3 = `
-CREATE TABLE IF NOT EXISTS locations (
-	id INTEGER PRIMARY KEY,
-	timestamp TIMESTAMP NOT NULL,
-	latitude DECIMAL(9,6) NOT NULL,
-	longitude DECIMAL(9,6) NOT NULL,
-	accuracy FLOAT NOT NULL,
-	source VARCHAR(10) NOT NULL
-);
-CREATE INDEX IF NOT EXISTS lat_long ON locations (latitude,longitude);
+var schemaSqlite3 = []string{
+	`CREATE TABLE IF NOT EXISTS locations (
+		id INTEGER PRIMARY KEY,
+		timestamp TIMESTAMP NOT NULL,
+		latitude DECIMAL(9,6) NOT NULL,
+		longitude DECIMAL(9,6) NOT NULL,
+		accuracy FLOAT NOT NULL,
+		source VARCHAR(10) NOT NULL
+	)`,
+	`CREATE INDEX IF NOT EXISTS lat_long ON locations (latitude,longitude)`,
 
-CREATE TABLE IF NOT EXISTS location_geofences (
-	id INTEGER PRIMARY KEY,
-	lat_min DECIMAL(9,6) NOT NULL,
-	lat_max DECIMAL(9,6) NOT NULL,
-	lng_min DECIMAL(9,6) NOT NULL,
-	lng_max DECIMAL(9,6) NOT NULL,
-	name VARCHAR(100) NOT NULL
-);
-CREATE INDEX IF NOT EXISTS bounds ON location_geofences (lat_min, lat_max, lng_min, lng_max);
-`
+	`CREATE TABLE IF NOT EXISTS location_geofences (
+		id INTEGER PRIMARY KEY,
+		lat_min DECIMAL(9,6) NOT NULL,
+		lat_max DECIMAL(9,6) NOT NULL,
+		lng_min DECIMAL(9,6) NOT NULL,
+		lng_max DECIMAL(9,6) NOT NULL,
+		name VARCHAR(100) NOT NULL
+	);`,
+	`CREATE INDEX IF NOT EXISTS bounds ON location_geofences (lat_min, lat_max, lng_min, lng_max);`,
+}
 
 type sqlDatabase struct {
 	Driver string
@@ -113,10 +113,14 @@ type sqlDatabase struct {
 
 func (d *sqlDatabase) Setup() error {
 	var err error
+	s := schema
 	if d.Driver == "sqlite3" {
-		_, err = d.Db.Exec(schemaSqlite3)
-	} else {
-		_, err = d.Db.Exec(schema)
+		s = schemaSqlite3
+	}
+	for _, q := range s {
+		if _, err = d.Db.Exec(q); err != nil {
+			return err
+		}
 	}
 	return err
 }
