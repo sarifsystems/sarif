@@ -44,15 +44,9 @@ func NewApp(appName string) (*App, error) {
 		return app, err
 	}
 
-	return app, nil
-}
+	app.writeConfig()
 
-func (app *App) Close() {
-	if app.Config.IsModified() {
-		f := app.GetDefaultDir() + "/config.json"
-		app.Log.Infof("[core] writing config to '%s'", f)
-		app.Must(conf.Write(f, app.Config))
-	}
+	return app, nil
 }
 
 func (app *App) GetDefaultDir() string {
@@ -78,7 +72,7 @@ func (app *App) initConfig() error {
 			return err
 		}
 		cfg = conf.New()
-		app.Log.Warnf("[core] config not found, writing defaults to '%s'", f)
+		app.Log.Warnf("[core] config not found, loading defaults")
 		if err := conf.Write(f, cfg); err != nil {
 			return err
 		}
@@ -86,6 +80,18 @@ func (app *App) initConfig() error {
 	}
 	app.Config = cfg
 	return nil
+}
+
+func (app *App) writeConfig() {
+	if app.Config.IsModified() {
+		f := app.GetDefaultDir() + "/config.json"
+		app.Log.Infof("[core] writing config to '%s'", f)
+		app.Must(conf.Write(f, app.Config))
+	}
+}
+
+func (app *App) Close() {
+	app.writeConfig()
 }
 
 func (app *App) initDatabase() error {
@@ -107,15 +113,17 @@ func (app *App) initDatabase() error {
 }
 
 func (app *App) initProto() error {
-	cfg := mqtt.Config{}
+	cfg := mqtt.GetDefaults()
 	if err := app.Config.Get("mqtt", &cfg); err != nil {
 		return err
 	}
 	app.Proto = proto.NewMux()
 
-	if cfg.Server == "" {
+	if cfg.Server == "" || cfg.Server == "tcp://example.org:1883" {
 		app.Log.Warnln("[core] config 'mqtt.Server' empty, falling back to local broker")
 		app.Proto.RegisterPublisher(func(msg proto.Message) error {
+			raw, _ := msg.Encode()
+			app.Log.Debugln("[core] broker received:", string(raw))
 			app.Proto.Handle(msg)
 			return nil
 		})

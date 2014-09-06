@@ -3,6 +3,10 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
+// A simple server that can host different stark services.
+//
+// The module loading hides a few implementation details, so for a better
+// introduction, look at cmd/starkping (it works serverless)
 package main
 
 import (
@@ -39,11 +43,19 @@ func main() {
 		app.Log.SetLevel(log.LevelDebug)
 	}
 
+	// Default configuration
 	cfg := Config{
-		EnabledModules: []string{"web"},
+		EnabledModules: []string{
+			"events",
+			"location",
+			"scheduler",
+			"web",
+		},
 	}
+	// Load configuration from file
 	app.Must(app.Config.Get("server", &cfg))
 
+	// Enable each module listed in the config
 	for _, module := range cfg.EnabledModules {
 		app.Must(app.EnableModule(module))
 	}

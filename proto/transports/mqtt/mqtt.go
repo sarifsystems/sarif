@@ -29,7 +29,9 @@ type Config struct {
 }
 
 func GetDefaults() Config {
-	return Config{}
+	return Config{
+		Server: "tcp://example.org:1883",
+	}
 }
 
 func (cfg *Config) LoadTlsCertificates() (*tls.Config, error) {
