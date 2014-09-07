@@ -22,7 +22,7 @@ const defaultRegularText = `
 - example: I drink coffee
   fields:
     action: event/new
-    subject: [I]
+    subject: I
     verb: [drink]
     object: [coffee]
     status: singular
@@ -51,6 +51,12 @@ const defaultRegularText = `
     duration: [10m]
     text: [make coffee]
 
+- example: Remind me to make coffee in 10m
+  fields:
+    action: schedule/duration
+    duration: [10m]
+    text: [make coffee]
+
 - example: Remind me in 10m
   fields:
     action: schedule/duration
@@ -60,6 +66,17 @@ const defaultRegularText = `
   fields:
     action: know/query
     query: [3 + 5]
+
+- example: Create a geofence named home at 221b Baker Street
+  fields:
+    action: location/fence/create
+    name: [home]
+    address: [221b Baker Street]
+
+- example: Create a geofence at friends house
+  fields:
+    action: location/fence/create
+    address: [friends house]
 `
 
 var defaultRegular RegularSchemata

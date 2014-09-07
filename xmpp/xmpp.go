@@ -152,25 +152,10 @@ func (c *Client) handleChatMessage(chat *xmpp.ClientMessage) {
 		return
 	}
 
-	msg, ok := natural.ParseRegular(chat.Body)
-	if !ok {
-		msg, ok = natural.ParseSimple(chat.Body)
-	}
-	if !ok {
-		if err := c.xmpp.Send(chat.From, "I didn't understand your message."); err != nil {
-			c.ctx.Log.Errorln("[xmpp] send:", err)
-		}
-		return
-	}
-
-	if msg.PayloadGetString("text") == "" {
-		if msg.Payload == nil {
-			msg.Payload = make(map[string]interface{})
-		}
-		msg.Payload["text"] = chat.Body
-	}
-
-	if err := cv.Proto.Publish(msg); err != nil {
-		c.ctx.Log.Errorln("[xmpp] publish: ", err)
-	}
+	cv.Proto.Publish(proto.Message{
+		Action: "natural/handle",
+		Payload: map[string]interface{}{
+			"text": chat.Body,
+		},
+	})
 }

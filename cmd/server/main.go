@@ -20,6 +20,7 @@ import (
 	_ "github.com/xconstruct/stark/services/events"
 	_ "github.com/xconstruct/stark/services/hostscan"
 	_ "github.com/xconstruct/stark/services/location"
+	_ "github.com/xconstruct/stark/services/natural"
 	_ "github.com/xconstruct/stark/services/router"
 	_ "github.com/xconstruct/stark/services/scheduler"
 	_ "github.com/xconstruct/stark/web"
@@ -48,6 +49,7 @@ func main() {
 		EnabledModules: []string{
 			"events",
 			"location",
+			"natural",
 			"scheduler",
 			"web",
 		},
