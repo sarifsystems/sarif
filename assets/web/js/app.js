@@ -1,71 +1,54 @@
-function StarkClient(name) {
-	this.deviceName = name
-	this.deviceId = name + '-' + GenerateId()
-}
+var mainApp = angular.module('mainApp', []);
 
-StarkClient.prototype.Connect = function(msg) {
-	this.socket = new WebSocket("ws://" + window.location.host + "/stream/stark");
-	var client = this
+mainApp.controller('ChatCtrl', function ($scope) {
+	$scope.responses = [];
 
-	this.socket.onopen = function() {
-		console.log('open');
-		if (client.onOpen) {
-			client.onOpen();
+	s = new StarkClient("web-" + GenerateId());
+	s.onMessage = function(msg) {
+		if (msg.action == "ping") {
+			s.Publish({
+				action: "ack",
+				dst: msg.src,
+				corr: msg.id,
+			});
 		}
-	}
 
-	this.socket.onmessage = function(raw) {
-		console.log("receive", raw.data);
-		msg = JSON.parse(raw.data);
-		if (client.onMessage) {
-			client.onMessage(msg);
+		$scope.$apply(function() {
+			$scope.addMessage(msg);
+		});
+	};
+	s.onOpen = function(msg) {
+		s.Subscribe("ping", "");
+		s.Subscribe("", "self");
+	};
+	s.Connect()
+
+	$scope.publish = function() {
+		if (!$scope.message) {
+			return;
 		}
-	}
-
-	this.socket.onclose = function() {
-		if (client.onClose) {
-			client.onClose();
+		if ($scope.message == "clear") {
+			$scope.responses = [];
+		} else {
+			var msg = {
+				action: "natural/handle",
+				p: {
+					text: $scope.message,
+				}
+			};
+			s.Publish(msg);
+			$scope.addMessage(msg);
 		}
-		console.log('closed');
-	}
-}
+		$scope.message = "";
+	};
 
-StarkClient.prototype.Publish = function(msg) {
-	msg.v = msg.v || "0.3"
-	msg.id = msg.id || GenerateId()
-	msg.src = msg.src || this.deviceId
-
-	raw = JSON.stringify(msg);
-	console.log("publish", raw)
-	this.socket.send(raw);
-}
-
-StarkClient.prototype.SubscribeGlobal = function(action) {
-	this.SubscribeSelf(action);
-	this.Publish({
-		action: "proto/sub",
-		p: {
-			"action": action,
-		},
-	});
-}
-
-StarkClient.prototype.SubscribeSelf = function(action) {
-	this.Publish({
-		action: "proto/sub",
-		p: {
-			"action": action,
-			"device": this.deviceId,
-		},
-	});
-}
-
-function GenerateId() {
-    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-    var text = "";
-    for( var i = 0; i < 8; i++ )
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
-
-    return text;
-}
+	$scope.addMessage = function(msg) {
+		var chat = {
+			msg: msg,
+			isSelf: (msg.src == s.deviceId),
+			time: new Date(),
+			text: msg.p && msg.p.text || (msg.action + " from " + msg.src)
+		}
+		$scope.responses.push(chat);
+	};
+});
