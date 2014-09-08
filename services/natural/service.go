@@ -77,10 +77,21 @@ func (s *Service) parseNatural(msg proto.Message) (proto.Message, bool) {
 		return proto.Message{}, false
 	}
 
-	if parsed, ok := natural.ParseRegular(text); ok {
-		return parsed, true
+	parsed, ok := natural.ParseRegular(text)
+	if !ok {
+		parsed, ok = natural.ParseSimple(text)
 	}
-	return natural.ParseSimple(text)
+	if !ok {
+		return parsed, false
+	}
+
+	if text := parsed.PayloadGetString("text"); text == "" {
+		if parsed.Payload == nil {
+			parsed.Payload = make(map[string]interface{})
+		}
+		parsed.Payload["text"] = msg.PayloadGetString("text")
+	}
+	return parsed, true
 }
 
 func (s *Service) handleNatural(msg proto.Message) {
