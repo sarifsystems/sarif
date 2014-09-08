@@ -189,7 +189,7 @@ func (h *HostScan) LastStatusAll() ([]Host, error) {
 
 func HostInSlice(host Host, hosts []Host) bool {
 	for _, curr := range hosts {
-		if curr.Ip == host.Ip && curr.Name == host.Name {
+		if curr.Ip == host.Ip && curr.Name == host.Name && host.Status == "up" {
 			return true
 		}
 	}
