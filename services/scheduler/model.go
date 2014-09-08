@@ -26,9 +26,13 @@ type Task struct {
 }
 
 func (t Task) String() string {
-	return fmt.Sprintf("On %s schedule task '%s'.",
+	text := t.Reply.PayloadGetString("text")
+	if text == "" {
+		text = t.Reply.Action
+	}
+	return fmt.Sprintf("Schedule task '%s' on %s.",
+		text,
 		util.FuzzyTime(t.Time),
-		t.Reply,
 	)
 }
 
