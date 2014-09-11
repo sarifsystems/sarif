@@ -63,7 +63,9 @@ func (s *Service) Enable() error {
 	if s.cfg.User != "" {
 		go func() {
 			for _ = range time.Tick(30 * time.Minute) {
-				s.ctx.Must(s.ImportAll())
+				if err := s.ImportAll(); err != nil {
+					s.ctx.Log.Errorln("[lastfm] import err:", err)
+				}
 			}
 		}()
 	}
