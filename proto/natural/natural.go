@@ -6,6 +6,7 @@
 package natural
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -14,6 +15,13 @@ import (
 
 func ParseSimple(text string) (proto.Message, bool) {
 	msg := proto.Message{}
+
+	if strings.HasPrefix(text, "{") {
+		if err := json.Unmarshal([]byte(text), &msg); err == nil {
+			return msg, true
+		}
+	}
+
 	parts := strings.Split(text, " ")
 	msg.Action = parts[0]
 	if msg.Action == "" {
