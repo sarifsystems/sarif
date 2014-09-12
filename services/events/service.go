@@ -55,9 +55,6 @@ func (s *Service) Enable() error {
 	if err := s.proto.Subscribe("location/fence", "", s.handleLocationFence); err != nil {
 		return err
 	}
-	if err := s.proto.Subscribe("location/fence", "", s.handleLocationFence); err != nil {
-		return err
-	}
 	return nil
 }
 
