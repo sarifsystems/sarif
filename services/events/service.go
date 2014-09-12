@@ -52,8 +52,15 @@ func (s *Service) Enable() error {
 	if err := s.proto.Subscribe("event/last", "", s.handleEventLast); err != nil {
 		return err
 	}
+	if err := s.proto.Subscribe("location/fence", "", s.handleLocationFence); err != nil {
+		return err
+	}
+	if err := s.proto.Subscribe("location/fence", "", s.handleLocationFence); err != nil {
+		return err
+	}
 	return nil
 }
+
 func (s *Service) Disable() error { return nil }
 
 var MessageEventNotFound = proto.Message{
