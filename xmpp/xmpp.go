@@ -6,7 +6,7 @@
 package xmpp
 
 import (
-	"fmt"
+	"encoding/json"
 	"time"
 
 	"github.com/agl/xmpp"
@@ -145,8 +145,11 @@ func (c *Client) handleChatMessage(chat *xmpp.ClientMessage) {
 	}
 
 	if chat.Body == "full" {
-		text := fmt.Sprintf("%v", cv.LastMessage)
-		if err := c.xmpp.Send(chat.From, text); err != nil {
+		text, err := json.MarshalIndent(cv.LastMessage, "", "    ")
+		if err != nil {
+			panic(err)
+		}
+		if err := c.xmpp.Send(chat.From, string(text)); err != nil {
 			c.ctx.Log.Errorln("[xmpp] send:", err)
 		}
 		return
