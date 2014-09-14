@@ -17,8 +17,8 @@ var verbose = flag.Bool("v", false, "verbose debug output")
 
 func main() {
 	flag.Parse()
-	app, err := core.NewApp("stark")
-	app.Must(err)
+	app := core.NewApp("stark")
+	app.Must(app.Init())
 	defer app.Close()
 
 	if *verbose {

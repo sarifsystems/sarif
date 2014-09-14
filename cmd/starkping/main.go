@@ -96,8 +96,8 @@ func main() {
 	// App simply helps to read our global configuration file and sets up the
 	// MQTT connection to the network. It is not strictly necessary for own
 	// services.
-	app, err := core.NewApp("stark")
-	app.Must(err)
+	app := core.NewApp("stark")
+	app.Must(app.Init())
 	defer app.Close()
 	if *verbose {
 		app.Log.SetLevel(log.LevelDebug)

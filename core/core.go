@@ -26,7 +26,7 @@ type App struct {
 	instances map[string]ModuleInstance
 }
 
-func NewApp(appName string) (*App, error) {
+func NewApp(appName string) *App {
 	app := &App{
 		AppName:   appName,
 		Log:       log.Default,
@@ -34,19 +34,22 @@ func NewApp(appName string) (*App, error) {
 	}
 	app.Log.SetLevel(log.LevelInfo)
 
+	return app
+}
+
+func (app *App) Init() error {
 	if err := app.initConfig(); err != nil {
-		return app, err
+		return err
 	}
 	if err := app.initDatabase(); err != nil {
-		return app, err
+		return err
 	}
 	if err := app.initProto(); err != nil {
-		return app, err
+		return err
 	}
 
 	app.writeConfig()
-
-	return app, nil
+	return nil
 }
 
 func (app *App) GetDefaultDir() string {

@@ -54,8 +54,8 @@ func main() {
 	flag.Parse()
 
 	// Setup app and read config.
-	app, err := core.NewApp("stark")
-	app.Must(err)
+	app := core.NewApp("stark")
+	app.Must(app.Init())
 	defer app.Close()
 	if *verbose {
 		app.Log.SetLevel(log.LevelDebug)
