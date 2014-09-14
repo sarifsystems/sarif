@@ -1,13 +1,20 @@
 function StarkClient(deviceId) {
 	this.deviceId = deviceId;
-}
+	this.replyHandlers = {};
+	this.pubQueue = [];
 
-StarkClient.prototype.Connect = function(msg) {
 	this.socket = new WebSocket("ws://" + window.location.host + "/stream/stark");
 	var client = this
 
 	this.socket.onopen = function() {
 		console.log('open');
+		client.Subscribe("ping", "");
+		client.Subscribe("", "self");
+
+		while (raw = client.pubQueue.pop()) {
+			console.log("publishq", raw);
+			this.send(raw);
+		}
 		if (client.onOpen) {
 			client.onOpen();
 		}
@@ -15,7 +22,24 @@ StarkClient.prototype.Connect = function(msg) {
 
 	this.socket.onmessage = function(raw) {
 		console.log("receive", raw.data);
-		msg = JSON.parse(raw.data);
+		var msg = JSON.parse(raw.data);
+
+		if (msg.action == "ping") {
+			client.Publish({
+				action: "ack",
+				dst: msg.src,
+				corr: msg.id,
+			});
+		}
+		if (msg.corr) {
+			var handler = client.replyHandlers[msg.corr]
+			if (handler) {
+				if (handler(msg)) {
+					delete client.replyHandlers[msg.corr];
+				}
+				return
+			}
+		}
 		if (client.onMessage) {
 			client.onMessage(msg);
 		}
@@ -35,7 +59,11 @@ StarkClient.prototype.Publish = function(msg) {
 	msg.src = msg.src || this.deviceId
 
 	raw = JSON.stringify(msg);
-	console.log("publish", raw)
+	if (this.socket.readyState != WebSocket.OPEN) {
+		this.pubQueue.push(raw);
+		return;
+	}
+	console.log("publish", raw);
 	this.socket.send(raw);
 }
 
@@ -53,6 +81,12 @@ StarkClient.prototype.Subscribe = function(action, device) {
 		msg.p.device = (device == "self" ? this.deviceId : device)
 	}
 	this.Publish(msg)
+}
+
+StarkClient.prototype.Request = function(msg, onReply) {
+	msg.id = msg.id || GenerateId()
+	this.replyHandlers[msg.id] = onReply;
+	return this.Publish(msg)
 }
 
 function GenerateId() {

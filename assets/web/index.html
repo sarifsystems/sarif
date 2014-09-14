@@ -9,11 +9,12 @@
 		<script src="/js/vendor/ui-bootstrap-0.9.0.min.js" type="text/javascript" charset="utf-8"></script>
 		<script src="/js/vendor/d3.v3.min.js" type="text/javascript" charset="utf-8"></script>
 		<script src="/js/stark.js" type="text/javascript" charset="utf-8"></script>
+		<script src="/js/timeago.js" type="text/javascript" charset="utf-8"></script>
 		<script src="/js/app.js" type="text/javascript" charset="utf-8"></script>
 	</head>
 	<body>
 		<div class="navbar navbar-default navbar-fixed-top" role="navigation">
-			<div class="container">
+			<div class="container-fluid">
 				<div class="navbar-header">
 					<button type="button" class="navbar-toggle collapsed" ng-init="isCollapsed = true" ng-click="isCollapsed = !isCollapsed">
 						<span class="sr-only">Toggle navigation</span>
@@ -32,9 +33,30 @@
 			</div>
 		</div>
 
-		<div class="container">
+		<div class="container-fluid" ng-controller="DashboardCtrl">
 			<div class="row">
-				<div class="col-md-8">
+				<div class="col-md-3">
+					<div class="panel panel-default">
+						<div class="panel-heading">
+							Last Coffee
+						</div>
+						<div class="panel-body" ng-model="lastCoffee">
+							{{lastCoffee.timestamp | timeago}}
+						</div>
+					</div>
+
+					<div class="panel panel-default">
+						<div class="panel-heading">
+							Last Location
+						</div>
+						<div class="panel-body" ng-model="lastLocation">
+							{{lastLocation.timestamp | timeago}}<br>
+							{{lastLocation.latitude}}, {{lastLocation.longitude}}
+						</div>
+					</div>
+				</div>
+
+				<div class="col-md-6">
 					<div class="panel panel-default" ng-controller="ChatCtrl">
 						<div class="panel-body">
 							<form ng-submit="publish()">

@@ -1,27 +1,20 @@
-var mainApp = angular.module('mainApp', []);
+var mainApp = angular.module('mainApp', ['timeAgo']);
 
-mainApp.controller('ChatCtrl', function ($scope) {
-	$scope.responses = [];
-
-	s = new StarkClient("web-" + GenerateId());
-	s.onMessage = function(msg) {
-		if (msg.action == "ping") {
-			s.Publish({
-				action: "ack",
-				dst: msg.src,
-				corr: msg.id,
-			});
-		}
-
-		$scope.$apply(function() {
-			$scope.addMessage(msg);
+mainApp.factory('stark', function($rootScope, $q) {
+	var client = new StarkClient("web-" + GenerateId());
+	client.Request = function(msg) {
+		var deferred = $q.defer();
+		StarkClient.prototype.Request.call(client, msg, function(msg) {
+			deferred.resolve(msg);
+			$rootScope.$digest();
 		});
+		return deferred.promise;
 	};
-	s.onOpen = function(msg) {
-		s.Subscribe("ping", "");
-		s.Subscribe("", "self");
-	};
-	s.Connect()
+	return client;
+});
+
+mainApp.controller('ChatCtrl', function ($scope, stark) {
+	$scope.responses = [];
 
 	$scope.publish = function() {
 		if (!$scope.message) {
@@ -36,8 +29,12 @@ mainApp.controller('ChatCtrl', function ($scope) {
 					text: $scope.message,
 				}
 			};
-			s.Publish(msg);
-			$scope.addMessage(msg);
+			stark.Request(msg).then($scope.addMessage)
+			stark.onMessage = function(msg) {
+				$scope.$apply(function() {
+					$scope.addMessage(msg);
+				});
+			};
 		}
 		$scope.message = "";
 	};
@@ -45,10 +42,28 @@ mainApp.controller('ChatCtrl', function ($scope) {
 	$scope.addMessage = function(msg) {
 		var chat = {
 			msg: msg,
-			isSelf: (msg.src == s.deviceId),
+			isSelf: (msg.src == stark.deviceId),
 			time: new Date(),
 			text: msg.p && msg.p.text || (msg.action + " from " + msg.src)
 		}
 		$scope.responses.push(chat);
 	};
+});
+
+mainApp.controller('DashboardCtrl', function($scope, stark) {
+	stark.Request({
+		action: 'event/last',
+		p: {
+			verb: 'drink',
+			object: 'coffee'
+		}
+	}).then(function(msg) {
+		$scope.lastCoffee = msg.p;
+	});
+
+	stark.Request({
+		action: 'location/last',
+	}).then(function(msg) {
+		$scope.lastLocation = msg.p;
+	});
 });
