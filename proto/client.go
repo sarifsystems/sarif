@@ -7,6 +7,7 @@ package proto
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/xconstruct/stark/log"
 )
@@ -51,6 +52,7 @@ func (c *Client) FillMessage(msg *Message) {
 
 func (c *Client) Publish(msg Message) error {
 	c.FillMessage(&msg)
+	fmt.Sprintln(c.endpoint)
 	if err := c.endpoint.Publish(msg); err != nil {
 		c.log.Errorf("[client %s] publish error: %v, %v", c.DeviceId, err)
 		return err
