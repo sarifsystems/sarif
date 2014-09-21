@@ -35,8 +35,9 @@ func init() {
 }
 
 type Config struct {
-	Interface string
-	ApiKeys   map[string]string
+	Interface      string
+	ApiKeys        map[string]string
+	AllowedActions map[string][]string
 }
 
 type Server struct {
@@ -56,8 +57,9 @@ func GenerateApiKey() (string, error) {
 
 func New(ctx *core.Context) (*Server, error) {
 	cfg := Config{
-		Interface: "0.0.0.0:5000",
-		ApiKeys:   nil,
+		Interface:      "0.0.0.0:5000",
+		ApiKeys:        nil,
+		AllowedActions: make(map[string][]string),
 	}
 	if err := ctx.Config.Get("web", &cfg); err != nil {
 		return nil, err
@@ -72,6 +74,7 @@ func New(ctx *core.Context) (*Server, error) {
 			}
 			cfg.ApiKeys["exampleclient"+strconv.Itoa(i)] = key
 		}
+		cfg.AllowedActions["exampleclient1"] = []string{"ping", "location/update"}
 		if err := ctx.Config.Set("web", cfg); err != nil {
 			return nil, err
 		}
@@ -166,6 +169,7 @@ func (s *Server) getApiClientByName(name string) *proto.Client {
 }
 
 func (s *Server) checkAuthentication(req *http.Request) string {
+	fmt.Println(req)
 	// Get authorization token.
 	token := ""
 	if auth := req.Header.Get("Authorization"); auth != "" {
@@ -181,6 +185,19 @@ func (s *Server) checkAuthentication(req *http.Request) string {
 	}
 	s.ctx.Log.Warnln("[web] authentication failed")
 	return ""
+}
+
+func (s *Server) clientIsAllowed(client string, msg proto.Message) bool {
+	allowed, ok := s.cfg.AllowedActions[client]
+	if !ok {
+		return true
+	}
+	for _, action := range allowed {
+		if msg.IsAction(action) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
@@ -221,6 +238,13 @@ func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	_ = msg.EncodePayload(pl)
+
+	if !s.clientIsAllowed(name, msg) {
+		w.WriteHeader(401)
+		fmt.Fprintf(w, "'%s' is not authorized to publish '%s'", name, msg.Action)
+		s.ctx.Log.Warnf("[web] REST '%s' is not authorized to publish on '%s'", name, msg.Action)
+		return
+	}
 
 	// Publish message.
 	if err := client.Publish(msg); err != nil {
