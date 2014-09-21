@@ -12,39 +12,73 @@ To Do
 
 * documentation
 * test coverage
+* spec:
+	- media support
+		+ [ ] define basic format of rich media messages
+		+ [ ] schema.org support
 * services:
-	- hostscan
+	- hostscan: track devices in home network via nmap
 		+ [x] automatic scanning
 		+ [x] simple query
-	- location
+	- location: handle user phone location tracking
 		+ [x] working save
 		+ [x] working retrieval "when did i last visit"
 		+ [x] geofencing: create zones
 		+ [x] geofencing: publish events on zone/enter leave
 		+ [ ] geofencing: list zones
-	- scheduler
+		+ [ ] last locations: return with active geofence info
+		+ [ ] last locations: filter by geofence
+		+ [ ] digest: walking, cycling, time spent at geofence
+	- scheduler: send messages on specific conditions
 		+ [x] working prototype
 		+ [x] parse 'reply' messages
-	- selfspy
+	- selfspy: manage desktop logs from selfspy
 		+ [ ] import option for sqlite file
+		+ [ ] dynamic import
+		+ [ ] dynamic event generation (for daily digest)
+		+ [ ] query support
 	- contacts
 		+ [ ] vcf reading support
-		+ [ ] storage
-		+ [ ] query
-		+ [ ] sync
-	- pkgtrack
+		+ [ ] storage / query
+		+ [ ] sync with carddav server
+		+ [ ] relationships between contacts, groups
+	- calendar
+		+ [ ] ics reading support
+		+ [ ] storage / query
+		+ [ ] sync with caldav server
+	- pkgtrack: handle status of shipment tracking numbers
 		+ [ ] store
 		+ [ ] automatic status change messages
-	- knowledge
-		+ [ ] parsing google
-		+ [ ] parsing wolfram alpha
-	- natural
+	- mailfiter: scan and process incoming emails
+		+ [ ] scan incoming mails
+		+ [ ] save package tracking numbers
+		+ [ ] parse semantic mails (schema.org, "Google Now Cards")
+	- wishlist: track future film releases and other media
+		+ [ ] generic things
+		+ [ ] movie queue: initial setup and retrieving
+		+ [ ] movie queue: check cinema / dvd / pre / torrent release dates
+	- knowledge: answer questions by querying knowledge providers
+		+ [ ] parse google
+		+ [ ] parse wolfram alpha
+	- natural: handle natural user text input
 		+ [x] more complex parsing
 		+ [ ] dynamic changes
-	- event stream
+	- events: manage a general stream of events and generate daily/weekly digests
 		+ [x] store/query
+		+ [x] store with geofence
 		+ [ ] grouping of all updates (selfspy, music tracks, location, ..)
 		+ [ ] daily digest + graphs
+	- weather: fetch current weather info and forecast
+		+ [ ] query
+		+ [ ] providers: openweathermap, ...
+	- files: provide storage for smaller files (max mail attachment size)
+		+ [ ] upload/retrieve files
+		+ [ ] metadata support
+		+ [ ] image recognition / tagging
+	- renderer: generates images from messages for display in clients with missing features
+		+ [ ] render dataseries as scatterplot
+		+ [ ] render GeoJSON tracks and map tiles
+		+ [ ] render LaTeX / MathML formulas
 * clients:
 	- private web interface
 		+ [ ] mockup
