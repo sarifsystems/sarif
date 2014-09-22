@@ -150,16 +150,12 @@ type locationLastMessage struct {
 
 var MsgNotFound = proto.Message{
 	Action: "err/location/notfound",
-	Payload: map[string]interface{}{
-		"text": "No matching location found.",
-	},
+	Text:   "No matching location found.",
 }
 
 var MsgAddressNotFound = proto.Message{
 	Action: "err/location/address/notfound",
-	Payload: map[string]interface{}{
-		"text": "Requested address could not be found",
-	},
+	Text:   "Requested address could not be found",
 }
 
 func (s *Service) queryLocationLast(pl locationLastMessage) proto.Message {
@@ -248,6 +244,6 @@ func (s *Service) handleGeofenceCreate(msg proto.Message) {
 		s.proto.ReplyInternalError(msg, err)
 		return
 	}
-	reply.Payload["text"] = "Geofence '" + g.Name + "' created."
+	reply.Text = "Geofence '" + g.Name + "' created."
 	s.proto.Publish(reply)
 }

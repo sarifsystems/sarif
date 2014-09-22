@@ -157,8 +157,6 @@ func (c *Client) handleChatMessage(chat *xmpp.ClientMessage) {
 
 	cv.Proto.Publish(proto.Message{
 		Action: "natural/handle",
-		Payload: map[string]interface{}{
-			"text": chat.Body,
-		},
+		Text:   chat.Body,
 	})
 }

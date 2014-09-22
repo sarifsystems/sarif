@@ -6,9 +6,9 @@
 package proto
 
 type Subscription struct {
-	Action  string
-	Device  string
-	Handler Handler
+	Action  string  `json:"action,omitempty"`
+	Device  string  `json:"device,omitempty"`
+	Handler Handler `json:"-"`
 }
 
 func (s Subscription) Matches(msg Message) bool {
@@ -22,13 +22,7 @@ func (s Subscription) Matches(msg Message) bool {
 }
 
 func Subscribe(action, device string) Message {
-	return Message{
-		Action: "proto/sub",
-		Payload: map[string]interface{}{
-			"action": action,
-			"device": device,
-		},
-	}
+	return CreateMessage("proto/sub", Subscription{action, device, nil})
 }
 
 func BadRequest(reason error) Message {
@@ -38,9 +32,7 @@ func BadRequest(reason error) Message {
 	}
 	return Message{
 		Action: "err/badrequest",
-		Payload: map[string]interface{}{
-			"text": str,
-		},
+		Text:   str,
 	}
 }
 
@@ -51,8 +43,6 @@ func InternalError(reason error) Message {
 	}
 	return Message{
 		Action: "err/internal",
-		Payload: map[string]interface{}{
-			"text": str,
-		},
+		Text:   str,
 	}
 }

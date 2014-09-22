@@ -79,27 +79,6 @@ func TestReply(t *testing.T) {
 	}
 }
 
-func TestPayload(t *testing.T) {
-	msg := Message{
-		Version: VERSION,
-		Id:      GenerateId(),
-		Action:  "proto/sub",
-		Source:  "original",
-		Payload: map[string]interface{}{
-			"stringpayload": "hello, world!",
-		},
-	}
-	got := msg.PayloadGetString("stringpayload")
-	if got != "hello, world!" {
-		t.Errorf("Message payload string wrong, got '%v'", got)
-	}
-
-	got = msg.PayloadGetString("nonexistent")
-	if got != "" {
-		t.Errorf("Nonexistent message payload wrong, got '%v'", got)
-	}
-}
-
 type simpleStruct struct {
 	Key    string
 	Number int
@@ -116,16 +95,16 @@ func TestEncodePayload(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if v := msg.PayloadGetString("Key"); v != "value" {
-		t.Error("encode: wrong Key:", v)
-	}
-	if v := msg.PayloadGetString("text"); v != "My key is value" {
-		t.Error("encode: wrong text:", v)
-	}
-
-	var got simpleStruct
+	got := simpleStruct{}
 	if err := msg.DecodePayload(&got); err != nil {
 		t.Fatal(err)
+	}
+
+	if got.Key != "value" {
+		t.Error("encode: wrong Key:", got.Key)
+	}
+	if msg.Text != "My key is value" {
+		t.Error("encode: wrong text:", msg.Text)
 	}
 
 	if got != exp {

@@ -26,7 +26,7 @@ type Task struct {
 }
 
 func (t Task) String() string {
-	text := t.Reply.PayloadGetString("text")
+	text := t.Reply.Text
 	if text == "" {
 		text = t.Reply.Action
 	}

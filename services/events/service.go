@@ -62,9 +62,7 @@ func (s *Service) Disable() error { return nil }
 
 var MessageEventNotFound = proto.Message{
 	Action: "event/notfound",
-	Payload: map[string]interface{}{
-		"text": "No event found.",
-	},
+	Text:   "No event found.",
 }
 
 func fixEvent(e *Event) {
@@ -99,7 +97,7 @@ func (s *Service) handleEventNew(msg proto.Message) {
 		s.publish(msg.Reply(proto.InternalError(err)))
 		return
 	}
-	reply.Payload["text"] = "New event: " + e.String()
+	reply.Text = "New event: " + e.String()
 
 	s.publish(msg.Reply(reply))
 }
@@ -132,7 +130,7 @@ func (s *Service) handleEventLast(msg proto.Message) {
 		s.publish(msg.Reply(proto.InternalError(err)))
 		return
 	}
-	reply.Payload["text"] = last.String()
+	reply.Text = last.String()
 
 	s.publish(msg.Reply(reply))
 }

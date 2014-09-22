@@ -11,10 +11,12 @@ import (
 
 func TestSubscribe(t *testing.T) {
 	msg := Subscribe("act", "dev")
-	if v := msg.PayloadGetString("action"); v != "act" {
-		t.Errorf("Message payload action wrong, got '%v'", v)
+	var got Subscription
+	msg.DecodePayload(&got)
+	if got.Action != "act" {
+		t.Errorf("Message payload action wrong, got '%v'", got.Action)
 	}
-	if v := msg.PayloadGetString("device"); v != "dev" {
-		t.Errorf("Message payload device wrong, got '%v'", v)
+	if got.Device != "dev" {
+		t.Errorf("Message payload device wrong, got '%v'", got.Device)
 	}
 }

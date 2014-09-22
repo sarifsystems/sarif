@@ -18,10 +18,10 @@ type MuxEndpoint struct {
 
 func (e *MuxEndpoint) Publish(msg Message) error {
 	if msg.IsAction("proto/sub") {
-		e.subs = append(e.subs, Subscription{
-			Action: msg.PayloadGetString("action"),
-			Device: msg.PayloadGetString("device"),
-		})
+		sub := Subscription{}
+		if err := msg.DecodePayload(&sub); err == nil {
+			e.subs = append(e.subs, sub)
+		}
 	}
 	return e.mux.publisher(msg)
 }

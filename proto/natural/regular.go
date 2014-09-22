@@ -18,19 +18,22 @@ type RegularSchema struct {
 	Regexp  *regexp.Regexp
 	Fields  map[string]interface{}
 	Message proto.Message
+	Payload map[string]interface{}
 }
 
 type RegularSchemata []RegularSchema
 
-func fillMessage(msg *proto.Message, key, val string) {
-	if key == "action" {
-		msg.Action = val
+func fillMessage(msg *proto.Message, payload map[string]interface{}, key, val string) {
+	switch key {
+	case "":
 		return
+	case "action":
+		msg.Action = val
+	case "text":
+		msg.Text = val
+	default:
+		payload[key] = val
 	}
-	if msg.Payload == nil {
-		msg.Payload = make(map[string]interface{})
-	}
-	msg.Payload[key] = val
 }
 
 func buildRegexp(re, field string, val []interface{}) string {
@@ -56,12 +59,13 @@ func LoadRegularSchemata(text string) (RegularSchemata, error) {
 	}
 
 	for i, s := range schemata {
+		s.Payload = make(map[string]interface{})
 		var err error
 		re := `^(?i)` + regexp.QuoteMeta(s.Example) + `$`
 		for field, val := range s.Fields {
 			switch v := val.(type) {
 			case string:
-				fillMessage(&schemata[i].Message, field, v)
+				fillMessage(&schemata[i].Message, s.Payload, field, v)
 			case []interface{}:
 				re = buildRegexp(re, field, v)
 			}
@@ -81,10 +85,15 @@ func (s RegularSchema) Parse(text string) (proto.Message, bool) {
 	if match == nil {
 		return msg, false
 	}
+	payload := make(map[string]interface{})
+	for k, v := range s.Payload {
+		payload[k] = v
+	}
 	for i, field := range s.Regexp.SubexpNames() {
-		if field != "" {
-			fillMessage(&msg, field, match[i])
-		}
+		fillMessage(&msg, payload, field, match[i])
+	}
+	if len(payload) > 0 {
+		msg.EncodePayload(payload)
 	}
 	return msg, true
 }

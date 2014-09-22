@@ -82,16 +82,14 @@ func (s *Scheduler) handle(msg proto.Message) {
 		t.Time = t.Time.Add(dur)
 	}
 	if t.Reply.Action == "" {
-		text := msg.PayloadGetString("text")
+		text := msg.Text
 		if text == "" {
 			text = "Reminder from " + util.FuzzyTime(time.Now()) + " finished."
 		}
 		t.Reply = proto.Message{
 			Action:      "schedule/finished",
 			Destination: msg.Source,
-			Payload: map[string]interface{}{
-				"text": text,
-			},
+			Text:        text,
 		}
 	}
 	if t.Reply.CorrId == "" {

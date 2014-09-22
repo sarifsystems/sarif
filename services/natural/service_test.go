@@ -21,9 +21,7 @@ func TestParse(t *testing.T) {
 
 	parsed, ok := srv.parseNatural(proto.Message{
 		Action: "natural/parse",
-		Payload: map[string]interface{}{
-			"text": "When did I last visit Berlin?",
-		},
+		Text:   "When did I last visit Berlin?",
 	})
 	if !ok {
 		t.Fatal("message should parse")
@@ -32,10 +30,15 @@ func TestParse(t *testing.T) {
 	if parsed.Action != "location/last" {
 		t.Error("wrong action: ", parsed.Action)
 	}
-	if v := parsed.PayloadGetString("address"); v != "Berlin" {
-		t.Error("wrong address: ", v)
+
+	got := struct {
+		Address string
+	}{}
+	parsed.DecodePayload(&got)
+	if got.Address != "Berlin" {
+		t.Error("wrong address: ", got.Address)
 	}
-	if v := parsed.PayloadGetString("text"); v != "When did I last visit Berlin?" {
-		t.Error("wrong text: ", v)
+	if parsed.Text != "When did I last visit Berlin?" {
+		t.Error("wrong text: ", parsed.Text)
 	}
 }

@@ -1,4 +1,4 @@
-Stark Specification Version 0.3
+Stark Specification Version 0.4
 =================================
 
 A stark message is a JSON-encoded object with a number of fixed fields. This message
@@ -18,6 +18,7 @@ As defined in [proto.Message](http://godoc.org/github.com/xconstruct/stark/proto
 * dst: optional device ID of the destination
 * p: optional payload (a JSON object with further fields)
 * corr: optional correlation id of previous message
+* text: optional user friendly textual representation of the message (recommended)
 
 Default actions
 ---------------

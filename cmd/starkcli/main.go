@@ -60,7 +60,7 @@ func main() {
 
 	// Subscribe to all replies and print them to stdout
 	client.Subscribe("", "self", func(msg proto.Message) {
-		text := msg.PayloadGetString("text")
+		text := msg.Text
 		if text == "" {
 			text = msg.Action + " from " + msg.Source
 		}
@@ -89,18 +89,14 @@ func main() {
 			// Publish natural message
 			client.Publish(proto.Message{
 				Action: "natural/handle",
-				Payload: map[string]interface{}{
-					"text": string(line),
-				},
+				Text:   string(line),
 			})
 		}
 	} else {
 		// Non-interactive mode publishes arguments and waits for response.
 		client.Publish(proto.Message{
 			Action: "natural/handle",
-			Payload: map[string]interface{}{
-				"text": strings.Join(flag.Args(), " "),
-			},
+			Text:   strings.Join(flag.Args(), " "),
 		})
 		select {}
 	}

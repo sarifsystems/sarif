@@ -30,15 +30,12 @@ func TestService(t *testing.T) {
 	}
 
 	// store new event
-	err = ep.Publish(proto.Message{
-		Action: "event/new",
-		Payload: map[string]interface{}{
-			"subject": "user",
-			"verb":    "drink",
-			"object":  "coffee",
-			"text":    "User drinks coffee.",
-		},
-	})
+	err = ep.Publish(proto.CreateMessage("event/new", map[string]interface{}{
+		"subject": "user",
+		"verb":    "drink",
+		"object":  "coffee",
+		"text":    "User drinks coffee.",
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,12 +48,9 @@ func TestService(t *testing.T) {
 
 	lastReply = nil
 	// retrieve event
-	err = ep.Publish(proto.Message{
-		Action: "event/last",
-		Payload: map[string]interface{}{
-			"verb": "drink",
-		},
-	})
+	err = ep.Publish(proto.CreateMessage("event/last", map[string]interface{}{
+		"verb": "drink",
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +60,9 @@ func TestService(t *testing.T) {
 	if lastReply.Action != "event/found" {
 		t.Error("did not find event")
 	}
-	if lastReply.PayloadGetString("object") != "coffee" {
+	got := Event{}
+	lastReply.DecodePayload(&got)
+	if got.Object != "coffee" {
 		t.Error("did not find coffee")
 	}
 	lastReply = nil

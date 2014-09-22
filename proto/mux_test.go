@@ -37,32 +37,14 @@ func TestMuxMultiple(t *testing.T) {
 	epOne.RegisterHandler(func(msg Message) {
 		oneFired = true
 	})
-	epOne.Publish(Message{
-		Action: "proto/sub",
-		Payload: map[string]interface{}{
-			"action": "ping",
-			"device": "one",
-		},
-	})
+	epOne.Publish(CreateMessage("proto/sub", Subscription{"ping", "one", nil}))
 
 	epTwo := mux.NewEndpoint()
 	epTwo.RegisterHandler(func(msg Message) {
 		twoFired = true
 	})
-	epTwo.Publish(Message{
-		Action: "proto/sub",
-		Payload: map[string]interface{}{
-			"action": "ping",
-			"device": "two",
-		},
-	})
-	epTwo.Publish(Message{
-		Action: "proto/sub",
-		Payload: map[string]interface{}{
-			"action": "ping",
-			"device": "",
-		},
-	})
+	epTwo.Publish(CreateMessage("proto/sub", Subscription{"ping", "two", nil}))
+	epTwo.Publish(CreateMessage("proto/sub", Subscription{"ping", "", nil}))
 
 	for _, test := range tests {
 		oneFired, twoFired = false, false

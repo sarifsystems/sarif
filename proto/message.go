@@ -14,13 +14,14 @@ import (
 const VERSION = "0.3"
 
 type Message struct {
-	Version     string                 `json:"v"`
-	Id          string                 `json:"id"`
-	Action      string                 `json:"action"`
-	Source      string                 `json:"src"`
-	Destination string                 `json:"dst,omitempty"`
-	Payload     map[string]interface{} `json:"p,omitempty"`
-	CorrId      string                 `json:"corr,omitempty"`
+	Version     string           `json:"v"`
+	Id          string           `json:"id"`
+	Action      string           `json:"action"`
+	Source      string           `json:"src"`
+	Destination string           `json:"dst,omitempty"`
+	Payload     *json.RawMessage `json:"p,omitempty"`
+	CorrId      string           `json:"corr,omitempty"`
+	Text        string           `json:"text,omitempty"`
 }
 
 func (m Message) Encode() ([]byte, error) {
@@ -82,21 +83,8 @@ func (m Message) IsAction(action string) bool {
 	return true
 }
 
-func (m Message) PayloadGetString(key string) string {
-	if val, ok := m.Payload[key]; ok {
-		if str, ok := val.(string); ok {
-			return str
-		}
-	}
-	return ""
-}
-
 func (m Message) DecodePayload(v interface{}) error {
-	raw, err := json.Marshal(m.Payload)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(raw, v)
+	return json.Unmarshal(*m.Payload, v)
 }
 
 type stringer interface {
@@ -108,13 +96,11 @@ func (m *Message) EncodePayload(v interface{}) error {
 	if err != nil {
 		return err
 	}
-	m.Payload = nil
-	if err := json.Unmarshal(raw, &m.Payload); err != nil {
-		return err
-	}
-	if m.PayloadGetString("text") == "" {
+	rawjson := json.RawMessage(raw)
+	m.Payload = &rawjson
+	if m.Text == "" {
 		if s, ok := v.(stringer); ok {
-			m.Payload["text"] = s.String()
+			m.Text = s.String()
 		}
 	}
 	return nil

@@ -32,12 +32,9 @@ func TestService(t *testing.T) {
 	}
 
 	// send simple default task
-	err = ep.Publish(proto.Message{
-		Action: "schedule/duration",
-		Payload: map[string]interface{}{
-			"duration": "300ms",
-		},
-	})
+	err = ep.Publish(proto.CreateMessage("schedule/duration", map[string]interface{}{
+		"duration": "300ms",
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,18 +47,13 @@ func TestService(t *testing.T) {
 
 	lastReply = nil
 	// send task with payload
-	err = ep.Publish(proto.Message{
-		Action: "schedule/duration",
-		Payload: map[string]interface{}{
-			"duration": "100ms",
-			"reply": proto.Message{
-				Action: "push/text",
-				Payload: map[string]interface{}{
-					"text": "reminder finished",
-				},
-			},
+	err = ep.Publish(proto.CreateMessage("schedule/duration", map[string]interface{}{
+		"duration": "100ms",
+		"reply": proto.Message{
+			Action: "push/text",
+			Text:   "reminder finished",
 		},
-	})
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,8 +71,8 @@ func TestService(t *testing.T) {
 	if lastReply.Action != "push/text" {
 		t.Error("did not receive scheduler reply")
 	}
-	if v := lastReply.PayloadGetString("text"); v != "reminder finished" {
-		t.Error("did not receive correct payload:", v)
+	if lastReply.Text != "reminder finished" {
+		t.Error("did not receive correct payload:", lastReply.Text)
 	}
 
 	// wait for simple task to fire
@@ -89,7 +81,7 @@ func TestService(t *testing.T) {
 	if lastReply.Action != "schedule/finished" {
 		t.Error("did not receive scheduler reply")
 	}
-	if !strings.HasPrefix(lastReply.PayloadGetString("text"), "Reminder from") {
+	if !strings.HasPrefix(lastReply.Text, "Reminder from") {
 		t.Error("did not receive correct payload")
 	}
 }

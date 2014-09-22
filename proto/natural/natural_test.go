@@ -13,40 +13,48 @@ import (
 )
 
 type simple struct {
-	text     string
-	ok       bool
-	expected proto.Message
+	text            string
+	ok              bool
+	expected        proto.Message
+	expectedPayload map[string]interface{}
 }
 
 func TestParseSimple(t *testing.T) {
 	tests := []simple{
 		simple{"ping", true, proto.Message{
 			Action: "ping",
-		}},
+		}, nil},
 
 		simple{"ping device=me", true, proto.Message{
 			Action:      "ping",
 			Destination: "me",
-		}},
+		}, nil},
 
 		simple{"ping device=me host=another", true, proto.Message{
 			Action:      "ping",
 			Destination: "me",
-			Payload: map[string]interface{}{
-				"host": "another",
-			},
+		}, map[string]interface{}{
+			"host": "another",
 		}},
 
-		simple{"ping no", false, proto.Message{}},
-		simple{"", false, proto.Message{}},
+		simple{"ping no", false, proto.Message{}, nil},
+		simple{"", false, proto.Message{}, nil},
 	}
 
 	for _, test := range tests {
 		msg, ok := ParseSimple(test.text)
 		if ok != test.ok {
 			t.Errorf("'%s' should parse? exp: %v, got: %v", test.text, test.ok, ok)
-		} else if ok && !reflect.DeepEqual(msg, test.expected) {
-			t.Errorf("decoded message differs\nexp '%v'\ngot '%v'", test.expected, msg)
+		} else if ok {
+			var payload map[string]interface{}
+			msg.DecodePayload(&payload)
+			msg.Payload = nil
+			if !reflect.DeepEqual(msg, test.expected) {
+				t.Errorf("decoded message differs\nexp '%v'\ngot '%v'", test.expected, msg)
+			}
+			if !reflect.DeepEqual(payload, test.expectedPayload) {
+				t.Errorf("decoded payload differs\nexp '%v'\ngot '%v'", test.expectedPayload, payload)
+			}
 		}
 	}
 }

@@ -29,7 +29,7 @@ type Event struct {
 	Object    string                 `json:"object"`
 	Status    string                 `json:"status"`
 	Source    string                 `json:"source"`
-	Text      string                 `json:"text"`
+	Text      string                 `json:"-"`
 	Meta      map[string]interface{} `json:"meta"`
 }
 

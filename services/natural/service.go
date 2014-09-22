@@ -72,24 +72,20 @@ func (pl MsgNaturalParsed) String() string {
 }
 
 func (s *Service) parseNatural(msg proto.Message) (proto.Message, bool) {
-	text := msg.PayloadGetString("text")
-	if text == "" {
+	if msg.Text == "" {
 		return proto.Message{}, false
 	}
 
-	parsed, ok := natural.ParseRegular(text)
+	parsed, ok := natural.ParseRegular(msg.Text)
 	if !ok {
-		parsed, ok = natural.ParseSimple(text)
+		parsed, ok = natural.ParseSimple(msg.Text)
 	}
 	if !ok {
 		return parsed, false
 	}
 
-	if text := parsed.PayloadGetString("text"); text == "" {
-		if parsed.Payload == nil {
-			parsed.Payload = make(map[string]interface{})
-		}
-		parsed.Payload["text"] = msg.PayloadGetString("text")
+	if parsed.Text == "" {
+		parsed.Text = msg.Text
 	}
 	return parsed, true
 }
@@ -97,8 +93,7 @@ func (s *Service) parseNatural(msg proto.Message) (proto.Message, bool) {
 func (s *Service) handleNatural(msg proto.Message) {
 	parsed, ok := s.parseNatural(msg)
 	if !ok {
-		text := msg.PayloadGetString("text")
-		reply := proto.CreateMessage("err/natural", MsgErrNatural{text})
+		reply := proto.CreateMessage("err/natural", MsgErrNatural{msg.Text})
 		s.proto.Publish(msg.Reply(reply))
 		return
 	}
@@ -108,14 +103,13 @@ func (s *Service) handleNatural(msg proto.Message) {
 }
 
 func (s *Service) handleNaturalParse(msg proto.Message) {
-	text := msg.PayloadGetString("text")
 	parsed, ok := s.parseNatural(msg)
 	if !ok {
-		reply := proto.CreateMessage("err/natural", MsgErrNatural{text})
+		reply := proto.CreateMessage("err/natural", MsgErrNatural{msg.Text})
 		s.proto.Publish(msg.Reply(reply))
 		return
 	}
 
-	reply := proto.CreateMessage("natural/parsed", MsgNaturalParsed{parsed, text})
+	reply := proto.CreateMessage("natural/parsed", MsgNaturalParsed{parsed, msg.Text})
 	s.proto.Publish(msg.Reply(reply))
 }

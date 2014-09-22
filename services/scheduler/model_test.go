@@ -27,9 +27,7 @@ func TestStoreRetrieve(t *testing.T) {
 		Time: time.Now().Add(2 * time.Minute),
 		Reply: proto.Message{
 			Action: "testaction",
-			Payload: map[string]interface{}{
-				"text": "hello you",
-			},
+			Text:   "hello you",
 		},
 	})
 	if err != nil {
@@ -39,9 +37,7 @@ func TestStoreRetrieve(t *testing.T) {
 		Time: time.Now().Add(1 * time.Minute),
 		Reply: proto.Message{
 			Action: "test/two",
-			Payload: map[string]interface{}{
-				"text": "hello me",
-			},
+			Text:   "hello me",
 		},
 	})
 	if err != nil {
@@ -63,8 +59,8 @@ func TestStoreRetrieve(t *testing.T) {
 	if task.Reply.Action != "test/two" {
 		t.Error("wrong reply action:", task.Reply.Action)
 	}
-	if task.Reply.PayloadGetString("text") != "hello me" {
-		t.Error("wrong reply payload:", task.Reply.PayloadGetString("text"))
+	if task.Reply.Text != "hello me" {
+		t.Error("wrong reply payload:", task.Reply.Text)
 	}
 
 	// mark task as finished
@@ -88,8 +84,8 @@ func TestStoreRetrieve(t *testing.T) {
 	if task.Reply.Action != "testaction" {
 		t.Error("wrong reply action:", task.Reply.Action)
 	}
-	if task.Reply.PayloadGetString("text") != "hello you" {
-		t.Error("wrong reply payload:", task.Reply.PayloadGetString("text"))
+	if task.Reply.Text != "hello you" {
+		t.Error("wrong reply payload:", task.Reply.Text)
 	}
 
 	// mark task as finished

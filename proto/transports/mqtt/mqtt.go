@@ -104,9 +104,11 @@ func (t *Transport) Publish(msg proto.Message) error {
 		return ErrNotConnected
 	}
 	if msg.Action == "proto/sub" {
-		action := msg.PayloadGetString("action")
-		device := msg.PayloadGetString("device")
-		if err := t.subscribe(proto.GetTopic(action, device) + "/#"); err != nil {
+		sub := proto.Subscription{}
+		if err := msg.DecodePayload(&sub); err != nil {
+			return err
+		}
+		if err := t.subscribe(proto.GetTopic(sub.Action, sub.Device) + "/#"); err != nil {
 			return err
 		}
 	}

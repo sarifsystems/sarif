@@ -25,9 +25,7 @@ mainApp.controller('ChatCtrl', function ($scope, stark) {
 		} else {
 			var msg = {
 				action: "natural/handle",
-				p: {
-					text: $scope.message,
-				}
+				text: $scope.message,
 			};
 			stark.Request(msg).then($scope.addMessage)
 			stark.onMessage = function(msg) {
@@ -44,7 +42,7 @@ mainApp.controller('ChatCtrl', function ($scope, stark) {
 			msg: msg,
 			isSelf: (msg.src == stark.deviceId),
 			time: new Date(),
-			text: msg.p && msg.p.text || (msg.action + " from " + msg.src)
+			text: msg.text || (msg.action + " from " + msg.src)
 		}
 		$scope.responses.push(chat);
 	};

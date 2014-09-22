@@ -22,11 +22,16 @@ func TestParseRegular(t *testing.T) {
 	if msg.Action != "event/new" {
 		t.Error("wrong action", msg.Action)
 	}
-	if v := msg.PayloadGetString("verb"); v != "acquire" {
-		t.Error("wrong verb", v)
+	got := struct {
+		Verb   string
+		Object string
+	}{}
+	msg.DecodePayload(&got)
+	if got.Verb != "acquire" {
+		t.Error("wrong verb", got.Verb)
 	}
-	if v := msg.PayloadGetString("object"); v != "Nutella" {
-		t.Error("wrong object", v)
+	if got.Object != "Nutella" {
+		t.Error("wrong object", got.Object)
 	}
 
 	// more complicted
@@ -38,10 +43,14 @@ func TestParseRegular(t *testing.T) {
 	if msg.Action != "schedule/duration" {
 		t.Error("wrong action", msg.Action)
 	}
-	if v := msg.PayloadGetString("duration"); v != "5h10m" {
-		t.Error("wrong duration", v)
+	got2 := struct {
+		Duration string
+	}{}
+	msg.DecodePayload(&got2)
+	if got2.Duration != "5h10m" {
+		t.Error("wrong duration", got2.Duration)
 	}
-	if v := msg.PayloadGetString("text"); v != "stop programming" {
-		t.Error("stop programming", v)
+	if msg.Text != "stop programming" {
+		t.Error("stop programming", msg.Text)
 	}
 }

@@ -67,50 +67,49 @@ func TestService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = ep.Publish(proto.Message{
-		Action: "location/update",
-		Payload: map[string]interface{}{
-			"timestamp": time.Now().Format(time.RFC3339),
-			"latitude":  52.3744779,
-			"longitude": 9.7385532,
-			"accuracy":  10,
-			"source":    "Hannover",
-		},
-	})
+	err = ep.Publish(proto.CreateMessage("location/update", map[string]interface{}{
+		"timestamp": time.Now().Format(time.RFC3339),
+		"latitude":  52.3744779,
+		"longitude": 9.7385532,
+		"accuracy":  10,
+		"source":    "Hannover",
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = ep.Publish(proto.Message{
-		Action: "location/last",
-		Payload: map[string]interface{}{
-			"bounds": []float64{52, 53, 9, 10},
-		},
-	})
+	err = ep.Publish(proto.CreateMessage("location/last", map[string]interface{}{
+		"bounds": []float64{52, 53, 9, 10},
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Log(lastReply)
-	if lastReply.PayloadGetString("source") != "Hannover" {
-		t.Errorf("Unexpected location: %s", lastReply.PayloadGetString("source"))
+	got := struct {
+		Source string
+	}{}
+	lastReply.DecodePayload(&got)
+	t.Log(lastReply, got)
+	if got.Source != "Hannover" {
+		t.Errorf("Unexpected location: %s", got.Source)
 	}
 
 	lastReply = nil
 
-	err = ep.Publish(proto.Message{
-		Action: "location/last",
-		Payload: map[string]interface{}{
-			"address": "Hannover, Germany",
-		},
-	})
+	err = ep.Publish(proto.CreateMessage("location/last", map[string]interface{}{
+		"address": "Hannover, Germany",
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Log(lastReply)
-	if lastReply.PayloadGetString("source") != "Hannover" {
-		t.Errorf("Unexpected location: %s", lastReply.PayloadGetString("source"))
+	got = struct {
+		Source string
+	}{}
+	lastReply.DecodePayload(&got)
+	t.Log(lastReply, got)
+	if got.Source != "Hannover" {
+		t.Errorf("Unexpected location: %s", got.Source)
 	}
 }
 
@@ -131,16 +130,13 @@ func TestGeofence(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = ep.Publish(proto.Message{
-		Action: "location/fence/create",
-		Payload: map[string]interface{}{
-			"name":    "City",
-			"lat_min": 5.1,
-			"lat_max": 5.3,
-			"lng_min": 6.1,
-			"lng_max": 6.3,
-		},
-	})
+	err = ep.Publish(proto.CreateMessage("location/fence/create", map[string]interface{}{
+		"name":    "City",
+		"lat_min": 5.1,
+		"lat_max": 5.3,
+		"lng_min": 6.1,
+		"lng_max": 6.3,
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,26 +145,20 @@ func TestGeofence(t *testing.T) {
 	}
 
 	// outside of the fence
-	err = ep.Publish(proto.Message{
-		Action: "location/update",
-		Payload: map[string]interface{}{
-			"latitude":  5.2,
-			"longitude": 6.0,
-			"accuracy":  20,
-		},
-	})
+	err = ep.Publish(proto.CreateMessage("location/update", map[string]interface{}{
+		"latitude":  5.2,
+		"longitude": 6.0,
+		"accuracy":  20,
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
 	// inside of the fence
-	err = ep.Publish(proto.Message{
-		Action: "location/update",
-		Payload: map[string]interface{}{
-			"latitude":  5.2,
-			"longitude": 6.2,
-			"accuracy":  20,
-		},
-	})
+	err = ep.Publish(proto.CreateMessage("location/update", map[string]interface{}{
+		"latitude":  5.2,
+		"longitude": 6.2,
+		"accuracy":  20,
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,14 +167,11 @@ func TestGeofence(t *testing.T) {
 	}
 
 	// still inside
-	err = ep.Publish(proto.Message{
-		Action: "location/update",
-		Payload: map[string]interface{}{
-			"latitude":  5.2,
-			"longitude": 6.2,
-			"accuracy":  20,
-		},
-	})
+	err = ep.Publish(proto.CreateMessage("location/update", map[string]interface{}{
+		"latitude":  5.2,
+		"longitude": 6.2,
+		"accuracy":  20,
+	}))
 	lastReply = proto.Message{}
 	if err != nil {
 		t.Fatal(err)
@@ -195,14 +182,11 @@ func TestGeofence(t *testing.T) {
 
 	// back outside
 	lastReply = proto.Message{}
-	err = ep.Publish(proto.Message{
-		Action: "location/update",
-		Payload: map[string]interface{}{
-			"latitude":  5.4,
-			"longitude": 6.0,
-			"accuracy":  20,
-		},
-	})
+	err = ep.Publish(proto.CreateMessage("location/update", map[string]interface{}{
+		"latitude":  5.4,
+		"longitude": 6.0,
+		"accuracy":  20,
+	}))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -66,25 +66,25 @@ func (s *Service) scheduledUpdate() {
 	time.AfterFunc(5*time.Minute, s.scheduledUpdate)
 }
 
+type HostRequest struct {
+	Host string `json:"host"`
+}
+
 func (s *Service) HandleLastStatus(msg proto.Message) {
 	if msg.Action != "devices/fetch_last_status" {
 		return
 	}
+	req := HostRequest{}
+	msg.DecodePayload(&req)
 
-	if name := msg.PayloadGetString("host"); name != "" {
-		host, err := s.scan.LastStatus(name)
+	if req.Host != "" {
+		host, err := s.scan.LastStatus(req.Host)
 		s.ctx.Log.Debugln(host)
 		if err != nil {
 			s.ctx.Log.Warnln(err)
 			return
 		}
-		s.proto.Publish(msg.Reply(proto.Message{
-			Action: "devices/last_status",
-			Payload: map[string]interface{}{
-				"host": host,
-				"text": host.String(),
-			},
-		}))
+		s.proto.Publish(msg.Reply(proto.CreateMessage("devices/last_status", host)))
 		return
 	}
 
@@ -94,11 +94,5 @@ func (s *Service) HandleLastStatus(msg proto.Message) {
 		s.ctx.Log.Warnln(err)
 		return
 	}
-	s.proto.Publish(msg.Reply(proto.Message{
-		Action: "devices/last_status",
-		Payload: map[string]interface{}{
-			"hosts": hosts,
-			"text":  "",
-		},
-	}))
+	s.proto.Publish(msg.Reply(proto.CreateMessage("devices/last_status", hosts)))
 }

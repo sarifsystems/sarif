@@ -46,14 +46,14 @@ func ParseSimple(text string) (proto.Message, bool) {
 		}
 	}
 	if len(payload) > 0 {
-		msg.Payload = payload
+		msg.EncodePayload(payload)
 	}
 	return msg, true
 }
 
 func FormatSimple(msg proto.Message) string {
-	if text := msg.PayloadGetString("text"); text != "" {
-		return text
+	if msg.Text != "" {
+		return msg.Text
 	}
 
 	return fmt.Sprintf("%s from %s.", msg.Action, msg.Source)
