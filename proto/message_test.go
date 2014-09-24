@@ -113,3 +113,11 @@ func TestEncodePayload(t *testing.T) {
 		t.Error("decoded payload differs")
 	}
 }
+
+func TestDecodeInvalidPayload(t *testing.T) {
+	msg := Message{}
+	var none struct{}
+	if err := msg.DecodePayload(&none); err != nil {
+		t.Fatal(err)
+	}
+}

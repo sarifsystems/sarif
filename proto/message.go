@@ -84,6 +84,9 @@ func (m Message) IsAction(action string) bool {
 }
 
 func (m Message) DecodePayload(v interface{}) error {
+	if m.Payload == nil {
+		return nil
+	}
 	return json.Unmarshal(*m.Payload, v)
 }
 
