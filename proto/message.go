@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const VERSION = "0.3"
+const VERSION = "0.4"
 
 type Message struct {
 	Version     string           `json:"v"`
