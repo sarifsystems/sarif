@@ -64,8 +64,8 @@ const defaultRegularText = `
 
 - example: What is 3 + 5
   fields:
-    action: know/query
-    query: [3 + 5]
+    action: knowledge/query
+    text: [3 + 5]
 
 - example: Create a geofence named home at 221b Baker Street
   fields:
@@ -77,6 +77,11 @@ const defaultRegularText = `
   fields:
     action: location/fence/create
     address: [friends house]
+
+- example: What is the birth day of Tuomas Holopainen?
+  fields:
+    action: knowledge/query
+    text: [birth day of Tuomas Holopainen]
 `
 
 var defaultRegular RegularSchemata
