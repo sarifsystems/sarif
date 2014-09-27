@@ -19,6 +19,7 @@ import (
 
 	_ "github.com/xconstruct/stark/services/events"
 	_ "github.com/xconstruct/stark/services/hostscan"
+	_ "github.com/xconstruct/stark/services/know"
 	_ "github.com/xconstruct/stark/services/lastfm"
 	_ "github.com/xconstruct/stark/services/location"
 	_ "github.com/xconstruct/stark/services/natural"
