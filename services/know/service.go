@@ -25,7 +25,12 @@ func newInstance(ctx *core.Context) (core.ModuleInstance, error) {
 	return NewService(ctx)
 }
 
+type Config struct {
+	WolframApiKey string
+}
+
 type Service struct {
+	cfg   Config
 	ctx   *core.Context
 	proto *proto.Client
 }
@@ -34,6 +39,12 @@ func NewService(ctx *core.Context) (*Service, error) {
 	s := &Service{
 		ctx:   ctx,
 		proto: proto.NewClient("know", ctx.Proto),
+	}
+	if err := ctx.Config.Get("know", &s.cfg); err != nil {
+		return nil, err
+	}
+	if s.cfg.WolframApiKey != "" {
+		know.Wolfram.SetApiKey(s.cfg.WolframApiKey)
 	}
 	return s, nil
 }
