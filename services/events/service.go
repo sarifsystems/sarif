@@ -82,6 +82,9 @@ func (s *Service) handleEventNew(msg proto.Message) {
 		return
 	}
 	fixEvent(&e)
+	if e.Text == "" {
+		e.Text = msg.Text
+	}
 
 	s.ctx.Log.Infoln("[events] new event:", e)
 
