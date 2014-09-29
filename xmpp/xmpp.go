@@ -129,7 +129,7 @@ func (c *Client) newConversation(remote string) *conversation {
 	if err := client.Subscribe("", "self", cv.handleProtoMessage); err != nil {
 		c.ctx.Log.Errorln("[xmpp] new:", err)
 	}
-	c.conversations[cv.Remote] = cv
+	c.conversations[xmpp.RemoveResourceFromJid(cv.Remote)] = cv
 	return cv
 }
 
@@ -139,7 +139,7 @@ func (c *Client) handleChatMessage(chat *xmpp.ClientMessage) {
 		return
 	}
 
-	cv, ok := c.conversations[chat.From]
+	cv, ok := c.conversations[xmpp.RemoveResourceFromJid(chat.From)]
 	if !ok {
 		cv = c.newConversation(chat.From)
 	}
