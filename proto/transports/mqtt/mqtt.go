@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"io/ioutil"
+	"time"
 
 	mqtt "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 
@@ -154,6 +155,19 @@ func (t *Transport) handleRawMessage(client *mqtt.MqttClient, raw mqtt.Message) 
 	t.handler(m)
 }
 
+func (t *Transport) reconnectLoop() {
+	for {
+		_, err := t.client.Start()
+		if err != nil {
+			t.log.Debugln("mqtt reconnect error:", err)
+			time.Sleep(5 * time.Second)
+		}
+		t.log.Infoln("mqtt reconnected")
+		return
+	}
+}
+
 func (t *Transport) onConnectionLost(client *mqtt.MqttClient, reason error) {
 	t.log.Infoln("mqtt transport lost connection:", reason)
+	t.reconnectLoop()
 }
