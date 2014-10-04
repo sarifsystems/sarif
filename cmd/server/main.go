@@ -25,8 +25,8 @@ import (
 	_ "github.com/xconstruct/stark/services/natural"
 	_ "github.com/xconstruct/stark/services/router"
 	_ "github.com/xconstruct/stark/services/scheduler"
-	_ "github.com/xconstruct/stark/web"
-	_ "github.com/xconstruct/stark/xmpp"
+	_ "github.com/xconstruct/stark/services/web"
+	_ "github.com/xconstruct/stark/services/xmpp"
 )
 
 var verbose = flag.Bool("v", false, "verbose debug output")
