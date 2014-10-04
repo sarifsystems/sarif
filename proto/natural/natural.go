@@ -37,6 +37,8 @@ func ParseSimple(text string) (proto.Message, bool) {
 
 		k, v := keyval[0], keyval[1]
 		switch k {
+		case "text":
+			msg.Text = v
 		case "device":
 			fallthrough
 		case "destination":
