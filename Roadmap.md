@@ -29,6 +29,7 @@ To Do
 		+ [ ] last locations: return with active geofence info
 		+ [ ] last locations: filter by geofence
 		+ [ ] digest: walking, cycling, time spent at geofence
+		+ [ ] digest: identify static locations, ask for check in
 	- scheduler: send messages on specific conditions
 		+ [x] working prototype
 		+ [x] parse 'reply' messages
@@ -58,16 +59,21 @@ To Do
 		+ [ ] movie queue: initial setup and retrieving
 		+ [ ] movie queue: check cinema / dvd / pre / torrent release dates
 	- knowledge: answer questions by querying knowledge providers
-		+ [ ] parse google
-		+ [ ] parse wolfram alpha
+		+ [x] parse google
+		+ [x] parse wolfram alpha
 	- natural: handle natural user text input
 		+ [x] more complex parsing
+		+ [ ] template support (e.g. via jq/gojee)
 		+ [ ] dynamic changes
 	- events: manage a general stream of events and generate daily/weekly digests
 		+ [x] store/query
 		+ [x] store with geofence
 		+ [ ] grouping of all updates (selfspy, music tracks, location, ..)
 		+ [ ] daily digest + graphs
+	- daily/weekly digest:
+		+ [ ] mail with stats
+		+ [ ] simple graphs
+		+ [ ] daily review (tag static locations -> check in)
 	- weather: fetch current weather info and forecast
 		+ [ ] query
 		+ [ ] providers: openweathermap, ...
@@ -79,6 +85,13 @@ To Do
 		+ [ ] render dataseries as scatterplot
 		+ [ ] render GeoJSON tracks and map tiles
 		+ [ ] render LaTeX / MathML formulas
+	- tracker:
+		+ [ ] standardized questions, natural support
+		+ [ ] mood tracking, randomized, verbal and numeric
+		+ [ ] activity tracking
+		+ [ ] meal tracking (serving/energy/carbs/fat/proteins), daily review
+	- qr code generator
+	- thing plusplus
 * clients:
 	- private web interface
 		+ [ ] mockup
