@@ -60,10 +60,11 @@ func (cfg *Config) LoadTlsCertificates() (*tls.Config, error) {
 }
 
 type Transport struct {
-	client  *mqtt.MqttClient
-	cfg     Config
-	handler proto.Handler
-	log     log.Interface
+	client        *mqtt.MqttClient
+	cfg           Config
+	handler       proto.Handler
+	log           log.Interface
+	subscriptions map[string]struct{}
 }
 
 func New(cfg Config) *Transport {
@@ -72,6 +73,7 @@ func New(cfg Config) *Transport {
 		cfg,
 		nil,
 		log.Default,
+		make(map[string]struct{}),
 	}
 }
 
@@ -135,6 +137,7 @@ func (t *Transport) subscribe(topic string) error {
 	if err != nil {
 		return err
 	}
+	t.subscriptions[topic] = struct{}{}
 	if _, err := t.client.StartSubscription(t.handleRawMessage, filter); err != nil {
 		return err
 	}
@@ -156,12 +159,20 @@ func (t *Transport) handleRawMessage(client *mqtt.MqttClient, raw mqtt.Message) 
 }
 
 func (t *Transport) reconnectLoop() {
+RECONNECT:
 	for {
 		if err := t.Connect(); err != nil {
 			t.log.Debugln("mqtt reconnect error:", err)
 			time.Sleep(5 * time.Second)
 		}
 		t.log.Infoln("mqtt reconnected")
+		for topic := range t.subscriptions {
+			if err := t.subscribe(topic); err != nil {
+				t.log.Debugln("mqtt reconnect subscribe error:", err)
+				time.Sleep(5 * time.Second)
+				continue RECONNECT
+			}
+		}
 		return
 	}
 }
