@@ -25,6 +25,7 @@ import (
 	_ "github.com/xconstruct/stark/services/natural"
 	_ "github.com/xconstruct/stark/services/router"
 	_ "github.com/xconstruct/stark/services/scheduler"
+	_ "github.com/xconstruct/stark/services/store"
 	_ "github.com/xconstruct/stark/services/web"
 	_ "github.com/xconstruct/stark/services/xmpp"
 )
@@ -50,9 +51,11 @@ func main() {
 	cfg := Config{
 		EnabledModules: []string{
 			"events",
+			"know",
 			"location",
 			"natural",
 			"scheduler",
+			"store",
 			"web",
 		},
 	}
