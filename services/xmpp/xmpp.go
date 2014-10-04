@@ -7,6 +7,7 @@ package xmpp
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/agl/xmpp"
@@ -120,7 +121,8 @@ func (c *Client) listen() {
 
 func (c *Client) newConversation(remote string) *conversation {
 	ep := c.mux.NewEndpoint()
-	client := proto.NewClient("xmpp-"+proto.GenerateId(), ep)
+	user := xmpp.RemoveResourceFromJid(remote)
+	client := proto.NewClient("xmpp/"+user, ep)
 	cv := &conversation{
 		Remote: remote,
 		Proto:  client,
@@ -129,7 +131,7 @@ func (c *Client) newConversation(remote string) *conversation {
 	if err := client.Subscribe("", "self", cv.handleProtoMessage); err != nil {
 		c.ctx.Log.Errorln("[xmpp] new:", err)
 	}
-	c.conversations[xmpp.RemoveResourceFromJid(cv.Remote)] = cv
+	c.conversations[user] = cv
 	return cv
 }
 
@@ -144,13 +146,22 @@ func (c *Client) handleChatMessage(chat *xmpp.ClientMessage) {
 		cv = c.newConversation(chat.From)
 	}
 
-	if chat.Body == "full" {
+	if chat.Body == ".full" {
 		text, err := json.MarshalIndent(cv.LastMessage, "", "    ")
 		if err != nil {
 			panic(err)
 		}
 		if err := c.xmpp.Send(chat.From, string(text)); err != nil {
 			c.ctx.Log.Errorln("[xmpp] send:", err)
+		}
+		return
+	}
+	if strings.HasPrefix(chat.Body, ".subscribe ") {
+		action := strings.TrimPrefix(chat.Body, ".subscribe ")
+		if action != "" {
+			if err := cv.Proto.Subscribe(action, "", cv.handleProtoMessage); err != nil {
+				c.ctx.Log.Errorln("[xmpp] subscribe:", err)
+			}
 		}
 		return
 	}
