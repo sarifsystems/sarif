@@ -157,8 +157,7 @@ func (t *Transport) handleRawMessage(client *mqtt.MqttClient, raw mqtt.Message) 
 
 func (t *Transport) reconnectLoop() {
 	for {
-		_, err := t.client.Start()
-		if err != nil {
+		if err := t.Connect(); err != nil {
 			t.log.Debugln("mqtt reconnect error:", err)
 			time.Sleep(5 * time.Second)
 		}
