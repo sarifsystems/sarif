@@ -1,0 +1,62 @@
+{
+	"ImportPath": "github.com/xconstruct/stark",
+	"GoVersion": "go1.3.1",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "code.google.com/p/cascadia",
+			"Comment": "null-30",
+			"Rev": "4f03c71bc42ba0015a68bea86422f0ecbb71bf70"
+		},
+		{
+			"ImportPath": "code.google.com/p/go.net/html",
+			"Comment": "null-144",
+			"Rev": "ad01a6fcc8a19d3a4478c836895ffe883bd2ceab"
+		},
+		{
+			"ImportPath": "code.google.com/p/go.net/websocket",
+			"Comment": "null-144",
+			"Rev": "ad01a6fcc8a19d3a4478c836895ffe883bd2ceab"
+		},
+		{
+			"ImportPath": "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git",
+			"Rev": "4572889cc6f741a610af3bb5447c90c03bfb763f"
+		},
+		{
+			"ImportPath": "github.com/PuerkitoBio/goquery",
+			"Comment": "v0.3.2-30-g12a8512",
+			"Rev": "12a851277896ab3921778fea9543634284691034"
+		},
+		{
+			"ImportPath": "github.com/agl/xmpp",
+			"Rev": "c3b61187566b252cfb4e61b4cb23285c86044463"
+		},
+		{
+			"ImportPath": "github.com/go-sql-driver/mysql",
+			"Comment": "v1.2-8-g0b00042",
+			"Rev": "0b000424e546f305e0bd47856d5fcb904c1a0eb4"
+		},
+		{
+			"ImportPath": "github.com/jinzhu/gorm",
+			"Rev": "375f3ee2604bdd0b4dce3c022a49e55599e99a42"
+		},
+		{
+			"ImportPath": "github.com/lib/pq/hstore",
+			"Rev": "c6325123e6d45115749734a8bc35060ebac74d0e"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-sqlite3",
+			"Rev": "abd3d9caef4548682a279b60c859c197a1b32a47"
+		},
+		{
+			"ImportPath": "github.com/xconstruct/know",
+			"Rev": "bed1a63d45e61588cfe0b9f262de5bae586fb311"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v1",
+			"Rev": "feb4ca79644e8e7e39c06095246ee54b1282c118"
+		}
+	]
+}
