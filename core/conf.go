@@ -3,7 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package conf
+package core
 
 import (
 	"encoding/json"
@@ -11,11 +11,11 @@ import (
 	"path"
 )
 
-type ErrNotFound struct {
+type ErrConfNotFound struct {
 	Section string
 }
 
-func (e ErrNotFound) Error() string {
+func (e ErrConfNotFound) Error() string {
 	return "conf: section '" + e.Section + "' not found"
 }
 
@@ -24,7 +24,7 @@ type Config struct {
 	sections map[string]*json.RawMessage
 }
 
-func New() *Config {
+func NewConfig() *Config {
 	return &Config{
 		false,
 		make(map[string]*json.RawMessage),
@@ -59,8 +59,8 @@ func (cfg *Config) IsModified() bool {
 	return cfg.modified
 }
 
-func Read(file string) (*Config, error) {
-	cfg := New()
+func ReadConfig(file string) (*Config, error) {
+	cfg := NewConfig()
 	f, err := os.Open(file)
 	if err != nil {
 		return cfg, err
@@ -71,7 +71,7 @@ func Read(file string) (*Config, error) {
 	return cfg, err
 }
 
-func Write(file string, cfg *Config) error {
+func WriteConfig(file string, cfg *Config) error {
 	if err := os.MkdirAll(path.Dir(file), 0700); err != nil {
 		return err
 	}

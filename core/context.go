@@ -6,17 +6,16 @@
 package core
 
 import (
-	"github.com/xconstruct/stark/conf"
-	"github.com/xconstruct/stark/database"
 	"github.com/xconstruct/stark/log"
 	"github.com/xconstruct/stark/proto"
 )
 
 type Context struct {
-	Database *database.DB
+	Database *DB
+	Orm      *Orm
 	Log      *log.Logger
 	Proto    proto.Endpoint
-	Config   *conf.Config
+	Config   *Config
 }
 
 func (ctx *Context) Must(err error) {
@@ -28,12 +27,13 @@ func (ctx *Context) Must(err error) {
 func NewTestContext() (*Context, proto.Endpoint) {
 	var err error
 	ctx := &Context{}
-	ctx.Config = conf.New()
+	ctx.Config = NewConfig()
 	ctx.Log = log.Default
 
-	if ctx.Database, err = database.OpenInMemory(); err != nil {
+	if ctx.Orm, err = OpenDatabaseInMemory(); err != nil {
 		log.Default.Fatalln(err)
 	}
+	ctx.Database = ctx.Orm.Database()
 
 	a, b := proto.NewPipe()
 	ctx.Proto = a

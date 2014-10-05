@@ -9,8 +9,6 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/xconstruct/stark/conf"
-	"github.com/xconstruct/stark/database"
 	"github.com/xconstruct/stark/log"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/proto/transports/mqtt"
@@ -18,9 +16,10 @@ import (
 
 type App struct {
 	AppName  string
-	Config   *conf.Config
+	Config   *Config
 	Proto    *proto.Mux
-	Database *database.DB
+	Database *DB
+	Orm      *Orm
 	Log      *log.Logger
 
 	instances map[string]ModuleInstance
@@ -69,14 +68,14 @@ func (app *App) GetDefaultDir() string {
 func (app *App) initConfig() error {
 	f := app.GetDefaultDir() + "/config.json"
 	app.Log.Debugf("[core] reading config from '%s'", f)
-	cfg, err := conf.Read(f)
+	cfg, err := ReadConfig(f)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return err
 		}
-		cfg = conf.New()
+		cfg = NewConfig()
 		app.Log.Warnf("[core] config not found, loading defaults")
-		if err := conf.Write(f, cfg); err != nil {
+		if err := WriteConfig(f, cfg); err != nil {
 			return err
 		}
 
@@ -89,7 +88,7 @@ func (app *App) writeConfig() {
 	if app.Config.IsModified() {
 		f := app.GetDefaultDir() + "/config.json"
 		app.Log.Infof("[core] writing config to '%s'", f)
-		app.Must(conf.Write(f, app.Config))
+		app.Must(WriteConfig(f, app.Config))
 	}
 }
 
@@ -98,7 +97,7 @@ func (app *App) Close() {
 }
 
 func (app *App) initDatabase() error {
-	cfg := database.Config{
+	cfg := DatabaseConfig{
 		Driver: "sqlite3",
 		Source: app.GetDefaultDir() + "/" + app.AppName + ".db",
 	}
@@ -107,11 +106,12 @@ func (app *App) initDatabase() error {
 		return err
 	}
 
-	db, err := database.Open(cfg)
+	db, err := OpenDatabase(cfg)
 	if err != nil {
 		return err
 	}
-	app.Database = db
+	app.Orm = db
+	app.Database = db.Database()
 	return nil
 }
 
@@ -183,6 +183,7 @@ func (app *App) WaitUntilInterrupt() {
 func (app *App) NewContext() *Context {
 	return &Context{
 		app.Database,
+		app.Orm,
 		app.Log,
 		app.Proto.NewEndpoint(),
 		app.Config,

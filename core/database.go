@@ -3,19 +3,25 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package database
+package core
 
 import (
 	"database/sql"
 	"os"
 	"path"
 
+	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-type Config struct {
+type DatabaseConfig struct {
 	Driver string
 	Source string
+}
+
+type Orm struct {
+	driver string
+	*gorm.DB
 }
 
 type DB struct {
@@ -23,11 +29,19 @@ type DB struct {
 	*sql.DB
 }
 
+func (db *Orm) Driver() string {
+	return db.driver
+}
+
+func (db *Orm) Database() *DB {
+	return &DB{db.driver, db.DB.DB()}
+}
+
 func (db *DB) Driver() string {
 	return db.driver
 }
 
-func Open(cfg Config) (*DB, error) {
+func OpenDatabase(cfg DatabaseConfig) (*Orm, error) {
 	driver := cfg.Driver
 	if driver == "sqlite3" {
 		err := os.MkdirAll(path.Dir(cfg.Source), 0700)
@@ -35,17 +49,17 @@ func Open(cfg Config) (*DB, error) {
 			return nil, err
 		}
 	}
-	sdb, err := sql.Open(driver, cfg.Source)
+	sdb, err := gorm.Open(driver, cfg.Source)
 	if err != nil {
 		return nil, err
 	}
-	return &DB{driver, sdb}, nil
+	return &Orm{driver, &sdb}, nil
 }
 
-func OpenInMemory() (*DB, error) {
-	sdb, err := sql.Open("sqlite3", ":memory:")
+func OpenDatabaseInMemory() (*Orm, error) {
+	sdb, err := gorm.Open("sqlite3", ":memory:")
 	if err != nil {
 		return nil, err
 	}
-	return &DB{"sqlite3", sdb}, nil
+	return &Orm{"sqlite3", &sdb}, nil
 }
