@@ -106,7 +106,7 @@ func (t *MqttConn) Publish(msg Message) error {
 		return ErrNotConnected
 	}
 	if msg.Action == "proto/sub" {
-		sub := Subscription{}
+		sub := subscription{}
 		if err := msg.DecodePayload(&sub); err != nil {
 			return err
 		}

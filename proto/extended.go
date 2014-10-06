@@ -5,13 +5,13 @@
 
 package proto
 
-type Subscription struct {
+type subscription struct {
 	Action  string  `json:"action,omitempty"`
 	Device  string  `json:"device,omitempty"`
 	Handler Handler `json:"-"`
 }
 
-func (s Subscription) Matches(msg Message) bool {
+func (s subscription) Matches(msg Message) bool {
 	if msg.Destination != s.Device {
 		return false
 	}
@@ -22,7 +22,7 @@ func (s Subscription) Matches(msg Message) bool {
 }
 
 func Subscribe(action, device string) Message {
-	return CreateMessage("proto/sub", Subscription{action, device, nil})
+	return CreateMessage("proto/sub", subscription{action, device, nil})
 }
 
 func BadRequest(reason error) Message {

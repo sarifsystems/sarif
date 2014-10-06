@@ -13,12 +13,12 @@ type Mux struct {
 type muxConn struct {
 	mux     *Mux
 	handler Handler
-	subs    []Subscription
+	subs    []subscription
 }
 
 func (e *muxConn) Publish(msg Message) error {
 	if msg.IsAction("proto/sub") {
-		sub := Subscription{}
+		sub := subscription{}
 		if err := msg.DecodePayload(&sub); err == nil {
 			e.subs = append(e.subs, sub)
 		}
@@ -57,7 +57,7 @@ func (m *Mux) RegisterPublisher(p Publisher) {
 }
 
 func (m *Mux) NewConn() Conn {
-	e := &muxConn{m, nil, make([]Subscription, 0)}
+	e := &muxConn{m, nil, make([]subscription, 0)}
 	m.conns = append(m.conns, e)
 	return e
 }

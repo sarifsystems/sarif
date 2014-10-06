@@ -17,7 +17,7 @@ type Client struct {
 	conn     Conn
 	handler  Handler
 	log      log.Interface
-	subs     []Subscription
+	subs     []subscription
 }
 
 func NewClient(deviceId string, e Conn) *Client {
@@ -26,7 +26,7 @@ func NewClient(deviceId string, e Conn) *Client {
 		e,
 		nil,
 		log.Default,
-		make([]Subscription, 0),
+		make([]subscription, 0),
 	}
 	c.conn = e
 	e.RegisterHandler(c.handle)
@@ -92,7 +92,7 @@ func (c *Client) Subscribe(action, device string, h Handler) error {
 		device = c.DeviceId
 	}
 
-	c.subs = append(c.subs, Subscription{
+	c.subs = append(c.subs, subscription{
 		action,
 		device,
 		h,
