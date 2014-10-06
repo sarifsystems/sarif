@@ -65,21 +65,22 @@ type MqttConn struct {
 	subscriptions map[string]struct{}
 }
 
-func DialMqtt(cfg MqttConfig) *MqttConn {
-	return &MqttConn{
+func DialMqtt(cfg MqttConfig) (*MqttConn, error) {
+	conn := &MqttConn{
 		nil,
 		cfg,
 		nil,
 		defaultLog,
 		make(map[string]struct{}),
 	}
+	return conn, conn.connect()
 }
 
 func (t *MqttConn) SetLogger(l Logger) {
 	t.log = l
 }
 
-func (t *MqttConn) Connect() error {
+func (t *MqttConn) connect() error {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(t.cfg.Server)
 	opts.SetClientId(GenerateId())
@@ -160,7 +161,7 @@ func (t *MqttConn) handleRawMessage(client *mqtt.MqttClient, raw mqtt.Message) {
 func (t *MqttConn) reconnectLoop() {
 RECONNECT:
 	for {
-		if err := t.Connect(); err != nil {
+		if err := t.connect(); err != nil {
 			t.log.Debugf("mqtt reconnect error: %s", err)
 			time.Sleep(5 * time.Second)
 		}

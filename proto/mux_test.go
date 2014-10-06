@@ -37,14 +37,14 @@ func TestMuxMultiple(t *testing.T) {
 	epOne.RegisterHandler(func(msg Message) {
 		oneFired = true
 	})
-	epOne.Publish(CreateMessage("proto/sub", Subscription{"ping", "one", nil}))
+	epOne.Publish(CreateMessage("proto/sub", subscription{"ping", "one", nil}))
 
 	epTwo := mux.NewConn()
 	epTwo.RegisterHandler(func(msg Message) {
 		twoFired = true
 	})
-	epTwo.Publish(CreateMessage("proto/sub", Subscription{"ping", "two", nil}))
-	epTwo.Publish(CreateMessage("proto/sub", Subscription{"ping", "", nil}))
+	epTwo.Publish(CreateMessage("proto/sub", subscription{"ping", "two", nil}))
+	epTwo.Publish(CreateMessage("proto/sub", subscription{"ping", "", nil}))
 
 	for _, test := range tests {
 		oneFired, twoFired = false, false

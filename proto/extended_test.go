@@ -11,7 +11,7 @@ import (
 
 func TestSubscribe(t *testing.T) {
 	msg := Subscribe("act", "dev")
-	var got Subscription
+	var got subscription
 	msg.DecodePayload(&got)
 	if got.Action != "act" {
 		t.Errorf("Message payload action wrong, got '%v'", got.Action)

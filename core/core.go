@@ -143,9 +143,12 @@ func (app *App) initProto() error {
 	}
 
 	app.Log.Debugf("[core] mqtt connecting to %s", cfg.Server)
-	m := proto.DialMqtt(cfg)
+	m, err := proto.DialMqtt(cfg)
+	if err != nil {
+		return err
+	}
 	proto.Connect(m, app.Proto)
-	return m.Connect()
+	return nil
 }
 
 func (app *App) Must(err error) {
