@@ -122,8 +122,8 @@ func (s *Server) handleStreamStark(ws *websocket.Conn) {
 		return
 	}
 
-	mtp := s.proto.NewEndpoint()
-	webtp := proto.NewByteEndpoint(ws)
+	mtp := s.proto.NewConn()
+	webtp := proto.NewByteConn(ws)
 	webtp.RegisterHandler(func(msg proto.Message) {
 		s.ctx.Log.Debugln("[web] websocket received", msg)
 		if err := mtp.Publish(msg); err != nil {
@@ -162,7 +162,7 @@ func parseAuthorizationHeader(h string) string {
 func (s *Server) getApiClientByName(name string) *proto.Client {
 	client, ok := s.apiClients[name]
 	if !ok {
-		client = proto.NewClient(name, s.proto.NewEndpoint())
+		client = proto.NewClient(name, s.proto.NewConn())
 		s.apiClients[name] = client
 	}
 	return client

@@ -11,7 +11,6 @@ import (
 
 	"github.com/xconstruct/stark/log"
 	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/proto/transports/mqtt"
 )
 
 type App struct {
@@ -116,7 +115,7 @@ func (app *App) initDatabase() error {
 }
 
 func (app *App) initProto() error {
-	cfg := mqtt.GetDefaults()
+	cfg := proto.GetMqttDefaults()
 	if err := app.Config.Get("mqtt", &cfg); err != nil {
 		return err
 	}
@@ -133,7 +132,7 @@ func (app *App) initProto() error {
 		return nil
 	}
 
-	m := mqtt.New(cfg)
+	m := proto.DialMqtt(cfg)
 	proto.Connect(m, app.Proto)
 	return m.Connect()
 }
@@ -185,7 +184,7 @@ func (app *App) NewContext() *Context {
 		app.Database,
 		app.Orm,
 		app.Log,
-		app.Proto.NewEndpoint(),
+		app.Proto.NewConn(),
 		app.Config,
 	}
 }

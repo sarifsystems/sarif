@@ -14,7 +14,7 @@ type Context struct {
 	Database *DB
 	Orm      *Orm
 	Log      *log.Logger
-	Proto    proto.Endpoint
+	Proto    proto.Conn
 	Config   *Config
 }
 
@@ -24,7 +24,7 @@ func (ctx *Context) Must(err error) {
 	}
 }
 
-func NewTestContext() (*Context, proto.Endpoint) {
+func NewTestContext() (*Context, proto.Conn) {
 	var err error
 	ctx := &Context{}
 	ctx.Config = NewConfig()

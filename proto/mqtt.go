@@ -3,7 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package mqtt
+package proto
 
 import (
 	"crypto/tls"
@@ -15,60 +15,60 @@ import (
 	mqtt "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
 
 	"github.com/xconstruct/stark/log"
-	"github.com/xconstruct/stark/proto"
 )
 
 var (
 	ErrNotConnected = errors.New("MQTT transport is not connected")
 )
 
-type Config struct {
+type MqttConfig struct {
 	Server      string
 	Certificate string
 	Key         string
 	Authority   string
+	TlsConfig   *tls.Config `json:"-"`
 }
 
-func GetDefaults() Config {
-	return Config{
+func GetMqttDefaults() MqttConfig {
+	return MqttConfig{
 		Server: "tcp://example.org:1883",
 	}
 }
 
-func (cfg *Config) LoadTlsCertificates() (*tls.Config, error) {
-	tcfg := &tls.Config{}
+func (cfg *MqttConfig) loadTlsCertificates() error {
+	cfg.TlsConfig = &tls.Config{}
 	if cfg.Certificate != "" && cfg.Key != "" {
 		cert, err := tls.LoadX509KeyPair(cfg.Certificate, cfg.Key)
 		if err != nil {
-			return tcfg, err
+			return err
 		}
-		tcfg.Certificates = []tls.Certificate{cert}
+		cfg.TlsConfig.Certificates = []tls.Certificate{cert}
 	}
 
 	if cfg.Authority != "" {
 		roots := x509.NewCertPool()
 		cert, err := ioutil.ReadFile(cfg.Authority)
 		if err != nil {
-			return tcfg, err
+			return err
 		}
 		roots.AppendCertsFromPEM(cert)
-		tcfg.RootCAs = roots
-		tcfg.InsecureSkipVerify = true
+		cfg.TlsConfig.RootCAs = roots
+		cfg.TlsConfig.InsecureSkipVerify = true
 	}
 
-	return tcfg, nil
+	return nil
 }
 
-type Transport struct {
+type MqttConn struct {
 	client        *mqtt.MqttClient
-	cfg           Config
-	handler       proto.Handler
+	cfg           MqttConfig
+	handler       Handler
 	log           log.Interface
 	subscriptions map[string]struct{}
 }
 
-func New(cfg Config) *Transport {
-	return &Transport{
+func DialMqtt(cfg MqttConfig) *MqttConn {
+	return &MqttConn{
 		nil,
 		cfg,
 		nil,
@@ -77,19 +77,18 @@ func New(cfg Config) *Transport {
 	}
 }
 
-func (t *Transport) Connect() error {
+func (t *MqttConn) Connect() error {
 	t.log.Infof("mqtt connecting to %s", t.cfg.Server)
 
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(t.cfg.Server)
-	opts.SetClientId(proto.GenerateId())
+	opts.SetClientId(GenerateId())
 	opts.SetCleanSession(true)
 	opts.SetOnConnectionLost(t.onConnectionLost)
-	tlscfg, err := t.cfg.LoadTlsCertificates()
-	if err != nil {
+	if err := t.cfg.loadTlsCertificates(); err != nil {
 		return err
 	}
-	opts.SetTlsConfig(tlscfg)
+	opts.SetTlsConfig(t.cfg.TlsConfig)
 	t.client = mqtt.NewClient(opts)
 	if _, err := t.client.Start(); err != nil {
 		return err
@@ -98,20 +97,20 @@ func (t *Transport) Connect() error {
 	return nil
 }
 
-func (t *Transport) IsConnected() bool {
+func (t *MqttConn) IsConnected() bool {
 	return t.client != nil && t.client.IsConnected()
 }
 
-func (t *Transport) Publish(msg proto.Message) error {
+func (t *MqttConn) Publish(msg Message) error {
 	if !t.IsConnected() {
 		return ErrNotConnected
 	}
 	if msg.Action == "proto/sub" {
-		sub := proto.Subscription{}
+		sub := Subscription{}
 		if err := msg.DecodePayload(&sub); err != nil {
 			return err
 		}
-		if err := t.subscribe(proto.GetTopic(sub.Action, sub.Device) + "/#"); err != nil {
+		if err := t.subscribe(getTopic(sub.Action, sub.Device) + "/#"); err != nil {
 			return err
 		}
 	}
@@ -121,14 +120,14 @@ func (t *Transport) Publish(msg proto.Message) error {
 		return err
 	}
 
-	topic := proto.GetTopic(msg.Action, msg.Destination)
+	topic := getTopic(msg.Action, msg.Destination)
 	t.log.Debugf("mqtt sending to %s: %v", topic, string(raw))
 	r := t.client.Publish(mqtt.QOS_ZERO, topic, raw)
 	<-r
 	return nil
 }
 
-func (t *Transport) subscribe(topic string) error {
+func (t *MqttConn) subscribe(topic string) error {
 	if !t.IsConnected() {
 		return ErrNotConnected
 	}
@@ -144,12 +143,12 @@ func (t *Transport) subscribe(topic string) error {
 	return nil
 }
 
-func (t *Transport) RegisterHandler(h proto.Handler) {
+func (t *MqttConn) RegisterHandler(h Handler) {
 	t.handler = h
 }
 
-func (t *Transport) handleRawMessage(client *mqtt.MqttClient, raw mqtt.Message) {
-	m, err := proto.DecodeMessage(raw.Payload())
+func (t *MqttConn) handleRawMessage(client *mqtt.MqttClient, raw mqtt.Message) {
+	m, err := DecodeMessage(raw.Payload())
 	if err != nil {
 		t.log.Warnln(err)
 		return
@@ -158,7 +157,7 @@ func (t *Transport) handleRawMessage(client *mqtt.MqttClient, raw mqtt.Message) 
 	t.handler(m)
 }
 
-func (t *Transport) reconnectLoop() {
+func (t *MqttConn) reconnectLoop() {
 RECONNECT:
 	for {
 		if err := t.Connect(); err != nil {
@@ -177,7 +176,7 @@ RECONNECT:
 	}
 }
 
-func (t *Transport) onConnectionLost(client *mqtt.MqttClient, reason error) {
+func (t *MqttConn) onConnectionLost(client *mqtt.MqttClient, reason error) {
 	t.log.Infoln("mqtt transport lost connection:", reason)
 	t.reconnectLoop()
 }

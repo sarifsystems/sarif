@@ -33,13 +33,13 @@ func TestMuxMultiple(t *testing.T) {
 	})
 	oneFired, twoFired := false, false
 
-	epOne := mux.NewEndpoint()
+	epOne := mux.NewConn()
 	epOne.RegisterHandler(func(msg Message) {
 		oneFired = true
 	})
 	epOne.Publish(CreateMessage("proto/sub", Subscription{"ping", "one", nil}))
 
-	epTwo := mux.NewEndpoint()
+	epTwo := mux.NewConn()
 	epTwo.RegisterHandler(func(msg Message) {
 		twoFired = true
 	})

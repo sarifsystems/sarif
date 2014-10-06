@@ -120,7 +120,7 @@ func (c *Client) listen() {
 }
 
 func (c *Client) newConversation(remote string) *conversation {
-	ep := c.mux.NewEndpoint()
+	ep := c.mux.NewConn()
 	user := xmpp.RemoveResourceFromJid(remote)
 	client := proto.NewClient("xmpp/"+user, ep)
 	cv := &conversation{

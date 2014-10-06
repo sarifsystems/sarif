@@ -7,16 +7,16 @@ package proto
 
 type Mux struct {
 	publisher Publisher
-	endpoints []*MuxEndpoint
+	conns     []*muxConn
 }
 
-type MuxEndpoint struct {
+type muxConn struct {
 	mux     *Mux
 	handler Handler
 	subs    []Subscription
 }
 
-func (e *MuxEndpoint) Publish(msg Message) error {
+func (e *muxConn) Publish(msg Message) error {
 	if msg.IsAction("proto/sub") {
 		sub := Subscription{}
 		if err := msg.DecodePayload(&sub); err == nil {
@@ -26,20 +26,20 @@ func (e *MuxEndpoint) Publish(msg Message) error {
 	return e.mux.publisher(msg)
 }
 
-func (e *MuxEndpoint) RegisterHandler(h Handler) {
+func (e *muxConn) RegisterHandler(h Handler) {
 	e.handler = h
 }
 
 func NewMux() *Mux {
 	m := &Mux{
 		nil,
-		make([]*MuxEndpoint, 0),
+		make([]*muxConn, 0),
 	}
 	return m
 }
 
 func (m *Mux) Handle(msg Message) {
-	for _, e := range m.endpoints {
+	for _, e := range m.conns {
 		if e.handler == nil {
 			continue
 		}
@@ -56,8 +56,8 @@ func (m *Mux) RegisterPublisher(p Publisher) {
 	m.publisher = p
 }
 
-func (m *Mux) NewEndpoint() *MuxEndpoint {
-	e := &MuxEndpoint{m, nil, make([]Subscription, 0)}
-	m.endpoints = append(m.endpoints, e)
+func (m *Mux) NewConn() Conn {
+	e := &muxConn{m, nil, make([]Subscription, 0)}
+	m.conns = append(m.conns, e)
 	return e
 }

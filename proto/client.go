@@ -14,13 +14,13 @@ import (
 
 type Client struct {
 	DeviceId string
-	endpoint Endpoint
+	conn     Conn
 	handler  Handler
 	log      log.Interface
 	subs     []Subscription
 }
 
-func NewClient(deviceId string, e Endpoint) *Client {
+func NewClient(deviceId string, e Conn) *Client {
 	c := &Client{
 		deviceId,
 		e,
@@ -28,7 +28,7 @@ func NewClient(deviceId string, e Endpoint) *Client {
 		log.Default,
 		make([]Subscription, 0),
 	}
-	c.endpoint = e
+	c.conn = e
 	e.RegisterHandler(c.handle)
 	c.Subscribe("ping", "", c.handlePing)
 	return c
@@ -38,7 +38,7 @@ func (c *Client) SetLogger(l log.Interface) {
 	c.log = l
 }
 
-func (c *Client) FillMessage(msg *Message) {
+func (c *Client) fillMessage(msg *Message) {
 	if msg.Version == "" {
 		msg.Version = VERSION
 	}
@@ -51,9 +51,9 @@ func (c *Client) FillMessage(msg *Message) {
 }
 
 func (c *Client) Publish(msg Message) error {
-	c.FillMessage(&msg)
-	fmt.Sprintln(c.endpoint)
-	if err := c.endpoint.Publish(msg); err != nil {
+	c.fillMessage(&msg)
+	fmt.Sprintln(c.conn)
+	if err := c.conn.Publish(msg); err != nil {
 		c.log.Errorf("[client %s] publish error: %v, %v", c.DeviceId, err)
 		return err
 	}

@@ -7,21 +7,17 @@ package proto
 
 import (
 	"encoding/json"
+	"io"
 )
 
-type ByteReadWriter interface {
-	Read(p []byte) (n int, err error)
-	Write(p []byte) (n int, err error)
-}
-
-type ByteEndpoint struct {
+type ByteConn struct {
 	enc     *json.Encoder
 	dec     *json.Decoder
 	handler Handler
 }
 
-func NewByteEndpoint(conn ByteReadWriter) *ByteEndpoint {
-	t := &ByteEndpoint{
+func NewByteConn(conn io.ReadWriter) *ByteConn {
+	t := &ByteConn{
 		json.NewEncoder(conn),
 		json.NewDecoder(conn),
 		nil,
@@ -29,15 +25,15 @@ func NewByteEndpoint(conn ByteReadWriter) *ByteEndpoint {
 	return t
 }
 
-func (t *ByteEndpoint) Publish(msg Message) error {
+func (t *ByteConn) Publish(msg Message) error {
 	return t.enc.Encode(msg)
 }
 
-func (t *ByteEndpoint) RegisterHandler(h Handler) {
+func (t *ByteConn) RegisterHandler(h Handler) {
 	t.handler = h
 }
 
-func (t *ByteEndpoint) Listen() error {
+func (t *ByteConn) Listen() error {
 	for {
 		var msg Message
 		if err := t.dec.Decode(&msg); err != nil {

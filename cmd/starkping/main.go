@@ -31,7 +31,7 @@ type PingService struct {
 
 // NewPingService creates a PingService that communicates on the supplied
 // stark protocol connection endpoint.
-func NewPingService(ep proto.Endpoint) *PingService {
+func NewPingService(ep proto.Conn) *PingService {
 	// We create a new client on this connection with an unique name.
 
 	// While the raw endpoint is good enough for sending/receiving pure messages,

@@ -22,17 +22,17 @@ func TestGenerateId(t *testing.T) {
 func TestGetTopic(t *testing.T) {
 	var tp string
 
-	tp = GetTopic("", "mydevice")
+	tp = getTopic("", "mydevice")
 	if tp != "stark/dev/mydevice" {
 		t.Errorf("Incorrect topic: %s", tp)
 	}
 
-	tp = GetTopic("myaction", "")
+	tp = getTopic("myaction", "")
 	if tp != "stark/special/all/action/myaction" {
 		t.Errorf("Incorrect topic: %s", tp)
 	}
 
-	tp = GetTopic("myaction", "mydevice")
+	tp = getTopic("myaction", "mydevice")
 	if tp != "stark/dev/mydevice/action/myaction" {
 		t.Errorf("Incorrect topic: %s", tp)
 	}

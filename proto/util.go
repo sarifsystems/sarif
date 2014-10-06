@@ -19,7 +19,7 @@ func GenerateId() string {
 	return string(bytes)
 }
 
-func GetTopic(action, device string) string {
+func getTopic(action, device string) string {
 	t := "stark"
 	if device != "" {
 		t += "/dev/" + device
