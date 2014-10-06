@@ -13,8 +13,6 @@ import (
 	"time"
 
 	mqtt "git.eclipse.org/gitroot/paho/org.eclipse.paho.mqtt.golang.git"
-
-	"github.com/xconstruct/stark/log"
 )
 
 var (
@@ -63,7 +61,7 @@ type MqttConn struct {
 	client        *mqtt.MqttClient
 	cfg           MqttConfig
 	handler       Handler
-	log           log.Interface
+	log           Logger
 	subscriptions map[string]struct{}
 }
 
@@ -72,14 +70,16 @@ func DialMqtt(cfg MqttConfig) *MqttConn {
 		nil,
 		cfg,
 		nil,
-		log.Default,
+		defaultLog,
 		make(map[string]struct{}),
 	}
 }
 
-func (t *MqttConn) Connect() error {
-	t.log.Infof("mqtt connecting to %s", t.cfg.Server)
+func (t *MqttConn) SetLogger(l Logger) {
+	t.log = l
+}
 
+func (t *MqttConn) Connect() error {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(t.cfg.Server)
 	opts.SetClientId(GenerateId())
@@ -131,7 +131,7 @@ func (t *MqttConn) subscribe(topic string) error {
 	if !t.IsConnected() {
 		return ErrNotConnected
 	}
-	t.log.Debugln("mqtt subscribing to", topic)
+	t.log.Debugf("mqtt subscribing to %s", topic)
 	filter, err := mqtt.NewTopicFilter(topic, 0)
 	if err != nil {
 		return err
@@ -150,7 +150,7 @@ func (t *MqttConn) RegisterHandler(h Handler) {
 func (t *MqttConn) handleRawMessage(client *mqtt.MqttClient, raw mqtt.Message) {
 	m, err := DecodeMessage(raw.Payload())
 	if err != nil {
-		t.log.Warnln(err)
+		t.log.Warnf("%s", err)
 		return
 	}
 	t.log.Debugf("mqtt receiving from %s: %v", raw.Topic(), string(raw.Payload()))
@@ -161,13 +161,13 @@ func (t *MqttConn) reconnectLoop() {
 RECONNECT:
 	for {
 		if err := t.Connect(); err != nil {
-			t.log.Debugln("mqtt reconnect error:", err)
+			t.log.Debugf("mqtt reconnect error: %s", err)
 			time.Sleep(5 * time.Second)
 		}
-		t.log.Infoln("mqtt reconnected")
+		t.log.Infof("mqtt reconnected")
 		for topic := range t.subscriptions {
 			if err := t.subscribe(topic); err != nil {
-				t.log.Debugln("mqtt reconnect subscribe error:", err)
+				t.log.Debugf("mqtt reconnect subscribe error: %s", err)
 				time.Sleep(5 * time.Second)
 				continue RECONNECT
 			}
@@ -177,6 +177,6 @@ RECONNECT:
 }
 
 func (t *MqttConn) onConnectionLost(client *mqtt.MqttClient, reason error) {
-	t.log.Infoln("mqtt transport lost connection:", reason)
+	t.log.Infof("mqtt transport lost connection: %s", reason)
 	t.reconnectLoop()
 }

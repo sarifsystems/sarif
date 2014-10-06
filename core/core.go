@@ -115,6 +115,7 @@ func (app *App) initDatabase() error {
 }
 
 func (app *App) initProto() error {
+	proto.SetDefaultLogger(app.Log)
 	cfg := proto.GetMqttDefaults()
 	if err := app.Config.Get("mqtt", &cfg); err != nil {
 		return err
@@ -132,6 +133,7 @@ func (app *App) initProto() error {
 		return nil
 	}
 
+	app.Log.Infof("[core] mqtt connecting to %s", cfg.Server)
 	m := proto.DialMqtt(cfg)
 	proto.Connect(m, app.Proto)
 	return m.Connect()

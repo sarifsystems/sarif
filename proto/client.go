@@ -8,15 +8,13 @@ package proto
 import (
 	"errors"
 	"fmt"
-
-	"github.com/xconstruct/stark/log"
 )
 
 type Client struct {
 	DeviceId string
 	conn     Conn
 	handler  Handler
-	log      log.Interface
+	log      Logger
 	subs     []subscription
 }
 
@@ -25,7 +23,7 @@ func NewClient(deviceId string, e Conn) *Client {
 		deviceId,
 		e,
 		nil,
-		log.Default,
+		defaultLog,
 		make([]subscription, 0),
 	}
 	c.conn = e
@@ -34,7 +32,7 @@ func NewClient(deviceId string, e Conn) *Client {
 	return c
 }
 
-func (c *Client) SetLogger(l log.Interface) {
+func (c *Client) SetLogger(l Logger) {
 	c.log = l
 }
 
@@ -75,7 +73,7 @@ func (c *Client) handlePing(msg Message) {
 		CorrId: msg.Id,
 	}))
 	if err != nil {
-		c.log.Warnln(err)
+		c.log.Warnf("%s", err)
 	}
 }
 
@@ -111,7 +109,7 @@ func (c *Client) ReplyBadRequest(orig Message, err error) error {
 }
 
 func (c *Client) ReplyInternalError(orig Message, err error) error {
-	c.log.Errorln("[client %s] internal error: %v, %v", c.DeviceId, orig, err)
+	c.log.Errorf("[client %s] internal error: %v, %v", c.DeviceId, orig, err)
 	reply := orig.Reply(InternalError(err))
 	return c.Publish(reply)
 }
