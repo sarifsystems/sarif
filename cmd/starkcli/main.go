@@ -15,12 +15,7 @@ import (
 	"strings"
 
 	"github.com/xconstruct/stark/core"
-	"github.com/xconstruct/stark/log"
 	"github.com/xconstruct/stark/proto"
-)
-
-var (
-	verbose = flag.Bool("v", false, "verbose debug output")
 )
 
 const Usage = `Usage: starkcli [OPTION]... [MESSAGE]...
@@ -45,11 +40,6 @@ func main() {
 
 	// Setup app and read config.
 	app := core.NewApp("stark")
-	if *verbose {
-		app.Log.SetLevel(log.LevelDebug)
-	} else {
-		app.Log.SetLevel(log.LevelWarn)
-	}
 	app.Must(app.Init())
 	defer app.Close()
 	ctx := app.NewContext()

@@ -10,10 +10,7 @@
 package main
 
 import (
-	"flag"
-
 	"github.com/xconstruct/stark/core"
-	"github.com/xconstruct/stark/log"
 
 	_ "github.com/go-sql-driver/mysql"
 
@@ -30,22 +27,14 @@ import (
 	_ "github.com/xconstruct/stark/services/xmpp"
 )
 
-var verbose = flag.Bool("v", false, "verbose debug output")
-
 type Config struct {
 	EnabledModules []string
 }
 
 func main() {
-	flag.Parse()
-
 	app := core.NewApp("stark")
 	app.Must(app.Init())
 	defer app.Close()
-
-	if *verbose {
-		app.Log.SetLevel(log.LevelDebug)
-	}
 
 	// Default configuration
 	cfg := Config{

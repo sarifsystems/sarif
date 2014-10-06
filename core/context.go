@@ -6,14 +6,13 @@
 package core
 
 import (
-	"github.com/xconstruct/stark/log"
 	"github.com/xconstruct/stark/proto"
 )
 
 type Context struct {
 	Database *DB
 	Orm      *Orm
-	Log      *log.Logger
+	Log      *Logger
 	Proto    proto.Conn
 	Config   *Config
 }
@@ -28,10 +27,10 @@ func NewTestContext() (*Context, proto.Conn) {
 	var err error
 	ctx := &Context{}
 	ctx.Config = NewConfig()
-	ctx.Log = log.Default
+	ctx.Log = DefaultLog
 
 	if ctx.Orm, err = OpenDatabaseInMemory(); err != nil {
-		log.Default.Fatalln(err)
+		ctx.Log.Fatalln(err)
 	}
 	ctx.Database = ctx.Orm.Database()
 

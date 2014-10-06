@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/xconstruct/stark/core"
-	"github.com/xconstruct/stark/log"
 	"github.com/xconstruct/stark/proto"
 )
 
@@ -41,25 +40,17 @@ Options:
 `
 
 var (
-	verbose = flag.Bool("v", false, "verbose debug output")
 	waitNum = flag.Int("n", -1, "wait for X replies before exiting (-1 for indefinitely)")
 	timeout = flag.Duration("t", 2*time.Second, "wait for X duration before exiting (-1s for indefinitely)")
 )
 
 func main() {
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, Usage)
-		flag.PrintDefaults()
-	}
 	flag.Parse()
 
 	// Setup app and read config.
 	app := core.NewApp("stark")
 	app.Must(app.Init())
 	defer app.Close()
-	if *verbose {
-		app.Log.SetLevel(log.LevelDebug)
-	}
 	ctx := app.NewContext()
 
 	// Connect to network.

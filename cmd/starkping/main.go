@@ -11,16 +11,12 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"time"
 
 	"github.com/xconstruct/stark/core"
-	"github.com/xconstruct/stark/log"
 	"github.com/xconstruct/stark/proto"
 )
-
-var verbose = flag.Bool("v", false, "verbose debug output")
 
 // PingService can send ping messages and measures the elapsed time until
 // a response is received.
@@ -91,17 +87,12 @@ func (s *PingService) Handle(msg proto.Message) {
 }
 
 func main() {
-	flag.Parse()
-
 	// App simply helps to read our global configuration file and sets up the
 	// MQTT connection to the network. It is not strictly necessary for own
 	// services.
 	app := core.NewApp("stark")
 	app.Must(app.Init())
 	defer app.Close()
-	if *verbose {
-		app.Log.SetLevel(log.LevelDebug)
-	}
 	ctx := app.NewContext()
 
 	// Enable our own stark Service.

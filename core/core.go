@@ -6,12 +6,14 @@
 package core
 
 import (
+	"flag"
 	"os"
 	"os/signal"
 
-	"github.com/xconstruct/stark/log"
 	"github.com/xconstruct/stark/proto"
 )
+
+var verbose = flag.Bool("v", false, "verbose debug output")
 
 type App struct {
 	AppName  string
@@ -19,18 +21,25 @@ type App struct {
 	Proto    *proto.Mux
 	Database *DB
 	Orm      *Orm
-	Log      *log.Logger
+	Log      *Logger
 
 	instances map[string]ModuleInstance
 }
 
 func NewApp(appName string) *App {
+	if !flag.Parsed() {
+		flag.Parse()
+	}
+
 	app := &App{
 		AppName:   appName,
-		Log:       log.Default,
+		Log:       DefaultLog,
 		instances: make(map[string]ModuleInstance),
 	}
-	app.Log.SetLevel(log.LevelInfo)
+	app.Log.SetLevel(LogLevelInfo)
+	if *verbose {
+		app.Log.SetLevel(LogLevelDebug)
+	}
 
 	return app
 }
@@ -133,7 +142,7 @@ func (app *App) initProto() error {
 		return nil
 	}
 
-	app.Log.Infof("[core] mqtt connecting to %s", cfg.Server)
+	app.Log.Debugf("[core] mqtt connecting to %s", cfg.Server)
 	m := proto.DialMqtt(cfg)
 	proto.Connect(m, app.Proto)
 	return m.Connect()

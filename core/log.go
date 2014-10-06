@@ -3,67 +3,54 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package log
+package core
 
 import (
 	"log"
 	"os"
 )
 
-type Interface interface {
-	Debugln(v ...interface{})
-	Debugf(format string, v ...interface{})
-	Infoln(v ...interface{})
-	Infof(format string, v ...interface{})
-	Warnln(v ...interface{})
-	Warnf(format string, v ...interface{})
-	Errorln(v ...interface{})
-	Errorf(format string, v ...interface{})
-	Fatal(v ...interface{})
-	Fatalf(format string, v ...interface{})
-}
-
-type LogLevel int
+type LogLogLevel int
 
 const (
-	LevelDebug LogLevel = iota
-	LevelInfo
-	LevelWarn
-	LevelError
-	LevelFatal
-	LevelCritical
+	LogLevelDebug LogLogLevel = iota
+	LogLevelInfo
+	LogLevelWarn
+	LogLevelError
+	LogLevelFatal
+	LogLevelCritical
 )
 
-var Default = New(
-	LevelDebug,
+var DefaultLog = New(
+	LogLevelDebug,
 	log.New(os.Stderr, "", log.LstdFlags),
 )
 
 type Logger struct {
-	level LogLevel
+	level LogLogLevel
 	*log.Logger
 }
 
-func New(level LogLevel, l *log.Logger) *Logger {
+func New(level LogLogLevel, l *log.Logger) *Logger {
 	return &Logger{
 		level,
 		l,
 	}
 }
 
-func (l *Logger) SetLevel(level LogLevel) {
+func (l *Logger) SetLevel(level LogLogLevel) {
 	l.level = level
 }
 
 func (l *Logger) Debugf(format string, v ...interface{}) {
-	if l.level > LevelDebug {
+	if l.level > LogLevelDebug {
 		return
 	}
 	l.Logger.Printf("DEBUG "+format, v...)
 }
 
 func (l *Logger) Debugln(v ...interface{}) {
-	if l.level > LevelDebug {
+	if l.level > LogLevelDebug {
 		return
 	}
 	v = append([]interface{}{"DEBUG"}, v...)
@@ -71,14 +58,14 @@ func (l *Logger) Debugln(v ...interface{}) {
 }
 
 func (l *Logger) Infof(format string, v ...interface{}) {
-	if l.level > LevelInfo {
+	if l.level > LogLevelInfo {
 		return
 	}
 	l.Logger.Printf("INFO "+format, v...)
 }
 
 func (l *Logger) Infoln(v ...interface{}) {
-	if l.level > LevelInfo {
+	if l.level > LogLevelInfo {
 		return
 	}
 	v = append([]interface{}{"INFO"}, v...)
@@ -86,7 +73,7 @@ func (l *Logger) Infoln(v ...interface{}) {
 }
 
 func (l *Logger) Warnln(v ...interface{}) {
-	if l.level > LevelWarn {
+	if l.level > LogLevelWarn {
 		return
 	}
 	v = append([]interface{}{"WARN"}, v...)
@@ -94,14 +81,14 @@ func (l *Logger) Warnln(v ...interface{}) {
 }
 
 func (l *Logger) Warnf(format string, v ...interface{}) {
-	if l.level > LevelWarn {
+	if l.level > LogLevelWarn {
 		return
 	}
 	l.Logger.Printf("WARN "+format, v...)
 }
 
 func (l *Logger) Errorln(v ...interface{}) {
-	if l.level > LevelError {
+	if l.level > LogLevelError {
 		return
 	}
 	v = append([]interface{}{"ERROR"}, v...)
@@ -109,14 +96,14 @@ func (l *Logger) Errorln(v ...interface{}) {
 }
 
 func (l *Logger) Errorf(format string, v ...interface{}) {
-	if l.level > LevelError {
+	if l.level > LogLevelError {
 		return
 	}
 	l.Logger.Printf("ERROR "+format, v...)
 }
 
 func (l *Logger) Fatalln(v ...interface{}) {
-	if l.level > LevelFatal {
+	if l.level > LogLevelFatal {
 		return
 	}
 	v = append([]interface{}{"FATAL"}, v...)
@@ -124,14 +111,14 @@ func (l *Logger) Fatalln(v ...interface{}) {
 }
 
 func (l *Logger) Fatalf(format string, v ...interface{}) {
-	if l.level > LevelFatal {
+	if l.level > LogLevelFatal {
 		return
 	}
 	l.Logger.Fatalf("FATAL "+format, v...)
 }
 
 func (l *Logger) Criticalln(v ...interface{}) {
-	if l.level > LevelCritical {
+	if l.level > LogLevelCritical {
 		return
 	}
 	v = append([]interface{}{"CRITICAL"}, v...)
@@ -139,7 +126,7 @@ func (l *Logger) Criticalln(v ...interface{}) {
 }
 
 func (l *Logger) Criticalf(format string, v ...interface{}) {
-	if l.level > LevelCritical {
+	if l.level > LogLevelCritical {
 		return
 	}
 	l.Logger.Panicf("CRITICAL "+format, v...)
