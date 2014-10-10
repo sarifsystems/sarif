@@ -73,7 +73,7 @@ func (s *Scheduler) handle(msg proto.Message) {
 		t.Time = time.Now()
 	}
 	if t.Duration != "" {
-		dur, err := time.ParseDuration(t.Duration)
+		dur, err := util.ParseDuration(t.Duration)
 		if err != nil {
 			s.ctx.Log.Warnln("[scheduler] received bad payload:", err)
 			s.publish(msg.Reply(proto.BadRequest(err)))
