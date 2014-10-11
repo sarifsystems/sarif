@@ -37,7 +37,7 @@ func NewService(deps *Dependencies) *Service {
 	return &Service{
 		New(deps.DB.DB),
 		deps.Log,
-		nil,
+		deps.Client,
 	}
 }
 
