@@ -45,22 +45,28 @@ const defaultRegularText = `
     text: [this long text]
     device: [phone]
 
-- example: Remind me in 10m to make coffee
+- example: Remind me in 10 minutes to make coffee
   fields:
     action: schedule/duration
-    duration: [10m]
+    duration: [10 minutes]
     text: [make coffee]
 
-- example: Remind me to make coffee in 10m
+- example: Remind me to make coffee in 10 minutes
   fields:
     action: schedule/duration
-    duration: [10m]
+    duration: [10 minutes]
     text: [make coffee]
 
-- example: Remind me in 10m
+- example: Remind me in 10 minutes that something is happening
   fields:
     action: schedule/duration
-    duration: [10m]
+    duration: [10 minutes]
+    text: [something is happening]
+
+- example: Remind me in 10 minutes
+  fields:
+    action: schedule/duration
+    duration: [10 minutes]
 
 - example: What is 3 + 5
   fields:
