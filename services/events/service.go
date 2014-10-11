@@ -6,10 +6,7 @@
 package events
 
 import (
-	"database/sql"
-	"time"
-
-	"github.com/xconstruct/stark/core"
+	"github.com/jinzhu/gorm"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -21,27 +18,30 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	DB     *core.DB
+	DB     *gorm.DB
 	Log    proto.Logger
 	Client *proto.Client
 }
 
 type Service struct {
-	DB  Database
+	DB  *gorm.DB
 	Log proto.Logger
 	*proto.Client
 }
 
 func NewService(deps *Dependencies) *Service {
 	return &Service{
-		DB:     &sqlDatabase{deps.DB.Driver(), deps.DB.DB},
+		DB:     deps.DB,
 		Log:    deps.Log,
 		Client: deps.Client,
 	}
 }
 
 func (s *Service) Enable() error {
-	if err := s.DB.Setup(); err != nil {
+	if err := s.DB.AutoMigrate(&Event{}).Error; err != nil {
+		return err
+	}
+	if err := s.DB.Model(&Event{}).AddIndex("timestamp", "timestamp", "subject", "verb", "verb", "object", "status").Error; err != nil {
 		return err
 	}
 	if err := s.Subscribe("event/new", "", s.handleEventNew); err != nil {
@@ -64,9 +64,6 @@ var MessageEventNotFound = proto.Message{
 }
 
 func fixEvent(e *Event) {
-	if e.Timestamp.IsZero() {
-		e.Timestamp = time.Now()
-	}
 	if e.Subject == "i" || e.Subject == "I" {
 		e.Subject = "user"
 	}
@@ -86,7 +83,7 @@ func (s *Service) handleEventNew(msg proto.Message) {
 
 	s.Log.Infoln("[events] new event:", e)
 
-	if err := s.DB.StoreEvent(e); err != nil {
+	if err := s.DB.Save(&e).Error; err != nil {
 		s.Log.Errorln("[vents] could not store event:", err)
 		s.ReplyInternalError(msg, err)
 		return
@@ -113,9 +110,10 @@ func (s *Service) handleEventLast(msg proto.Message) {
 	fixEvent(&filter)
 
 	s.Log.Infoln("[events] get last by filter:", filter)
-	last, err := s.DB.GetLastEvent(filter)
-	if err != nil {
-		if err == sql.ErrNoRows {
+	var last Event
+	s.DB.Where(&filter).Order("timestamp desc").First(&last)
+	if err := s.DB.Error; err != nil {
+		if err == gorm.RecordNotFound {
 			s.Reply(msg, MessageEventNotFound)
 			return
 		}
