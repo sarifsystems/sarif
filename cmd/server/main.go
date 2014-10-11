@@ -11,20 +11,19 @@ package main
 
 import (
 	"github.com/xconstruct/stark/core"
+	"github.com/xconstruct/stark/services/events"
+	"github.com/xconstruct/stark/services/hostscan"
+	"github.com/xconstruct/stark/services/know"
+	"github.com/xconstruct/stark/services/lastfm"
+	"github.com/xconstruct/stark/services/location"
+	"github.com/xconstruct/stark/services/natural"
+	"github.com/xconstruct/stark/services/router"
+	"github.com/xconstruct/stark/services/scheduler"
+	"github.com/xconstruct/stark/services/store"
+	"github.com/xconstruct/stark/services/web"
+	"github.com/xconstruct/stark/services/xmpp"
 
 	_ "github.com/go-sql-driver/mysql"
-
-	_ "github.com/xconstruct/stark/services/events"
-	_ "github.com/xconstruct/stark/services/hostscan"
-	_ "github.com/xconstruct/stark/services/know"
-	_ "github.com/xconstruct/stark/services/lastfm"
-	_ "github.com/xconstruct/stark/services/location"
-	_ "github.com/xconstruct/stark/services/natural"
-	_ "github.com/xconstruct/stark/services/router"
-	_ "github.com/xconstruct/stark/services/scheduler"
-	_ "github.com/xconstruct/stark/services/store"
-	_ "github.com/xconstruct/stark/services/web"
-	_ "github.com/xconstruct/stark/services/xmpp"
 )
 
 type Config struct {
@@ -35,6 +34,18 @@ func main() {
 	app := core.NewApp("stark")
 	app.Must(app.Init())
 	defer app.Close()
+
+	app.RegisterModule(scheduler.Module)
+	app.RegisterModule(events.Module)
+	app.RegisterModule(hostscan.Module)
+	app.RegisterModule(know.Module)
+	app.RegisterModule(lastfm.Module)
+	app.RegisterModule(location.Module)
+	app.RegisterModule(natural.Module)
+	app.RegisterModule(router.Module)
+	app.RegisterModule(store.Module)
+	app.RegisterModule(web.Module)
+	app.RegisterModule(xmpp.Module)
 
 	// Default configuration
 	cfg := Config{
@@ -49,7 +60,7 @@ func main() {
 		},
 	}
 	// Load configuration from file
-	app.Must(app.Config.Get("server", &cfg))
+	app.Config.Get("server", &cfg)
 
 	// Enable each module listed in the config
 	for _, module := range cfg.EnabledModules {

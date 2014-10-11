@@ -18,20 +18,17 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/services"
 )
 
 const (
 	REST_URL = "/api/v0/"
 )
 
-var Module = core.Module{
+var Module = &services.Module{
 	Name:        "web",
 	Version:     "1.0",
-	NewInstance: NewInstance,
-}
-
-func init() {
-	core.RegisterModule(Module)
+	NewInstance: New,
 }
 
 type Config struct {
@@ -40,9 +37,15 @@ type Config struct {
 	AllowedActions map[string][]string
 }
 
+type Dependencies struct {
+	Config *core.Config
+	Log    proto.Logger
+	Conn   proto.Conn
+}
+
 type Server struct {
 	cfg        Config
-	ctx        *core.Context
+	Log        proto.Logger
 	proto      *proto.Mux
 	apiClients map[string]*proto.Client
 }
@@ -55,43 +58,35 @@ func GenerateApiKey() (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
-func New(ctx *core.Context) (*Server, error) {
+func New(deps *Dependencies) *Server {
 	cfg := Config{
 		Interface:      "0.0.0.0:5000",
 		ApiKeys:        nil,
 		AllowedActions: make(map[string][]string),
 	}
-	if err := ctx.Config.Get("web", &cfg); err != nil {
-		return nil, err
-	}
+	deps.Config.Get("web", &cfg)
 	if cfg.ApiKeys == nil {
 		cfg.ApiKeys = make(map[string]string)
 		cfg.ApiKeys["unprivileged"] = ""
 		for i := 1; i < 6; i++ {
 			key, err := GenerateApiKey()
 			if err != nil {
-				return nil, err
+				deps.Log.Fatalln(err)
 			}
 			cfg.ApiKeys["exampleclient"+strconv.Itoa(i)] = key
 		}
 		cfg.AllowedActions["exampleclient1"] = []string{"ping", "location/update"}
-		if err := ctx.Config.Set("web", cfg); err != nil {
-			return nil, err
-		}
+		deps.Config.Set("web", cfg)
 	}
 
 	s := &Server{
 		cfg,
-		ctx,
+		deps.Log,
 		proto.NewMux(),
 		make(map[string]*proto.Client),
 	}
-	proto.Connect(ctx.Proto, s.proto)
-	return s, nil
-}
-
-func NewInstance(ctx *core.Context) (core.ModuleInstance, error) {
-	return New(ctx)
+	proto.Connect(deps.Conn, s.proto)
+	return s
 }
 
 func (s *Server) Enable() error {
@@ -100,9 +95,9 @@ func (s *Server) Enable() error {
 	http.Handle("/stream/stark", websocket.Handler(s.handleStreamStark))
 
 	go func() {
-		s.ctx.Log.Infof("[web] listening on %s", s.cfg.Interface)
+		s.Log.Infof("[web] listening on %s", s.cfg.Interface)
 		err := http.ListenAndServe(s.cfg.Interface, nil)
-		s.ctx.Log.Warnln(err)
+		s.Log.Warnln(err)
 	}()
 	return nil
 }
@@ -113,7 +108,7 @@ func (s *Server) Disable() error {
 
 func (s *Server) handleStreamStark(ws *websocket.Conn) {
 	defer ws.Close()
-	s.ctx.Log.Infoln("[web] new websocket connection")
+	s.Log.Infoln("[web] new websocket connection")
 
 	// Check authentication.
 	name := s.checkAuthentication(ws.Request())
@@ -125,19 +120,19 @@ func (s *Server) handleStreamStark(ws *websocket.Conn) {
 	mtp := s.proto.NewConn()
 	webtp := proto.NewByteConn(ws)
 	webtp.RegisterHandler(func(msg proto.Message) {
-		s.ctx.Log.Debugln("[web] websocket received", msg)
+		s.Log.Debugln("[web] websocket received", msg)
 		if err := mtp.Publish(msg); err != nil {
-			s.ctx.Log.Errorln("[web] broker publish error:", err)
+			s.Log.Errorln("[web] broker publish error:", err)
 		}
 	})
 	mtp.RegisterHandler(func(msg proto.Message) {
-		s.ctx.Log.Debugln("[web] mtp received:", msg)
+		s.Log.Debugln("[web] mtp received:", msg)
 		if err := webtp.Publish(msg); err != nil {
-			s.ctx.Log.Errorln("[web] websocket publish error:", err)
+			s.Log.Errorln("[web] websocket publish error:", err)
 		}
 	})
 	err := webtp.Listen()
-	s.ctx.Log.Errorln("[web] websocket closed: ", err)
+	s.Log.Errorln("[web] websocket closed: ", err)
 }
 
 func parseAuthorizationHeader(h string) string {
@@ -179,11 +174,11 @@ func (s *Server) checkAuthentication(req *http.Request) string {
 	// Find client to API key.
 	for name, stored := range s.cfg.ApiKeys {
 		if token == stored {
-			s.ctx.Log.Debugf("[web] authenticated for '%s'", name)
+			s.Log.Debugf("[web] authenticated for '%s'", name)
 			return name
 		}
 	}
-	s.ctx.Log.Warnln("[web] authentication failed")
+	s.Log.Warnln("[web] authentication failed")
 	return ""
 }
 
@@ -202,11 +197,11 @@ func (s *Server) clientIsAllowed(client string, msg proto.Message) bool {
 
 func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
-	s.ctx.Log.Debugln("[web] new REST request:", req.URL.Path)
+	s.Log.Debugln("[web] new REST request:", req.URL.Path)
 
 	// Parse form values.
 	if err := req.ParseForm(); err != nil {
-		s.ctx.Log.Warnln("[web] REST bad request:", err)
+		s.Log.Warnln("[web] REST bad request:", err)
 		w.WriteHeader(400)
 		fmt.Fprintln(w, "Bad request:", err)
 		return
@@ -242,13 +237,13 @@ func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
 	if !s.clientIsAllowed(name, msg) {
 		w.WriteHeader(401)
 		fmt.Fprintf(w, "'%s' is not authorized to publish '%s'", name, msg.Action)
-		s.ctx.Log.Warnf("[web] REST '%s' is not authorized to publish on '%s'", name, msg.Action)
+		s.Log.Warnf("[web] REST '%s' is not authorized to publish on '%s'", name, msg.Action)
 		return
 	}
 
 	// Publish message.
 	if err := client.Publish(msg); err != nil {
-		s.ctx.Log.Warnln("[web] REST bad request:", err)
+		s.Log.Warnln("[web] REST bad request:", err)
 		w.WriteHeader(400)
 		fmt.Fprintln(w, "Bad Request:", err)
 		return

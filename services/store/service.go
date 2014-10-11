@@ -12,48 +12,46 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/services"
 )
 
-var Module = core.Module{
+var Module = &services.Module{
 	Name:        "store",
 	Version:     "1.0",
-	NewInstance: newInstance,
+	NewInstance: NewService,
 }
 
-func init() {
-	core.RegisterModule(Module)
-}
-
-func newInstance(ctx *core.Context) (core.ModuleInstance, error) {
-	return NewService(ctx)
+type Dependencies struct {
+	DB     *core.DB
+	Log    proto.Logger
+	Client *proto.Client
 }
 
 type Service struct {
 	Store Store
-	ctx   *core.Context
-	proto *proto.Client
+	Log   proto.Logger
+	*proto.Client
 }
 
-func NewService(ctx *core.Context) (*Service, error) {
-	s := &Service{
-		Store: &sqlStore{ctx.Database.Driver(), ctx.Database.DB},
-		ctx:   ctx,
-		proto: proto.NewClient("store", ctx.Proto),
+func NewService(deps *Dependencies) *Service {
+	return &Service{
+		Store:  &sqlStore{deps.DB.Driver(), deps.DB.DB},
+		Log:    deps.Log,
+		Client: deps.Client,
 	}
-	return s, nil
 }
 
 func (s *Service) Enable() error {
 	if err := s.Store.Setup(); err != nil {
 		return err
 	}
-	if err := s.proto.Subscribe("store/put", "", s.handlePut); err != nil {
+	if err := s.Subscribe("store/put", "", s.handlePut); err != nil {
 		return err
 	}
-	if err := s.proto.Subscribe("store/get", "", s.handleGet); err != nil {
+	if err := s.Subscribe("store/get", "", s.handleGet); err != nil {
 		return err
 	}
-	if err := s.proto.Subscribe("store/del", "", s.handleDel); err != nil {
+	if err := s.Subscribe("store/del", "", s.handleDel); err != nil {
 		return err
 	}
 	return nil
@@ -73,8 +71,8 @@ func (s *Service) handlePut(msg proto.Message) {
 		value = json.RawMessage(v)
 	}
 	if err := msg.DecodePayload(&value); err != nil {
-		s.ctx.Log.Warnln("[store] received bad payload:", err)
-		s.proto.Publish(msg.Reply(proto.BadRequest(err)))
+		s.Log.Warnln("[store] received bad payload:", err)
+		s.ReplyBadRequest(msg, err)
 		return
 	}
 	doc, err := s.Store.Put(Document{
@@ -82,19 +80,19 @@ func (s *Service) handlePut(msg proto.Message) {
 		Value: []byte(value),
 	})
 	if err != nil {
-		s.ctx.Log.Errorln("[store] could not store:", err)
-		s.proto.Publish(msg.Reply(proto.InternalError(err)))
+		s.Log.Errorln("[store] could not store:", err)
+		s.ReplyInternalError(msg, err)
 		return
 	}
 
 	replydoc := doc
 	replydoc.Value = nil
 	reply := proto.CreateMessage("store/updated/"+doc.Key, replydoc)
-	s.proto.Publish(msg.Reply(reply))
+	s.Reply(msg, reply)
 
 	pub := proto.CreateMessage("store/updated/"+doc.Key, doc.Value)
 	pub.Text = "Document " + doc.Key + "."
-	s.proto.Publish(pub)
+	s.Publish(pub)
 }
 
 func (s *Service) handleGet(msg proto.Message) {
@@ -103,20 +101,20 @@ func (s *Service) handleGet(msg proto.Message) {
 		key = strings.TrimPrefix(msg.Action, "store/get/")
 	}
 	if key == "" {
-		s.proto.Publish(msg.Reply(proto.BadRequest(errors.New("No key specified."))))
+		s.ReplyBadRequest(msg, errors.New("No key specified."))
 		return
 	}
 
 	doc, err := s.Store.Get(key)
 	if err == ErrNoResult {
-		s.proto.Publish(msg.Reply(proto.Message{
+		s.Publish(msg.Reply(proto.Message{
 			Action: "err/notfound",
 			Text:   "Document " + key + " not found.",
 		}))
 		return
 	} else if err != nil {
-		s.ctx.Log.Errorln("[store] could not retrieve:", err)
-		s.proto.Publish(msg.Reply(proto.InternalError(err)))
+		s.Log.Errorln("[store] could not retrieve:", err)
+		s.ReplyInternalError(msg, err)
 		return
 	}
 
@@ -129,7 +127,7 @@ func (s *Service) handleGet(msg proto.Message) {
 			reply.Text = "Document " + doc.Key + `: "` + val + `".`
 		}
 	}
-	s.proto.Publish(msg.Reply(reply))
+	s.Reply(msg, reply)
 }
 
 func (s *Service) handleDel(msg proto.Message) {
@@ -138,15 +136,15 @@ func (s *Service) handleDel(msg proto.Message) {
 		key = strings.TrimPrefix(msg.Action, "store/del/")
 	}
 	if key == "" {
-		s.proto.Publish(msg.Reply(proto.BadRequest(errors.New("No key specified."))))
+		s.ReplyBadRequest(msg, errors.New("No key specified."))
 		return
 	}
 	if err := s.Store.Del(key); err != nil {
-		s.ctx.Log.Errorln("[store] could not delete:", err)
-		s.proto.Publish(msg.Reply(proto.InternalError(err)))
+		s.Log.Errorln("[store] could not delete:", err)
+		s.ReplyInternalError(msg, err)
 		return
 	}
 
-	s.proto.Publish(msg.Reply(proto.CreateMessage("store/deleted/"+key, nil)))
-	s.proto.Publish(proto.CreateMessage("store/deleted/"+key, nil))
+	s.Reply(msg, proto.CreateMessage("store/deleted/"+key, nil))
+	s.Publish(proto.CreateMessage("store/deleted/"+key, nil))
 }

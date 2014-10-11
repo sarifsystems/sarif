@@ -9,45 +9,40 @@ import (
 	"time"
 
 	"github.com/xconstruct/stark/core"
+	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/services"
 )
 
-var Module = core.Module{
+var Module = &services.Module{
 	Name:        "router",
 	Version:     "1.0",
-	NewInstance: NewInstance,
+	NewInstance: NewService,
 }
 
-func init() {
-	core.RegisterModule(Module)
+type Dependencies struct {
+	Config *core.Config
+	Log    proto.Logger
 }
 
 type Service struct {
 	router   *Router
-	ctx      *core.Context
+	Log      proto.Logger
 	last     Diagnostic
 	interval time.Duration
 }
 
-func NewService(ctx *core.Context) (*Service, error) {
+func NewService(deps *Dependencies) *Service {
 	//db := ctx.Database
 	//SetupSchema(db.Driver(), db.DB)
 
 	var cfg Config
-	if err := ctx.Config.Get("router", &cfg); err != nil {
-		return nil, err
-	}
-	s := &Service{
+	deps.Config.Get("router", &cfg)
+	return &Service{
 		New(cfg),
-		ctx,
+		deps.Log,
 		Diagnostic{},
 		10 * time.Second,
 	}
-	return s, nil
-}
-
-func NewInstance(ctx *core.Context) (core.ModuleInstance, error) {
-	s, err := NewService(ctx)
-	return s, err
 }
 
 func (s *Service) Enable() error {
@@ -59,16 +54,12 @@ func (s *Service) Enable() error {
 	return nil
 }
 
-func (s *Service) Disable() error {
-	return nil
-}
-
 func (s *Service) scheduledUpdate() {
 	diag, err := s.router.Diagnostic()
 	if err != nil {
-		s.ctx.Log.Errorln("[router:update] error:", err)
+		s.Log.Errorln("[router:update] error:", err)
 	} else {
-		s.ctx.Log.Debugf("[router:update] done, interval %v: %v", s.interval, diag)
+		s.Log.Debugf("[router:update] done, interval %v: %v", s.interval, diag)
 	}
 
 	speedChanged := diag.DownSpeed != s.last.DownSpeed

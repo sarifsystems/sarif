@@ -6,6 +6,11 @@
 package proto
 
 type Logger interface {
+	Debugln(v ...interface{})
+	Infoln(v ...interface{})
+	Warnln(v ...interface{})
+	Errorln(v ...interface{})
+	Fatalln(v ...interface{})
 	Debugf(format string, v ...interface{})
 	Infof(format string, v ...interface{})
 	Warnf(format string, v ...interface{})
@@ -15,6 +20,11 @@ type Logger interface {
 
 type defaultLogger struct{}
 
+func (defaultLogger) Debugln(v ...interface{})               {}
+func (defaultLogger) Infoln(fv ...interface{})               {}
+func (defaultLogger) Warnln(fv ...interface{})               {}
+func (defaultLogger) Errorln(v ...interface{})               {}
+func (defaultLogger) Fatalln(v ...interface{})               {}
 func (defaultLogger) Debugf(format string, v ...interface{}) {}
 func (defaultLogger) Infof(format string, v ...interface{})  {}
 func (defaultLogger) Warnf(format string, v ...interface{})  {}

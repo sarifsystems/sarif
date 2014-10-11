@@ -9,48 +9,45 @@ import (
 	"github.com/xconstruct/know"
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/services"
 )
 
-var Module = core.Module{
+var Module = &services.Module{
 	Name:        "know",
 	Version:     "1.0",
-	NewInstance: newInstance,
-}
-
-func init() {
-	core.RegisterModule(Module)
-}
-
-func newInstance(ctx *core.Context) (core.ModuleInstance, error) {
-	return NewService(ctx)
+	NewInstance: NewService,
 }
 
 type Config struct {
 	WolframApiKey string
 }
 
-type Service struct {
-	cfg   Config
-	ctx   *core.Context
-	proto *proto.Client
+type Dependencies struct {
+	Config *core.Config
+	Log    proto.Logger
+	Client *proto.Client
 }
 
-func NewService(ctx *core.Context) (*Service, error) {
+type Service struct {
+	cfg Config
+	Log proto.Logger
+	*proto.Client
+}
+
+func NewService(deps *Dependencies) *Service {
 	s := &Service{
-		ctx:   ctx,
-		proto: proto.NewClient("know", ctx.Proto),
+		Log:    deps.Log,
+		Client: deps.Client,
 	}
-	if err := ctx.Config.Get("know", &s.cfg); err != nil {
-		return nil, err
-	}
+	deps.Config.Get("know", &s.cfg)
 	if s.cfg.WolframApiKey != "" {
 		know.Wolfram.SetApiKey(s.cfg.WolframApiKey)
 	}
-	return s, nil
+	return s
 }
 
 func (s *Service) Enable() error {
-	if err := s.proto.Subscribe("knowledge/query", "", s.handleQuery); err != nil {
+	if err := s.Subscribe("knowledge/query", "", s.handleQuery); err != nil {
 		return err
 	}
 	return nil
@@ -87,12 +84,12 @@ func (s *Service) handleQuery(msg proto.Message) {
 			pl := MessageAnswer{
 				Query: query,
 			}
-			s.proto.Publish(msg.Reply(proto.CreateMessage("knowledge/noanswer", pl)))
+			s.Reply(msg, proto.CreateMessage("knowledge/noanswer", pl))
 			return
 		}
 
 		// Error received, forward.
-		s.proto.Publish(msg.Reply(proto.InternalError(err)))
+		s.ReplyInternalError(msg, err)
 		return
 	}
 
@@ -102,6 +99,6 @@ func (s *Service) handleQuery(msg proto.Message) {
 		ans.Answer,
 		ans.Provider,
 	}
-	s.proto.Publish(msg.Reply(proto.CreateMessage("knowledge/answer", pl)))
+	s.Reply(msg, proto.CreateMessage("knowledge/answer", pl))
 	return
 }

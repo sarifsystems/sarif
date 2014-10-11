@@ -31,12 +31,15 @@ func NewConfig() *Config {
 	}
 }
 
-func (cfg *Config) Get(section string, v interface{}) error {
+func (cfg *Config) Get(section string, v interface{}) {
 	raw, ok := cfg.sections[section]
 	if !ok {
-		return cfg.Set(section, v)
+		cfg.Set(section, v)
+		return
 	}
-	return json.Unmarshal(*raw, v)
+	if err := json.Unmarshal(*raw, v); err != nil {
+		DefaultLog.Fatal(err)
+	}
 }
 
 func (cfg *Config) Exists(section string) bool {

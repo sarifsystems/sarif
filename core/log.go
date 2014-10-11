@@ -10,10 +10,10 @@ import (
 	"os"
 )
 
-type LogLogLevel int
+type LogLevel int
 
 const (
-	LogLevelDebug LogLogLevel = iota
+	LogLevelDebug LogLevel = iota
 	LogLevelInfo
 	LogLevelWarn
 	LogLevelError
@@ -27,18 +27,18 @@ var DefaultLog = New(
 )
 
 type Logger struct {
-	level LogLogLevel
+	level LogLevel
 	*log.Logger
 }
 
-func New(level LogLogLevel, l *log.Logger) *Logger {
+func New(level LogLevel, l *log.Logger) *Logger {
 	return &Logger{
 		level,
 		l,
 	}
 }
 
-func (l *Logger) SetLevel(level LogLogLevel) {
+func (l *Logger) SetLevel(level LogLevel) {
 	l.level = level
 }
 

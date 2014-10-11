@@ -6,45 +6,39 @@
 package natural
 
 import (
-	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/proto/natural"
+	"github.com/xconstruct/stark/services"
 )
 
-var Module = core.Module{
+var Module = &services.Module{
 	Name:        "natural",
 	Version:     "1.0",
-	NewInstance: newInstance,
+	NewInstance: NewService,
 }
 
-func newInstance(ctx *core.Context) (core.ModuleInstance, error) {
-	s, err := NewService(ctx)
-	return s, err
-}
-
-func init() {
-	core.RegisterModule(Module)
+type Dependencies struct {
+	Log    proto.Logger
+	Client *proto.Client
 }
 
 type Service struct {
-	ctx   *core.Context
-	proto *proto.Client
+	Log proto.Logger
+	*proto.Client
 }
 
-func NewService(ctx *core.Context) (*Service, error) {
-	s := &Service{
-		ctx,
-		nil,
+func NewService(deps *Dependencies) *Service {
+	return &Service{
+		deps.Log,
+		deps.Client,
 	}
-	return s, nil
 }
 
 func (s *Service) Enable() error {
-	s.proto = proto.NewClient("natural", s.ctx.Proto)
-	if err := s.proto.Subscribe("natural/handle", "", s.handleNatural); err != nil {
+	if err := s.Subscribe("natural/handle", "", s.handleNatural); err != nil {
 		return err
 	}
-	if err := s.proto.Subscribe("natural/parse", "", s.handleNaturalParse); err != nil {
+	if err := s.Subscribe("natural/parse", "", s.handleNaturalParse); err != nil {
 		return err
 	}
 	return nil
@@ -94,22 +88,22 @@ func (s *Service) handleNatural(msg proto.Message) {
 	parsed, ok := s.parseNatural(msg)
 	if !ok {
 		reply := proto.CreateMessage("err/natural", MsgErrNatural{msg.Text})
-		s.proto.Publish(msg.Reply(reply))
+		s.Publish(msg.Reply(reply))
 		return
 	}
 
 	parsed.Source = msg.Source
-	s.proto.Publish(parsed)
+	s.Publish(parsed)
 }
 
 func (s *Service) handleNaturalParse(msg proto.Message) {
 	parsed, ok := s.parseNatural(msg)
 	if !ok {
 		reply := proto.CreateMessage("err/natural", MsgErrNatural{msg.Text})
-		s.proto.Publish(msg.Reply(reply))
+		s.Publish(msg.Reply(reply))
 		return
 	}
 
 	reply := proto.CreateMessage("natural/parsed", MsgNaturalParsed{parsed, msg.Text})
-	s.proto.Publish(msg.Reply(reply))
+	s.Publish(msg.Reply(reply))
 }

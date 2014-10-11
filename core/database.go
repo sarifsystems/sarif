@@ -56,10 +56,10 @@ func OpenDatabase(cfg DatabaseConfig) (*Orm, error) {
 	return &Orm{driver, &sdb}, nil
 }
 
-func OpenDatabaseInMemory() (*Orm, error) {
+func OpenDatabaseInMemory() *Orm {
 	sdb, err := gorm.Open("sqlite3", ":memory:")
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	return &Orm{"sqlite3", &sdb}, nil
+	return &Orm{"sqlite3", &sdb}
 }

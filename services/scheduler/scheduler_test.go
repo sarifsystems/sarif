@@ -16,23 +16,21 @@ import (
 
 func TestService(t *testing.T) {
 	// setup context
-	ctx, ep := core.NewTestContext()
+	deps := &Dependencies{}
+	ep := core.InjectTest(deps)
 	var lastReply *proto.Message
 	ep.RegisterHandler(func(msg proto.Message) {
 		lastReply = &msg
 	})
 
 	// init service
-	srv, err := NewService(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = srv.Enable(); err != nil {
+	srv := NewService(deps)
+	if err := srv.Enable(); err != nil {
 		t.Fatal(err)
 	}
 
 	// send simple default task
-	err = ep.Publish(proto.CreateMessage("schedule/duration", map[string]interface{}{
+	err := ep.Publish(proto.CreateMessage("schedule/duration", map[string]interface{}{
 		"duration": "300ms",
 	}))
 	if err != nil {

@@ -11,48 +11,46 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/services"
 )
 
-var Module = core.Module{
+var Module = &services.Module{
 	Name:        "events",
 	Version:     "1.0",
-	NewInstance: newInstance,
+	NewInstance: NewService,
 }
 
-func init() {
-	core.RegisterModule(Module)
-}
-
-func newInstance(ctx *core.Context) (core.ModuleInstance, error) {
-	return NewService(ctx)
+type Dependencies struct {
+	DB     *core.DB
+	Log    proto.Logger
+	Client *proto.Client
 }
 
 type Service struct {
-	DB    Database
-	ctx   *core.Context
-	proto *proto.Client
+	DB  Database
+	Log proto.Logger
+	*proto.Client
 }
 
-func NewService(ctx *core.Context) (*Service, error) {
-	s := &Service{
-		DB:    &sqlDatabase{ctx.Database.Driver(), ctx.Database.DB},
-		ctx:   ctx,
-		proto: proto.NewClient("events", ctx.Proto),
+func NewService(deps *Dependencies) *Service {
+	return &Service{
+		DB:     &sqlDatabase{deps.DB.Driver(), deps.DB.DB},
+		Log:    deps.Log,
+		Client: deps.Client,
 	}
-	return s, nil
 }
 
 func (s *Service) Enable() error {
 	if err := s.DB.Setup(); err != nil {
 		return err
 	}
-	if err := s.proto.Subscribe("event/new", "", s.handleEventNew); err != nil {
+	if err := s.Subscribe("event/new", "", s.handleEventNew); err != nil {
 		return err
 	}
-	if err := s.proto.Subscribe("event/last", "", s.handleEventLast); err != nil {
+	if err := s.Subscribe("event/last", "", s.handleEventLast); err != nil {
 		return err
 	}
-	if err := s.proto.Subscribe("location/fence", "", s.handleLocationFence); err != nil {
+	if err := s.Subscribe("location/fence", "", s.handleLocationFence); err != nil {
 		return err
 	}
 	return nil
@@ -77,8 +75,8 @@ func fixEvent(e *Event) {
 func (s *Service) handleEventNew(msg proto.Message) {
 	var e Event
 	if err := msg.DecodePayload(&e); err != nil {
-		s.ctx.Log.Warnln("[events] received bad payload:", err)
-		s.publish(msg.Reply(proto.BadRequest(err)))
+		s.Log.Warnln("[events] received bad payload:", err)
+		s.ReplyBadRequest(msg, err)
 		return
 	}
 	fixEvent(&e)
@@ -86,60 +84,54 @@ func (s *Service) handleEventNew(msg proto.Message) {
 		e.Text = msg.Text
 	}
 
-	s.ctx.Log.Infoln("[events] new event:", e)
+	s.Log.Infoln("[events] new event:", e)
 
 	if err := s.DB.StoreEvent(e); err != nil {
-		s.ctx.Log.Errorln("[vents] could not store event:", err)
-		s.publish(msg.Reply(proto.InternalError(err)))
+		s.Log.Errorln("[vents] could not store event:", err)
+		s.ReplyInternalError(msg, err)
 		return
 	}
 
 	reply := proto.Message{Action: "event/created"}
 	if err := reply.EncodePayload(e); err != nil {
-		s.ctx.Log.Errorln("[events] could not encode reply:", err)
-		s.publish(msg.Reply(proto.InternalError(err)))
+		s.Log.Errorln("[events] could not encode reply:", err)
+		s.ReplyInternalError(msg, err)
 		return
 	}
 	reply.Text = "New event: " + e.String()
 
-	s.publish(msg.Reply(reply))
+	s.Reply(msg, reply)
 }
 
 func (s *Service) handleEventLast(msg proto.Message) {
 	var filter Event
 	if err := msg.DecodePayload(&filter); err != nil {
-		s.ctx.Log.Warnln("[events] received bad payload:", err)
-		s.publish(msg.Reply(proto.BadRequest(err)))
+		s.Log.Warnln("[events] received bad payload:", err)
+		s.ReplyBadRequest(msg, err)
 		return
 	}
 	fixEvent(&filter)
 
-	s.ctx.Log.Infoln("[events] get last by filter:", filter)
+	s.Log.Infoln("[events] get last by filter:", filter)
 	last, err := s.DB.GetLastEvent(filter)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			s.publish(msg.Reply(MessageEventNotFound))
+			s.Reply(msg, MessageEventNotFound)
 			return
 		}
-		s.ctx.Log.Errorln("[events] could not get events:", err)
-		s.publish(msg.Reply(proto.InternalError(err)))
+		s.Log.Errorln("[events] could not get events:", err)
+		s.ReplyInternalError(msg, err)
 		return
 	}
-	s.ctx.Log.Infoln("[events] found", last)
+	s.Log.Infoln("[events] found", last)
 
 	reply := proto.Message{Action: "event/found"}
 	if err := reply.EncodePayload(last); err != nil {
-		s.ctx.Log.Errorln("[events] could not encode reply:", err)
-		s.publish(msg.Reply(proto.InternalError(err)))
+		s.Log.Errorln("[events] could not encode reply:", err)
+		s.ReplyInternalError(msg, err)
 		return
 	}
 	reply.Text = last.String()
 
-	s.publish(msg.Reply(reply))
-}
-
-func (s *Service) publish(msg proto.Message) {
-	if err := s.proto.Publish(msg); err != nil {
-		s.ctx.Log.Errorln(err)
-	}
+	s.Reply(msg, reply)
 }

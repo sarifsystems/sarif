@@ -13,11 +13,9 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	ctx, _ := core.NewTestContext()
-	srv, err := NewService(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	deps := &Dependencies{}
+	core.InjectTest(deps)
+	srv := NewService(deps)
 
 	parsed, ok := srv.parseNatural(proto.Message{
 		Action: "natural/parse",

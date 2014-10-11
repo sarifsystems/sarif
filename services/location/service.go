@@ -12,38 +12,33 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/services"
 )
 
-var Module = core.Module{
+var Module = &services.Module{
 	Name:        "location",
 	Version:     "1.0",
-	NewInstance: NewInstance,
+	NewInstance: NewService,
 }
 
-func init() {
-	core.RegisterModule(Module)
+type Dependencies struct {
+	DB     *core.DB
+	Log    proto.Logger
+	Client *proto.Client
 }
 
 type Service struct {
-	DB    Database
-	ctx   *core.Context
-	proto *proto.Client
+	DB  Database
+	Log proto.Logger
+	*proto.Client
 }
 
-func NewService(ctx *core.Context) (*Service, error) {
-	db := ctx.Database
-
-	s := &Service{
-		&sqlDatabase{db.Driver(), db.DB},
-		ctx,
-		nil,
+func NewService(deps *Dependencies) *Service {
+	return &Service{
+		&sqlDatabase{deps.DB.Driver(), deps.DB.DB},
+		deps.Log,
+		deps.Client,
 	}
-	return s, nil
-}
-
-func NewInstance(ctx *core.Context) (core.ModuleInstance, error) {
-	s, err := NewService(ctx)
-	return s, err
 }
 
 func (s *Service) Enable() error {
@@ -51,14 +46,13 @@ func (s *Service) Enable() error {
 		return err
 	}
 
-	s.proto = proto.NewClient("location", s.ctx.Proto)
-	if err := s.proto.Subscribe("location/update", "", s.handleLocationUpdate); err != nil {
+	if err := s.Subscribe("location/update", "", s.handleLocationUpdate); err != nil {
 		return err
 	}
-	if err := s.proto.Subscribe("location/last", "", s.handleLocationLast); err != nil {
+	if err := s.Subscribe("location/last", "", s.handleLocationLast); err != nil {
 		return err
 	}
-	if err := s.proto.Subscribe("location/fence/create", "", s.handleGeofenceCreate); err != nil {
+	if err := s.Subscribe("location/fence/create", "", s.handleGeofenceCreate); err != nil {
 		return err
 	}
 	return nil
@@ -90,27 +84,27 @@ func (m GeofenceEventPayload) String() string {
 func (s *Service) checkGeofences(last, curr Location) {
 	lastFences, err := s.DB.GetGeofencesInLocation(last)
 	if err != nil {
-		s.ctx.Log.Errorln("[location] retrieve last fences", err)
+		s.Log.Errorln("[location] retrieve last fences", err)
 	}
 	currFences, err := s.DB.GetGeofencesInLocation(curr)
 	if err != nil {
-		s.ctx.Log.Errorln("[location] retrieve curr fences", err)
+		s.Log.Errorln("[location] retrieve curr fences", err)
 	}
 
 	for _, g := range lastFences {
 		if !fenceInSlice(g, currFences) {
-			s.ctx.Log.Debugln("[location] geofence leave:", g)
+			s.Log.Debugln("[location] geofence leave:", g)
 			pl := GeofenceEventPayload{curr, g, "leave"}
 			msg := proto.CreateMessage("location/fence/leave/"+g.Name, pl)
-			s.proto.Publish(msg)
+			s.Publish(msg)
 		}
 	}
 	for _, g := range currFences {
 		if !fenceInSlice(g, lastFences) {
-			s.ctx.Log.Debugln("[location] geofence enter:", g)
+			s.Log.Debugln("[location] geofence enter:", g)
 			pl := GeofenceEventPayload{curr, g, "enter"}
 			msg := proto.CreateMessage("location/fence/enter/"+g.Name, pl)
-			s.proto.Publish(msg)
+			s.Publish(msg)
 		}
 	}
 }
@@ -118,21 +112,21 @@ func (s *Service) checkGeofences(last, curr Location) {
 func (s *Service) handleLocationUpdate(msg proto.Message) {
 	loc := Location{}
 	if err := msg.DecodePayload(&loc); err != nil {
-		s.proto.ReplyBadRequest(msg, err)
+		s.ReplyBadRequest(msg, err)
 		return
 	}
 	if loc.Timestamp.IsZero() {
 		loc.Timestamp = time.Now()
 	}
-	s.ctx.Log.Debugln("[location] store update:", loc)
+	s.Log.Debugln("[location] store update:", loc)
 
 	last, err := s.DB.GetLastLocation()
 	if err != nil {
-		s.ctx.Log.Errorln("[location] retrieve last err", err)
+		s.Log.Errorln("[location] retrieve last err", err)
 	}
 
 	if err := s.DB.StoreLocation(loc); err != nil {
-		s.proto.ReplyInternalError(msg, err)
+		s.ReplyInternalError(msg, err)
 	}
 
 	if last.Id != 0 {
@@ -192,7 +186,7 @@ func (s *Service) queryLocationLast(pl locationLastMessage) proto.Message {
 
 	reply := proto.Message{Action: "location/found"}
 	if err := reply.EncodePayload(loc); err != nil {
-		s.ctx.Log.Errorln(err)
+		s.Log.Errorln(err)
 		return proto.InternalError(err)
 	}
 	return reply
@@ -201,32 +195,32 @@ func (s *Service) queryLocationLast(pl locationLastMessage) proto.Message {
 func (s *Service) handleLocationLast(msg proto.Message) {
 	var pl locationLastMessage
 	if err := msg.DecodePayload(&pl); err != nil {
-		s.proto.ReplyBadRequest(msg, err)
+		s.ReplyBadRequest(msg, err)
 		return
 	}
-	s.ctx.Log.Debugln("[location] last loc request:", pl)
+	s.Log.Debugln("[location] last loc request:", pl)
 
 	if reply := s.queryLocationLast(pl); reply.Action != "" {
 		reply = msg.Reply(reply)
-		s.proto.Publish(reply)
+		s.Publish(reply)
 	}
 }
 
 func (s *Service) handleGeofenceCreate(msg proto.Message) {
 	var g Geofence
 	if err := msg.DecodePayload(&g); err != nil {
-		s.proto.ReplyBadRequest(msg, err)
+		s.ReplyBadRequest(msg, err)
 		return
 	}
 
 	if g.Address != "" {
 		geo, err := Geocode(g.Address)
 		if err != nil {
-			s.proto.ReplyBadRequest(msg, err)
+			s.ReplyBadRequest(msg, err)
 			return
 		}
 		if len(geo) == 0 {
-			s.proto.Publish(msg.Reply(MsgAddressNotFound))
+			s.Publish(msg.Reply(MsgAddressNotFound))
 			return
 		}
 		g.SetBounds(geo[0].BoundingBox)
@@ -236,14 +230,14 @@ func (s *Service) handleGeofenceCreate(msg proto.Message) {
 	}
 
 	if err := s.DB.StoreGeofence(g); err != nil {
-		s.proto.ReplyInternalError(msg, err)
+		s.ReplyInternalError(msg, err)
 	}
 
 	reply := proto.Message{Action: "location/fence/created"}
 	if err := reply.EncodePayload(g); err != nil {
-		s.proto.ReplyInternalError(msg, err)
+		s.ReplyInternalError(msg, err)
 		return
 	}
 	reply.Text = "Geofence '" + g.Name + "' created."
-	s.proto.Publish(reply)
+	s.Publish(reply)
 }

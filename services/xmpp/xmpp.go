@@ -15,16 +15,19 @@ import (
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/proto/natural"
+	"github.com/xconstruct/stark/services"
 )
 
-var Module = core.Module{
+var Module = &services.Module{
 	Name:        "xmpp",
 	Version:     "1.0",
-	NewInstance: NewInstance,
+	NewInstance: New,
 }
 
-func init() {
-	core.RegisterModule(Module)
+type Dependencies struct {
+	Config *core.Config
+	Log    proto.Logger
+	Conn   proto.Conn
 }
 
 type Config struct {
@@ -43,28 +46,24 @@ type conversation struct {
 
 type Client struct {
 	cfg           Config
-	ctx           *core.Context
+	Log           proto.Logger
 	mux           *proto.Mux
 	xmpp          *xmpp.Conn
 	conversations map[string]*conversation
 }
 
-func New(ctx *core.Context) (*Client, error) {
+func New(deps *Dependencies) *Client {
 	c := &Client{
-		ctx:           ctx,
+		Log:           deps.Log,
+		mux:           proto.NewMux(),
 		conversations: make(map[string]*conversation, 0),
 	}
-	err := ctx.Config.Get("xmpp", &c.cfg)
-	return c, err
-}
-
-func NewInstance(ctx *core.Context) (core.ModuleInstance, error) {
-	return New(ctx)
+	proto.Connect(deps.Conn, c.mux)
+	deps.Config.Get("xmpp", &c.cfg)
+	return c
 }
 
 func (c *Client) Enable() (err error) {
-	c.mux = proto.NewMux()
-	proto.Connect(c.ctx.Proto, c.mux)
 	return c.connectXmpp()
 }
 
@@ -81,24 +80,20 @@ func (c *Client) connectXmpp() (err error) {
 func (c *Client) reconnectLoop() {
 	for {
 		if err := c.connectXmpp(); err != nil {
-			c.ctx.Log.Debugln("[xmpp] reconnect error:", err)
+			c.Log.Debugln("[xmpp] reconnect error:", err)
 			time.Sleep(5 * time.Second)
 		}
-		c.ctx.Log.Infoln("[xmpp] reconnected")
+		c.Log.Infoln("[xmpp] reconnected")
 		return
 	}
-}
-
-func (c *Client) Disable() error {
-	return nil
 }
 
 func (cv *conversation) handleProtoMessage(msg proto.Message) {
 	cv.LastMessage = msg
 	text := natural.FormatSimple(msg)
-	cv.Xmpp.ctx.Log.Debugf("[xmpp] send '%s' to '%s'", text, cv.Remote)
+	cv.Xmpp.Log.Debugf("[xmpp] send '%s' to '%s'", text, cv.Remote)
 	if err := cv.Xmpp.xmpp.Send(cv.Remote, text); err != nil {
-		cv.Xmpp.ctx.Log.Errorln("[xmpp] send:", err)
+		cv.Xmpp.Log.Errorln("[xmpp] send:", err)
 	}
 }
 
@@ -114,7 +109,7 @@ func (c *Client) listen() {
 		case *xmpp.ClientMessage:
 			c.handleChatMessage(v)
 		default:
-			c.ctx.Log.Debugln("[xmpp] stanza", stanza.Name, v)
+			c.Log.Debugln("[xmpp] stanza", stanza.Name, v)
 		}
 	}
 }
@@ -129,14 +124,14 @@ func (c *Client) newConversation(remote string) *conversation {
 		Xmpp:   c,
 	}
 	if err := client.Subscribe("", "self", cv.handleProtoMessage); err != nil {
-		c.ctx.Log.Errorln("[xmpp] new:", err)
+		c.Log.Errorln("[xmpp] new:", err)
 	}
 	c.conversations[user] = cv
 	return cv
 }
 
 func (c *Client) handleChatMessage(chat *xmpp.ClientMessage) {
-	c.ctx.Log.Debugln("[xmpp] chat: ", chat)
+	c.Log.Debugln("[xmpp] chat: ", chat)
 	if chat.Body == "" {
 		return
 	}
@@ -152,7 +147,7 @@ func (c *Client) handleChatMessage(chat *xmpp.ClientMessage) {
 			panic(err)
 		}
 		if err := c.xmpp.Send(chat.From, string(text)); err != nil {
-			c.ctx.Log.Errorln("[xmpp] send:", err)
+			c.Log.Errorln("[xmpp] send:", err)
 		}
 		return
 	}
@@ -160,7 +155,7 @@ func (c *Client) handleChatMessage(chat *xmpp.ClientMessage) {
 		action := strings.TrimPrefix(chat.Body, ".subscribe ")
 		if action != "" {
 			if err := cv.Proto.Subscribe(action, "", cv.handleProtoMessage); err != nil {
-				c.ctx.Log.Errorln("[xmpp] subscribe:", err)
+				c.Log.Errorln("[xmpp] subscribe:", err)
 			}
 		}
 		return

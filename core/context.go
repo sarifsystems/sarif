@@ -6,6 +6,8 @@
 package core
 
 import (
+	"log"
+
 	"github.com/xconstruct/stark/proto"
 )
 
@@ -24,18 +26,39 @@ func (ctx *Context) Must(err error) {
 }
 
 func NewTestContext() (*Context, proto.Conn) {
-	var err error
 	ctx := &Context{}
 	ctx.Config = NewConfig()
 	ctx.Log = DefaultLog
 
-	if ctx.Orm, err = OpenDatabaseInMemory(); err != nil {
-		ctx.Log.Fatalln(err)
-	}
+	ctx.Orm = OpenDatabaseInMemory()
 	ctx.Database = ctx.Orm.Database()
 
 	a, b := proto.NewPipe()
 	ctx.Proto = a
 
 	return ctx, b
+}
+
+func InjectTest(container interface{}) proto.Conn {
+	orm := OpenDatabaseInMemory()
+	a, b := proto.NewPipe()
+
+	inj := NewInjector()
+	inj.Instance(orm.DB)
+	inj.Instance(orm.Database())
+	inj.Instance(proto.Conn(a))
+	inj.Instance(NewConfig())
+	inj.Factory(func() proto.Logger {
+		return DefaultLog
+	})
+	inj.Factory(func() *proto.Client {
+		c := proto.NewClient("test", a)
+		c.SetLogger(DefaultLog)
+		return c
+	})
+	if err := inj.Inject(container); err != nil {
+		log.Fatalln(err)
+	}
+
+	return b
 }

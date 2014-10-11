@@ -17,7 +17,7 @@ type locationFenceChanged struct {
 func (s *Service) handleLocationFence(msg proto.Message) {
 	var pl locationFenceChanged
 	if err := msg.DecodePayload(&pl); err != nil {
-		s.ctx.Log.Warnln("[events] received bad payload:", err)
+		s.Log.Warnln("[events] received bad payload:", err)
 		return
 	}
 
@@ -37,5 +37,5 @@ func (s *Service) handleLocationFence(msg proto.Message) {
 		Text:    "User " + pl.Status + "s " + pl.Fence.Name + ".",
 	}
 	reply := proto.CreateMessage("event/new", e)
-	s.proto.Publish(reply)
+	s.Publish(reply)
 }

@@ -13,46 +13,44 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/services"
 )
 
-var Module = core.Module{
+var Module = &services.Module{
 	Name:        "lastfm",
 	Version:     "1.0",
-	NewInstance: newInstance,
+	NewInstance: NewService,
 }
 
 type Config struct {
 	User string
 }
 
-func init() {
-	core.RegisterModule(Module)
+type Dependencies struct {
+	DB     *core.DB
+	Config *core.Config
+	Log    proto.Logger
+	Client *proto.Client
 }
 
 type Service struct {
-	cfg       Config
-	DB        Database
-	ctx       *core.Context
-	proto     *proto.Client
+	cfg Config
+	DB  Database
+	Log proto.Logger
+	*proto.Client
 	importing sync.WaitGroup
 }
 
-func NewService(ctx *core.Context) (*Service, error) {
-	db := ctx.Database
+func NewService(deps *Dependencies) *Service {
 	s := &Service{
 		Config{},
-		&sqlDatabase{db.Driver(), db.DB},
-		ctx,
-		nil,
+		&sqlDatabase{deps.DB.Driver(), deps.DB.DB},
+		deps.Log,
+		deps.Client,
 		sync.WaitGroup{},
 	}
-	err := ctx.Config.Get("lastfm", &s.cfg)
-	return s, err
-}
-
-func newInstance(ctx *core.Context) (core.ModuleInstance, error) {
-	s, err := NewService(ctx)
-	return s, err
+	deps.Config.Get("lastfm", &s.cfg)
+	return s
 }
 
 func (s *Service) Enable() error {
@@ -64,17 +62,11 @@ func (s *Service) Enable() error {
 		go func() {
 			for _ = range time.Tick(30 * time.Minute) {
 				if err := s.ImportAll(); err != nil {
-					s.ctx.Log.Errorln("[lastfm] import err:", err)
+					s.Log.Errorln("[lastfm] import err:", err)
 				}
 			}
 		}()
 	}
-
-	s.proto = proto.NewClient("lastfm", s.ctx.Proto)
-	return nil
-}
-
-func (s *Service) Disable() error {
 	return nil
 }
 
@@ -101,7 +93,7 @@ func (s *Service) ImportAll() error {
 		if len(result.Tracks) == 0 {
 			return nil
 		}
-		s.ctx.Log.Infof("[lastfm] import page %d/%d", result.Page, result.TotalPages)
+		s.Log.Infof("[lastfm] import page %d/%d", result.Page, result.TotalPages)
 
 		tracks := make([]Track, len(result.Tracks))
 		for i, track := range result.Tracks {

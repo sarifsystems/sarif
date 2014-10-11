@@ -15,9 +15,9 @@ func main() {
 	app.Must(app.Init())
 	defer app.Close()
 
-	ctx := app.NewContext()
-	srv, err := lastfm.NewService(ctx)
-	app.Must(err)
+	deps := &lastfm.Dependencies{}
+	app.Must(app.Inject("lastfm", deps))
+	srv := lastfm.NewService(deps)
 	app.Must(srv.Enable())
 	app.Must(srv.ImportAll())
 }

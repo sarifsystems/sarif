@@ -15,9 +15,10 @@ import (
 )
 
 func TestStoreRetrieve(t *testing.T) {
-	ctx, _ := core.NewTestContext()
+	deps := &Dependencies{}
+	core.InjectTest(deps)
 
-	db := &sqlDatabase{ctx.Database.Driver(), ctx.Database.DB}
+	db := &sqlDatabase{deps.DB.Driver(), deps.DB.DB}
 	if err := db.Setup(); err != nil {
 		t.Fatal(err)
 	}
@@ -51,23 +52,20 @@ func TestStoreRetrieve(t *testing.T) {
 }
 
 func TestService(t *testing.T) {
-	ctx, ep := core.NewTestContext()
+	deps := &Dependencies{}
+	ep := core.InjectTest(deps)
 
 	var lastReply *proto.Message
 	ep.RegisterHandler(func(msg proto.Message) {
 		lastReply = &msg
 	})
 
-	srv, err := NewService(ctx)
-	if err != nil {
+	srv := NewService(deps)
+	if err := srv.Enable(); err != nil {
 		t.Fatal(err)
 	}
 
-	if err = srv.Enable(); err != nil {
-		t.Fatal(err)
-	}
-
-	err = ep.Publish(proto.CreateMessage("location/update", map[string]interface{}{
+	err := ep.Publish(proto.CreateMessage("location/update", map[string]interface{}{
 		"timestamp": time.Now().Format(time.RFC3339),
 		"latitude":  52.3744779,
 		"longitude": 9.7385532,
@@ -114,23 +112,20 @@ func TestService(t *testing.T) {
 }
 
 func TestGeofence(t *testing.T) {
-	ctx, ep := core.NewTestContext()
+	deps := &Dependencies{}
+	ep := core.InjectTest(deps)
 
 	var lastReply proto.Message
 	ep.RegisterHandler(func(msg proto.Message) {
 		lastReply = msg
 	})
 
-	srv, err := NewService(ctx)
-	if err != nil {
+	srv := NewService(deps)
+	if err := srv.Enable(); err != nil {
 		t.Fatal(err)
 	}
 
-	if err = srv.Enable(); err != nil {
-		t.Fatal(err)
-	}
-
-	err = ep.Publish(proto.CreateMessage("location/fence/create", map[string]interface{}{
+	err := ep.Publish(proto.CreateMessage("location/fence/create", map[string]interface{}{
 		"name":    "City",
 		"lat_min": 5.1,
 		"lat_max": 5.3,
