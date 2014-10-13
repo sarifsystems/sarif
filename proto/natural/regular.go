@@ -95,6 +95,9 @@ func (s RegularSchema) Parse(text string) (proto.Message, bool) {
 	if len(payload) > 0 {
 		msg.EncodePayload(payload)
 	}
+	if msg.Text == "" {
+		msg.Text = text
+	}
 	return msg, true
 }
 

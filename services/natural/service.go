@@ -78,9 +78,6 @@ func (s *Service) parseNatural(msg proto.Message) (proto.Message, bool) {
 		return parsed, false
 	}
 
-	if parsed.Text == "" {
-		parsed.Text = msg.Text
-	}
 	return parsed, true
 }
 
