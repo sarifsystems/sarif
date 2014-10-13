@@ -72,7 +72,6 @@ func fixEvent(e *Event) {
 func (s *Service) handleEventNew(msg proto.Message) {
 	var e Event
 	if err := msg.DecodePayload(&e); err != nil {
-		s.Log.Warnln("[events] received bad payload:", err)
 		s.ReplyBadRequest(msg, err)
 		return
 	}
@@ -84,14 +83,12 @@ func (s *Service) handleEventNew(msg proto.Message) {
 	s.Log.Infoln("[events] new event:", e)
 
 	if err := s.DB.Save(&e).Error; err != nil {
-		s.Log.Errorln("[vents] could not store event:", err)
 		s.ReplyInternalError(msg, err)
 		return
 	}
 
 	reply := proto.Message{Action: "event/created"}
 	if err := reply.EncodePayload(e); err != nil {
-		s.Log.Errorln("[events] could not encode reply:", err)
 		s.ReplyInternalError(msg, err)
 		return
 	}
@@ -103,7 +100,6 @@ func (s *Service) handleEventNew(msg proto.Message) {
 func (s *Service) handleEventLast(msg proto.Message) {
 	var filter Event
 	if err := msg.DecodePayload(&filter); err != nil {
-		s.Log.Warnln("[events] received bad payload:", err)
 		s.ReplyBadRequest(msg, err)
 		return
 	}
@@ -117,7 +113,6 @@ func (s *Service) handleEventLast(msg proto.Message) {
 			s.Reply(msg, MessageEventNotFound)
 			return
 		}
-		s.Log.Errorln("[events] could not get events:", err)
 		s.ReplyInternalError(msg, err)
 		return
 	}
@@ -125,7 +120,6 @@ func (s *Service) handleEventLast(msg proto.Message) {
 
 	reply := proto.Message{Action: "event/found"}
 	if err := reply.EncodePayload(last); err != nil {
-		s.Log.Errorln("[events] could not encode reply:", err)
 		s.ReplyInternalError(msg, err)
 		return
 	}

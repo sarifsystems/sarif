@@ -16,6 +16,7 @@ import (
 	"github.com/xconstruct/stark/services/know"
 	"github.com/xconstruct/stark/services/lastfm"
 	"github.com/xconstruct/stark/services/location"
+	"github.com/xconstruct/stark/services/mood"
 	"github.com/xconstruct/stark/services/natural"
 	"github.com/xconstruct/stark/services/router"
 	"github.com/xconstruct/stark/services/scheduler"
@@ -35,14 +36,15 @@ func main() {
 	app.Must(app.Init())
 	defer app.Close()
 
-	app.RegisterModule(scheduler.Module)
 	app.RegisterModule(events.Module)
 	app.RegisterModule(hostscan.Module)
 	app.RegisterModule(know.Module)
 	app.RegisterModule(lastfm.Module)
 	app.RegisterModule(location.Module)
+	app.RegisterModule(mood.Module)
 	app.RegisterModule(natural.Module)
 	app.RegisterModule(router.Module)
+	app.RegisterModule(scheduler.Module)
 	app.RegisterModule(store.Module)
 	app.RegisterModule(web.Module)
 	app.RegisterModule(xmpp.Module)
@@ -53,6 +55,7 @@ func main() {
 			"events",
 			"know",
 			"location",
+			"mood",
 			"natural",
 			"scheduler",
 			"store",
