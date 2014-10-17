@@ -6,71 +6,55 @@
 package natural
 
 import (
+	"bytes"
+	"encoding/json"
 	"regexp"
 	"strings"
+	"text/template"
 
 	"github.com/xconstruct/stark/proto"
-	"gopkg.in/yaml.v1"
 )
 
+var reMatchVars = regexp.MustCompile(`\\\[([\w ]+)\\\]`)
+
 type RegularSchema struct {
-	Example string
-	Regexp  *regexp.Regexp
-	Fields  map[string]interface{}
-	Message proto.Message
-	Payload map[string]interface{}
+	Example string           `json:"example"`
+	Message *json.RawMessage `json:"msg"`
+
+	Regexp   *regexp.Regexp     `json:"-"`
+	Template *template.Template `json:"-"`
 }
 
 type RegularSchemata []RegularSchema
 
-func fillMessage(msg *proto.Message, payload map[string]interface{}, key, val string) {
-	switch key {
-	case "":
-		return
-	case "action":
-		msg.Action = val
-	case "text":
-		msg.Text = val
-	default:
-		payload[key] = val
+func buildRegexp(field string) string {
+	matches := reMatchVars.FindStringSubmatch(field)
+	field = matches[1]
+	repl := `[^\s]+`
+	if strings.ContainsRune(field, ' ') {
+		repl = `.+`
 	}
-}
-
-func buildRegexp(re, field string, val []interface{}) string {
-	valStr := val[0].(string)
-	old := regexp.QuoteMeta(valStr)
-	repl := regexp.QuoteMeta(valStr)
-	multiWords := strings.ContainsRune(old, ' ')
-	if len(val) == 1 {
-		if multiWords {
-			repl = `.+`
-		} else {
-			repl = `[^\s]+`
-		}
-	}
-	repl = `(?P<` + field + `>` + repl + `)`
-	return strings.Replace(re, old, repl, -1)
+	field = strings.Replace(field, " ", "", -1)
+	return `(?P<` + field + `>` + repl + `)`
 }
 
 func LoadRegularSchemata(text string) (RegularSchemata, error) {
 	schemata := make(RegularSchemata, 0)
-	if err := yaml.Unmarshal([]byte(text), &schemata); err != nil {
+	if err := json.Unmarshal([]byte(text), &schemata); err != nil {
 		return schemata, err
 	}
 
+	var err error
 	for i, s := range schemata {
-		s.Payload = make(map[string]interface{})
-		var err error
-		re := `^(?i)` + regexp.QuoteMeta(s.Example) + `$`
-		for field, val := range s.Fields {
-			switch v := val.(type) {
-			case string:
-				fillMessage(&schemata[i].Message, s.Payload, field, v)
-			case []interface{}:
-				re = buildRegexp(re, field, v)
-			}
-		}
+		re := regexp.QuoteMeta(s.Example)
+		re = reMatchVars.ReplaceAllStringFunc(re, buildRegexp)
+		re = `^(?i)` + re + `$`
 		schemata[i].Regexp, err = regexp.Compile(re)
+		if err != nil {
+			return schemata, err
+		}
+
+		schemata[i].Template, err = template.New("").Parse("<script>" + string(*s.Message) + "</script>")
 		if err != nil {
 			return schemata, err
 		}
@@ -80,20 +64,24 @@ func LoadRegularSchemata(text string) (RegularSchemata, error) {
 }
 
 func (s RegularSchema) Parse(text string) (proto.Message, bool) {
-	msg := s.Message.Copy()
 	match := s.Regexp.FindStringSubmatch(text)
 	if match == nil {
-		return msg, false
+		return proto.Message{}, false
 	}
-	payload := make(map[string]interface{})
-	for k, v := range s.Payload {
-		payload[k] = v
-	}
+
+	vars := make(map[string]string)
 	for i, field := range s.Regexp.SubexpNames() {
-		fillMessage(&msg, payload, field, match[i])
+		vars[field] = match[i]
 	}
-	if len(payload) > 0 {
-		msg.EncodePayload(payload)
+	var b bytes.Buffer
+	if err := s.Template.Execute(&b, vars); err != nil {
+		panic(err)
+	}
+	by := b.Bytes()
+	by = by[8 : len(by)-9] // Strip <script> tags.
+	var msg proto.Message
+	if err := json.Unmarshal(by, &msg); err != nil {
+		panic(err)
 	}
 	if msg.Text == "" {
 		msg.Text = text
