@@ -8,6 +8,7 @@ package core
 import (
 	"log"
 
+	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 )
 
@@ -16,7 +17,7 @@ type Context struct {
 	Orm      *Orm
 	Log      *Logger
 	Proto    proto.Conn
-	Config   *Config
+	Config   *core.Config
 }
 
 func (ctx *Context) Must(err error) {
@@ -27,7 +28,7 @@ func (ctx *Context) Must(err error) {
 
 func NewTestContext() (*Context, proto.Conn) {
 	ctx := &Context{}
-	ctx.Config = NewConfig()
+	ctx.Config = core.NewConfig("")
 	ctx.Log = DefaultLog
 
 	ctx.Orm = OpenDatabaseInMemory()
@@ -47,7 +48,7 @@ func InjectTest(container interface{}) proto.Conn {
 	inj.Instance(orm.DB)
 	inj.Instance(orm.Database())
 	inj.Instance(proto.Conn(a))
-	inj.Instance(NewConfig())
+	inj.Instance(core.NewConfig(""))
 	inj.Factory(func() proto.Logger {
 		return DefaultLog
 	})

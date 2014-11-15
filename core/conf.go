@@ -7,39 +7,42 @@ package core
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path"
 )
+
+var ErrNoFile = errors.New("config: No file specified")
 
 type ErrConfNotFound struct {
 	Section string
 }
 
 func (e ErrConfNotFound) Error() string {
-	return "conf: section '" + e.Section + "' not found"
+	return "config: section '" + e.Section + "' not found"
 }
 
 type Config struct {
+	path     string
 	modified bool
 	sections map[string]*json.RawMessage
 }
 
-func NewConfig() *Config {
+func NewConfig(file string) *Config {
 	return &Config{
+		file,
 		false,
 		make(map[string]*json.RawMessage),
 	}
 }
 
-func (cfg *Config) Get(section string, v interface{}) {
+func (cfg *Config) Get(section string, v interface{}) error {
 	raw, ok := cfg.sections[section]
 	if !ok {
 		cfg.Set(section, v)
-		return
+		return nil
 	}
-	if err := json.Unmarshal(*raw, v); err != nil {
-		DefaultLog.Fatal(err)
-	}
+	return json.Unmarshal(*raw, v)
 }
 
 func (cfg *Config) Exists(section string) bool {
@@ -62,24 +65,19 @@ func (cfg *Config) IsModified() bool {
 	return cfg.modified
 }
 
-func ReadConfig(file string) (*Config, error) {
-	cfg := NewConfig()
-	f, err := os.Open(file)
-	if err != nil {
-		return cfg, err
+func (cfg *Config) Write() error {
+	if cfg.path == "" {
+		return ErrNoFile
 	}
-	defer f.Close()
-	dec := json.NewDecoder(f)
-	err = dec.Decode(&cfg.sections)
-	return cfg, err
-}
+	if !cfg.IsModified() {
+		return nil
+	}
 
-func WriteConfig(file string, cfg *Config) error {
-	if err := os.MkdirAll(path.Dir(file), 0700); err != nil {
+	if err := os.MkdirAll(path.Dir(cfg.path), 0700); err != nil {
 		return err
 	}
 
-	f, err := os.Create(file)
+	f, err := os.Create(cfg.path)
 	if err != nil {
 		return err
 	}
@@ -91,4 +89,49 @@ func WriteConfig(file string, cfg *Config) error {
 	}
 	_, err = f.Write(encoded)
 	return err
+}
+
+func (cfg *Config) Path() string {
+	return cfg.path
+}
+
+func OpenConfig(file string, create bool) (*Config, error) {
+	cfg := New(file)
+	f, err := os.Open(file)
+	if err != nil {
+		if !create || !os.IsNotExist(err) {
+			return cfg, err
+		}
+		if err := cfg.Write(); err != nil {
+			return cfg, err
+		}
+		return cfg, nil
+	}
+
+	defer f.Close()
+	dec := json.NewDecoder(f)
+	err = dec.Decode(&cfg.sections)
+	return cfg, err
+}
+
+func OpenConfigDefaultDir(app, module string) (*Config, error) {
+	if module == "" {
+		module = "config"
+	}
+	name := GetDefaultDir(app) + "/" + module + ".json"
+	return Open(name, true)
+}
+
+func GetDefaultDir(name string) string {
+	path := os.Getenv("XDG_CONFIG_HOME")
+	if path != "" {
+		return path + "/" + name
+	}
+
+	home := os.Getenv("HOME")
+	if home != "" {
+		return home + "/.config/" + name
+	}
+
+	return "."
 }

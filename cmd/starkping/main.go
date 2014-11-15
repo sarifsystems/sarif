@@ -6,101 +6,65 @@
 // A simple stark client that pings the network every second and prints the
 // results.
 //
-// You probably want to start it with the -v (verbose) flag to get a feel
-// for the protocol.
+// Example: ./starkping tcp://localhost:23100
 package main
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"time"
 
-	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 )
 
-// PingService can send ping messages and measures the elapsed time until
-// a response is received.
-type PingService struct {
-	pings  map[string]time.Time
-	client *proto.Client
-}
-
-// NewPingService creates a PingService that communicates on the supplied
-// stark protocol connection endpoint.
-func NewPingService(ep proto.Conn) *PingService {
-	// We create a new client on this connection with an unique name.
-
-	// While the raw endpoint is good enough for sending/receiving pure messages,
-	// the client provides lots of helpful abstractions and handles a few
-	// implementation details.
-	name := "starkping-" + proto.GenerateId()
-	client := proto.NewClient(name, ep)
-
-	return &PingService{
-		make(map[string]time.Time),
-		client,
-	}
-}
-
-// Ping sends a new ping message to the specified device in the stark network.
-// If device is an empty string, sends it to the whole network.
-// By spec, every client is normally bound to respond with an "ack".
-func (s *PingService) Ping(device string) error {
-	// Generate an unique ID for our message and store the time we sent it.
-	id := proto.GenerateId()
-	s.pings[id] = time.Now()
-
-	// Create the ping message and publish it on the network
-	msg := proto.Message{
-		Id:          id,
-		Action:      "ping",
-		Destination: device,
-	}
-	return s.client.Publish(msg)
-}
-
-// Enable starts the service by subscribing to the right stark messages.
-func (s *PingService) Enable() error {
-	// Listen for messages with action "ack" that are send directly to us
-	// and pass them to Handle()
-	return s.client.Subscribe("ack", "self", s.Handle)
-}
-
-// Handle processes an incoming stark message.
-func (s *PingService) Handle(msg proto.Message) {
-	// We want to only handle acknowledgements to our pings here
-	if !msg.IsAction("ack") {
-		return
-	}
-	// Does the ack reference a previous ping message in its correlation id?
-	sent, ok := s.pings[msg.CorrId]
-	if !ok {
-		return
-	}
-
-	// Print the received message and the elapsed time since the ping.
-	fmt.Printf("%s from %s: time=%.1fms\n",
-		msg.Action,
-		msg.Source,
-		time.Since(sent).Seconds()*1e3,
-	)
-}
-
 func main() {
-	// App simply helps to read our global configuration file and sets up the
-	// MQTT connection to the network. It is not strictly necessary for own
-	// services.
-	app := core.NewApp("stark")
-	app.Must(app.Init())
-	defer app.Close()
-	ctx := app.NewContext()
+	addr := "tcp://localhost:23100"
+	if len(os.Args) > 1 {
+		addr = os.Args[1]
+	}
+	fmt.Println("connecting to", addr)
 
-	// Enable our own stark Service.
-	srv := NewPingService(ctx.Proto)
-	ctx.Must(srv.Enable())
+	// Dial into the stark network.
+	conn, err := proto.Dial(&proto.NetConfig{
+		Address: addr,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Setup our client.
+	client := proto.NewClient("starkping", conn)
+	pings := make(map[string]time.Time)
+
+	// Subscribe to all acknowledgements to our pings
+	// and print them.
+	client.Subscribe("ack", "self", func(msg proto.Message) {
+		if !msg.IsAction("ack") {
+			return
+		}
+		sent, ok := pings[msg.CorrId]
+		if !ok {
+			return
+		}
+
+		fmt.Printf("%s from %s: time=%.1fms\n",
+			msg.Action,
+			msg.Source,
+			time.Since(sent).Seconds()*1e3,
+		)
+	})
 
 	// Every second, send a ping to all devices.
 	for _ = range time.Tick(1 * time.Second) {
-		ctx.Must(srv.Ping(""))
+		// Create the ping message and publish it on the network
+		msg := proto.Message{
+			Id:     proto.GenerateId(),
+			Action: "ping",
+		}
+		if err := client.Publish(msg); err != nil {
+			log.Fatal(err)
+		}
+		pings[msg.Id] = time.Now()
 	}
 }

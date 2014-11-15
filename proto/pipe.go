@@ -5,42 +5,50 @@
 
 package proto
 
-import (
-	"errors"
-)
+import "errors"
 
 var (
 	ErrClosed = errors.New("The other end is closed.")
 )
 
 type pipeConn struct {
-	other   *pipeConn
-	closed  bool
-	handler Handler
+	other    *pipeConn
+	messages chan Message
 }
 
 func NewPipe() (a, b Conn) {
 	ac := &pipeConn{}
 	bc := &pipeConn{}
+	ac.messages = make(chan Message, 10)
+	bc.messages = make(chan Message, 10)
 	ac.other = bc
 	bc.other = ac
 	return ac, bc
 }
 
-func (t *pipeConn) Publish(msg Message) error {
-	if t.other == nil || t.other.closed {
-		if t.other.closed {
-			t.other = nil
-		}
+func (t *pipeConn) Write(msg Message) error {
+	if t.other == nil {
 		return ErrClosed
 	}
-
-	if t.other.handler != nil {
-		t.other.handler(msg)
-	}
+	t.other.messages <- msg
 	return nil
 }
 
-func (t *pipeConn) RegisterHandler(h Handler) {
-	t.handler = h
+func (t *pipeConn) Read() (Message, error) {
+	msg, ok := <-t.messages
+	if !ok {
+		return msg, ErrClosed
+	}
+	return msg, nil
+}
+
+func (t *pipeConn) Close() error {
+	if t.other == nil {
+		return nil
+	}
+
+	o := t.other
+	t.other = nil
+	close(t.messages)
+	return o.Close()
 }

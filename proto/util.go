@@ -7,6 +7,7 @@ package proto
 
 import (
 	"crypto/rand"
+	"strings"
 )
 
 func GenerateId() string {
@@ -20,14 +21,12 @@ func GenerateId() string {
 }
 
 func getTopic(action, device string) string {
-	t := "stark"
+	t := ""
 	if device != "" {
 		t += "/dev/" + device
-	} else {
-		t += "/special/all"
 	}
 	if action != "" {
 		t += "/action/" + action
 	}
-	return t
+	return strings.TrimLeft(t, "/")
 }

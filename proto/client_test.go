@@ -7,26 +7,13 @@ package proto
 
 import (
 	"testing"
+	"time"
 )
 
 type single struct {
 	action string
 	device string
 	should bool
-}
-
-type testConn struct {
-	last Message
-	send Handler
-}
-
-func (c *testConn) Publish(msg Message) error {
-	c.last = msg
-	return nil
-}
-
-func (c *testConn) RegisterHandler(h Handler) {
-	c.send = h
 }
 
 func TestClientSingle(t *testing.T) {
@@ -39,23 +26,21 @@ func TestClientSingle(t *testing.T) {
 		{"ack", "", false},
 	}
 
-	tc := &testConn{}
-	client := NewClient("test", tc)
+	tc, other := NewPipe()
+	client := NewClient("test", other)
 
 	fired := false
 	client.Subscribe("ping", "one", func(msg Message) {
 		fired = true
 	})
-	if tc.send == nil {
-		t.Fatal("client should have registed with the testconn")
-	}
 
 	for _, test := range tests {
 		fired = false
-		tc.send(Message{
+		tc.Write(Message{
 			Action:      test.action,
 			Destination: test.device,
 		})
+		time.Sleep(10 * time.Millisecond)
 		if test.should && !fired {
 			t.Error("did not fire", test)
 		}

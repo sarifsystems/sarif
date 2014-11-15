@@ -27,7 +27,7 @@ var Module = &services.Module{
 type Dependencies struct {
 	Config *core.Config
 	Log    proto.Logger
-	Conn   proto.Conn
+	Broker *proto.Broker
 }
 
 type Config struct {
@@ -47,7 +47,7 @@ type conversation struct {
 type Client struct {
 	cfg           Config
 	Log           proto.Logger
-	mux           *proto.Mux
+	Broker        *proto.Broker
 	xmpp          *xmpp.Conn
 	conversations map[string]*conversation
 }
@@ -55,10 +55,9 @@ type Client struct {
 func New(deps *Dependencies) *Client {
 	c := &Client{
 		Log:           deps.Log,
-		mux:           proto.NewMux(),
+		Broker:        deps.Broker,
 		conversations: make(map[string]*conversation, 0),
 	}
-	proto.Connect(deps.Conn, c.mux)
 	deps.Config.Get("xmpp", &c.cfg)
 	return c
 }
@@ -115,7 +114,7 @@ func (c *Client) listen() {
 }
 
 func (c *Client) newConversation(remote string) *conversation {
-	ep := c.mux.NewConn()
+	ep := c.Broker.NewLocalConn()
 	user := xmpp.RemoveResourceFromJid(remote)
 	client := proto.NewClient("xmpp/"+user, ep)
 	cv := &conversation{

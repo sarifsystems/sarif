@@ -9,11 +9,11 @@ import "github.com/xconstruct/stark/proto"
 
 const defaultRegularText = `[
 {
-	"example": "I started to [play] [music]",
+	"example": "Record that [I] started to [play] [music]",
 	"msg": {
 		"action": "event/new",
 		"p": {
-			"subject": ".I",
+			"subject": "{{.I}}",
 			"verb": "{{.play}}",
 			"object": "{{.music}}",
 			"status": "started"
@@ -21,11 +21,11 @@ const defaultRegularText = `[
 	}
 },
 {
-	"example": "I finished to [play] [music]",
+	"example": "Record that [I] finished to [play] [music]",
 	"msg": {
 		"action": "event/new",
 		"p": {
-			"subject": "I",
+			"subject": "{{.I}}",
 			"verb": "{{.play}}",
 			"object": "{{.music}}",
 			"status": "ended"
@@ -33,13 +33,24 @@ const defaultRegularText = `[
 	}
 },
 {
-	"example": "I [drink] [coffee]",
+	"example": "Record that [I] [drink] [coffee]",
 	"msg": {
 		"action": "event/new",
 		"p": {
-			"subject": "I",
+			"subject": "{{.I}}",
 			"verb": "{{.drink}}",
 			"object": "{{.coffee}}",
+			"status": "singular"
+		}
+	}
+},
+{
+	"example": "Record that [I] [worked]",
+	"msg": {
+		"action": "event/new",
+		"p": {
+			"subject": "{{.I}}",
+			"verb": "{{.worked}}",
 			"status": "singular"
 		}
 	}

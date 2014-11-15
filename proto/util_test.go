@@ -23,17 +23,17 @@ func TestGetTopic(t *testing.T) {
 	var tp string
 
 	tp = getTopic("", "mydevice")
-	if tp != "stark/dev/mydevice" {
+	if tp != "dev/mydevice" {
 		t.Errorf("Incorrect topic: %s", tp)
 	}
 
 	tp = getTopic("myaction", "")
-	if tp != "stark/special/all/action/myaction" {
+	if tp != "action/myaction" {
 		t.Errorf("Incorrect topic: %s", tp)
 	}
 
 	tp = getTopic("myaction", "mydevice")
-	if tp != "stark/dev/mydevice/action/myaction" {
+	if tp != "dev/mydevice/action/myaction" {
 		t.Errorf("Incorrect topic: %s", tp)
 	}
 }

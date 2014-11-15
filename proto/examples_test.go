@@ -16,9 +16,16 @@ import (
 func ExampleClient() {
 	recv := make(chan bool)
 
-	// Connect to MQTT network
-	conn, err := proto.DialMqtt(proto.MqttConfig{
-		Server: "tcp://test.mosquitto.org:1883",
+	// Hosting a broker
+	broker := proto.NewBroker()
+	go broker.Listen(&proto.ListenConfig{
+		Address: "tcp://localhost:5698",
+	})
+	time.Sleep(time.Millisecond)
+
+	// Connect to broker
+	conn, err := proto.Dial(&proto.DialConfig{
+		Address: "tcp://localhost:5698",
 	})
 	if err != nil {
 		fmt.Println(err)

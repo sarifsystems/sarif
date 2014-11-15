@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -18,8 +19,8 @@ var verbose = flag.Bool("v", false, "verbose debug output")
 
 type App struct {
 	AppName  string
-	Config   *Config
-	Proto    *proto.Mux
+	Config   *core.Config
+	Broker   *proto.Broker
 	Database *DB
 	Orm      *Orm
 	Log      *Logger
@@ -54,7 +55,7 @@ func (app *App) Init() error {
 	if err := app.initDatabase(); err != nil {
 		return err
 	}
-	if err := app.initProto(); err != nil {
+	if err := app.initBroker(); err != nil {
 		return err
 	}
 
@@ -62,44 +63,20 @@ func (app *App) Init() error {
 	return nil
 }
 
-func (app *App) GetDefaultDir() string {
-	path := os.Getenv("XDG_CONFIG_HOME")
-	if path != "" {
-		return path + "/" + app.AppName
-	}
-
-	home := os.Getenv("HOME")
-	if home != "" {
-		return home + "/.config/" + app.AppName
-	}
-
-	return "."
-}
-
 func (app *App) initConfig() error {
-	f := app.GetDefaultDir() + "/config.json"
-	app.Log.Debugf("[core] reading config from '%s'", f)
-	cfg, err := ReadConfig(f)
+	cfg, err := OpenConfigDefaultDir(app.AppName, "")
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
-		cfg = NewConfig()
-		app.Log.Warnf("[core] config not found, loading defaults")
-		if err := WriteConfig(f, cfg); err != nil {
-			return err
-		}
-
+		return err
 	}
+	app.Log.Debugf("[core] reading config from '%s'", cfg.Path())
 	app.Config = cfg
 	return nil
 }
 
 func (app *App) writeConfig() {
 	if app.Config.IsModified() {
-		f := app.GetDefaultDir() + "/config.json"
-		app.Log.Infof("[core] writing config to '%s'", f)
-		app.Must(WriteConfig(f, app.Config))
+		app.Log.Infof("[core] writing config to '%s'", app.Config.Path())
+		app.Must(app.Config.Write())
 	}
 }
 
@@ -110,7 +87,7 @@ func (app *App) Close() {
 func (app *App) initDatabase() error {
 	cfg := DatabaseConfig{
 		Driver: "sqlite3",
-		Source: app.GetDefaultDir() + "/" + app.AppName + ".db",
+		Source: config.GetDefaultDir(app.AppName) + "/" + app.AppName + ".db",
 	}
 
 	app.Config.Get("database", &cfg)
@@ -124,29 +101,11 @@ func (app *App) initDatabase() error {
 	return nil
 }
 
-func (app *App) initProto() error {
+func (app *App) initBroker() error {
 	proto.SetDefaultLogger(app.Log)
 	cfg := proto.GetMqttDefaults()
 	app.Config.Get("mqtt", &cfg)
-	app.Proto = proto.NewMux()
-
-	if cfg.Server == "" || cfg.Server == "tcp://example.org:1883" {
-		app.Log.Warnln("[core] config 'mqtt.Server' empty, falling back to local broker")
-		app.Proto.RegisterPublisher(func(msg proto.Message) error {
-			raw, _ := msg.Encode()
-			app.Log.Debugln("[core] broker received:", string(raw))
-			app.Proto.Handle(msg)
-			return nil
-		})
-		return nil
-	}
-
-	app.Log.Debugf("[core] mqtt connecting to %s", cfg.Server)
-	m, err := proto.DialMqtt(cfg)
-	if err != nil {
-		return err
-	}
-	proto.Connect(m, app.Proto)
+	app.Broker = proto.NewBroker()
 	return nil
 }
 
@@ -162,14 +121,16 @@ func (app *App) setupInjector(name string) *Injector {
 	inj.Instance(app.Orm.DB)
 	inj.Instance(app.Orm.Database())
 	inj.Instance(app.Log)
+	inj.Instance(app.Broker)
 	inj.Factory(func() proto.Logger {
 		return app.Log
 	})
 	inj.Factory(func() proto.Conn {
-		return app.Proto.NewConn()
+		return app.Broker.NewLocalConn()
 	})
 	inj.Factory(func() *proto.Client {
-		c := proto.NewClient(name, app.Proto.NewConn())
+		conn := app.Broker.NewLocalConn()
+		c := proto.NewClient(name, conn)
 		c.SetLogger(app.Log)
 		return c
 	})
@@ -219,7 +180,7 @@ func (app *App) DisableModule(name string) error {
 	return nil
 }
 
-func (app *App) WaitUntilInterrupt() {
+func WaitUntilInterrupt() {
 	ch := make(chan os.Signal, 2)
 	signal.Notify(ch, os.Interrupt)
 	<-ch
@@ -230,7 +191,7 @@ func (app *App) NewContext() *Context {
 		app.Database,
 		app.Orm,
 		app.Log,
-		app.Proto.NewConn(),
+		app.Broker.NewLocalConn(),
 		app.Config,
 	}
 }

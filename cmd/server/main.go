@@ -11,6 +11,7 @@ package main
 
 import (
 	"github.com/xconstruct/stark/core"
+	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services/events"
 	"github.com/xconstruct/stark/services/hostscan"
 	"github.com/xconstruct/stark/services/know"
@@ -28,6 +29,7 @@ import (
 )
 
 type Config struct {
+	Listen         []*proto.NetConfig
 	EnabledModules []string
 }
 
@@ -65,10 +67,24 @@ func main() {
 	// Load configuration from file
 	app.Config.Get("server", &cfg)
 
+	if len(cfg.Listen) == 0 {
+		cfg.Listen = append(cfg.Listen, &proto.NetConfig{
+			Address: "tcp://localhost:23100",
+		})
+		app.Config.Set("server", &cfg)
+	}
+
+	// Listen on connections
+	for _, cfg := range cfg.Listen {
+		go func(cfg *proto.NetConfig) {
+			app.Must(app.Broker.Listen(cfg))
+		}(cfg)
+	}
+
 	// Enable each module listed in the config
 	for _, module := range cfg.EnabledModules {
 		app.Must(app.EnableModule(module))
 	}
 
-	app.WaitUntilInterrupt()
+	core.WaitUntilInterrupt()
 }

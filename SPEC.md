@@ -41,6 +41,6 @@ As defined in [proto.GetTopic](http://godoc.org/github.com/xconstruct/stark/prot
 Devices normally subscribe to a whole topic tree (e.g. "/stark/dev/mydevice/#" or "/stark/special/all/action/push/#").
 This means that if you subscribe to an action "push", you also receive all subactions, e.g. "push/link" or "push/text".
 
-* /stark/dev/{destination}: send message to a specific device
-* /stark/special/all/{action}: send message to all devices
+* /stark/action/{action}: send message to all devices
+* /stark/dev/{destination}/action/{action}: send message to a specific device
 * /stark/user/{user}/{action}: send message to all devices with an active user in the last few minutes (planned)

@@ -11,37 +11,30 @@ import (
 )
 
 type ByteConn struct {
-	enc     *json.Encoder
-	dec     *json.Decoder
-	handler Handler
+	conn io.ReadWriteCloser
+	enc  *json.Encoder
+	dec  *json.Decoder
 }
 
-func NewByteConn(conn io.ReadWriter) *ByteConn {
+func NewByteConn(conn io.ReadWriteCloser) Conn {
 	t := &ByteConn{
+		conn,
 		json.NewEncoder(conn),
 		json.NewDecoder(conn),
-		nil,
 	}
 	return t
 }
 
-func (t *ByteConn) Publish(msg Message) error {
+func (t *ByteConn) Write(msg Message) error {
 	return t.enc.Encode(msg)
 }
 
-func (t *ByteConn) RegisterHandler(h Handler) {
-	t.handler = h
+func (t *ByteConn) Read() (Message, error) {
+	var msg Message
+	err := t.dec.Decode(&msg)
+	return msg, err
 }
 
-func (t *ByteConn) Listen() error {
-	for {
-		var msg Message
-		if err := t.dec.Decode(&msg); err != nil {
-			return err
-		}
-
-		if t.handler != nil {
-			t.handler(msg)
-		}
-	}
+func (t *ByteConn) Close() error {
+	return t.conn.Close()
 }

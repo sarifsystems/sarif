@@ -40,13 +40,13 @@ type Config struct {
 type Dependencies struct {
 	Config *core.Config
 	Log    proto.Logger
-	Conn   proto.Conn
+	Broker *proto.Broker
 }
 
 type Server struct {
 	cfg        Config
 	Log        proto.Logger
-	proto      *proto.Mux
+	Broker     *proto.Broker
 	apiClients map[string]*proto.Client
 }
 
@@ -82,10 +82,9 @@ func New(deps *Dependencies) *Server {
 	s := &Server{
 		cfg,
 		deps.Log,
-		proto.NewMux(),
+		deps.Broker,
 		make(map[string]*proto.Client),
 	}
-	proto.Connect(deps.Conn, s.proto)
 	return s
 }
 
@@ -117,22 +116,9 @@ func (s *Server) handleStreamStark(ws *websocket.Conn) {
 		return
 	}
 
-	mtp := s.proto.NewConn()
 	webtp := proto.NewByteConn(ws)
-	webtp.RegisterHandler(func(msg proto.Message) {
-		s.Log.Debugln("[web] websocket received", msg)
-		if err := mtp.Publish(msg); err != nil {
-			s.Log.Errorln("[web] broker publish error:", err)
-		}
-	})
-	mtp.RegisterHandler(func(msg proto.Message) {
-		s.Log.Debugln("[web] mtp received:", msg)
-		if err := webtp.Publish(msg); err != nil {
-			s.Log.Errorln("[web] websocket publish error:", err)
-		}
-	})
-	err := webtp.Listen()
-	s.Log.Errorln("[web] websocket closed: ", err)
+	err := s.Broker.ListenOnConn(webtp)
+	s.Log.Errorln("[web] websocket closed:", err)
 }
 
 func parseAuthorizationHeader(h string) string {
@@ -157,7 +143,7 @@ func parseAuthorizationHeader(h string) string {
 func (s *Server) getApiClientByName(name string) *proto.Client {
 	client, ok := s.apiClients[name]
 	if !ok {
-		client = proto.NewClient(name, s.proto.NewConn())
+		client = proto.NewClient(name, s.Broker.NewLocalConn())
 		s.apiClients[name] = client
 	}
 	return client

@@ -25,11 +25,13 @@ type MqttConfig struct {
 	Key         string
 	Authority   string
 	TlsConfig   *tls.Config `json:"-"`
+	Prefix      string
 }
 
 func GetMqttDefaults() MqttConfig {
 	return MqttConfig{
 		Server: "tcp://example.org:1883",
+		Prefix: "stark",
 	}
 }
 
@@ -111,7 +113,8 @@ func (t *MqttConn) Publish(msg Message) error {
 		if err := msg.DecodePayload(&sub); err != nil {
 			return err
 		}
-		if err := t.subscribe(getTopic(sub.Action, sub.Device) + "/#"); err != nil {
+		topic := t.cfg.Prefix + "/" + getTopic(sub.Action, sub.Device) + "/#"
+		if err := t.subscribe(topic); err != nil {
 			return err
 		}
 	}
@@ -121,7 +124,7 @@ func (t *MqttConn) Publish(msg Message) error {
 		return err
 	}
 
-	topic := getTopic(msg.Action, msg.Destination)
+	topic := t.cfg.Prefix + "/" + getTopic(msg.Action, msg.Destination)
 	t.log.Debugf("mqtt sending to %s: %v", topic, string(raw))
 	r := t.client.Publish(mqtt.QOS_ZERO, topic, raw)
 	<-r

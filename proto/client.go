@@ -5,10 +5,7 @@
 
 package proto
 
-import (
-	"errors"
-	"fmt"
-)
+import "errors"
 
 type Client struct {
 	DeviceId string
@@ -27,7 +24,17 @@ func NewClient(deviceId string, e Conn) *Client {
 		make([]subscription, 0),
 	}
 	c.conn = e
-	e.RegisterHandler(c.handle)
+	go func() {
+		for {
+			msg, err := e.Read()
+			if err != nil {
+				c.log.Errorln("[client] read:", err)
+				return
+			}
+			c.handle(msg)
+		}
+
+	}()
 	c.Subscribe("ping", "", c.handlePing)
 	return c
 }
@@ -50,8 +57,7 @@ func (c *Client) fillMessage(msg *Message) {
 
 func (c *Client) Publish(msg Message) error {
 	c.fillMessage(&msg)
-	fmt.Sprintln(c.conn)
-	if err := c.conn.Publish(msg); err != nil {
+	if err := c.conn.Write(msg); err != nil {
 		c.log.Errorf("[client %s] publish error: %v, %v", c.DeviceId, err)
 		return err
 	}

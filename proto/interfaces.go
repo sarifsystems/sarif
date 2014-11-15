@@ -9,16 +9,12 @@ type Handler func(msg Message)
 type Publisher func(msg Message) error
 
 type Conn interface {
-	Publish(msg Message) error
-	RegisterHandler(h Handler)
+	Read() (Message, error)
+	Write(msg Message) error
+	Close() error
 }
 
 type Service interface {
 	Handle(msg Message)
 	RegisterPublisher(p Publisher)
-}
-
-func Connect(c Conn, s Service) {
-	s.RegisterPublisher(c.Publish)
-	c.RegisterHandler(s.Handle)
 }
