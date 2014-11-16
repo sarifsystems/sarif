@@ -38,11 +38,14 @@ func NewService(deps *Dependencies) *Service {
 }
 
 func (s *Service) Enable() error {
+	createIndizes := !s.DB.HasTable(&Event{})
 	if err := s.DB.AutoMigrate(&Event{}).Error; err != nil {
 		return err
 	}
-	if err := s.DB.Model(&Event{}).AddIndex("timestamp", "timestamp", "subject", "verb", "verb", "object", "status").Error; err != nil {
-		return err
+	if createIndizes {
+		if err := s.DB.Model(&Event{}).AddIndex("timestamp", "timestamp", "subject", "verb", "verb", "object", "status").Error; err != nil {
+			return err
+		}
 	}
 	if err := s.Subscribe("event/new", "", s.handleEventNew); err != nil {
 		return err

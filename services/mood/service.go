@@ -42,12 +42,14 @@ func NewService(deps *Dependencies) *Service {
 }
 
 func (s *Service) Enable() error {
-	s.DB.LogMode(true)
+	createIndizes := !s.DB.HasTable(&Tag{})
 	if s.DB.AutoMigrate(&Record{}, &Tag{}).Error != nil {
 		return s.DB.Error
 	}
-	if s.DB.Model(&Tag{}).AddUniqueIndex("name", "name").Error != nil {
-		return s.DB.Error
+	if createIndizes {
+		if s.DB.Model(&Tag{}).AddUniqueIndex("name", "name").Error != nil {
+			return s.DB.Error
+		}
 	}
 	if err := s.Subscribe("mood/record", "", s.handleRecord); err != nil {
 		return err
