@@ -88,14 +88,19 @@ func (b *Broker) ListenOnConn(conn Conn) error {
 			c.publish(msg)
 		}
 	}()
-	return <-c.errs
+	err := <-c.errs
+	conn.Close()
+	return err
 }
 
 // ListenOnBridge forms a bridge between two brokers by transmitting all
 // messages in both directions, regardless of subscriptions. The call blocks
 // until an error is received.
 func (b *Broker) ListenOnBridge(conn Conn) error {
-	if err := conn.Write(Subscribe("", "")); err != nil {
+	sub := Subscribe("", "")
+	sub.Source = "broker"
+	if err := conn.Write(sub); err != nil {
+		conn.Close()
 		return err
 	}
 
@@ -106,7 +111,7 @@ func (b *Broker) ListenOnBridge(conn Conn) error {
 		conn,
 	}
 	b.conns[c] = struct{}{}
-	c.publish(Subscribe("", ""))
+	c.publish(sub)
 
 	go func() {
 		for {
@@ -118,7 +123,9 @@ func (b *Broker) ListenOnBridge(conn Conn) error {
 			c.publish(msg)
 		}
 	}()
-	return <-c.errs
+	err := <-c.errs
+	conn.Close()
+	return err
 }
 
 // NewLocalConn creates a new local connection and starts listening on it.
@@ -153,13 +160,15 @@ func (b *Broker) Listen(cfg *NetConfig) error {
 // to it.
 func (b *Broker) Publish(msg Message) {
 	if b.checkDuplicate(msg.Id) {
-		b.Log.Debugln("[broker] ignore duplicate:", msg)
+		if b.trace {
+			b.Log.Debugln("[broker] ignore duplicate:", msg)
+		}
 		return
 	}
 
 	if b.trace {
 		raw, _ := msg.Encode()
-		b.Log.Debugln("[broker] publish:", string(raw))
+		b.Log.Debugln("[broker] publish:", string(raw), msg.Action)
 	}
 
 	topic := getTopic(msg.Action, msg.Destination)
@@ -193,11 +202,11 @@ func (c *brokerConn) subscribe(topic string) {
 	unsubs := make([]string, 0)
 	for sub := range c.subs {
 		// Already subscribed? Nothing to do.
-		if strings.HasPrefix(topic+"/", sub+"/") {
+		if sub == "" || strings.HasPrefix(topic+"/", sub+"/") {
 			return
 		}
 		// Already subscribed to sub topic? Unsubscribe from it.
-		if strings.HasPrefix(sub+"/", topic+"/") {
+		if topic == "" || strings.HasPrefix(sub+"/", topic+"/") {
 			unsubs = append(unsubs, sub)
 		}
 	}

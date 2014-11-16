@@ -16,6 +16,7 @@ func TestNet(t *testing.T) {
 		Version:     VERSION,
 		Id:          GenerateId(),
 		Action:      "ping/something",
+		Source:      "someone",
 		Destination: "this",
 	}
 

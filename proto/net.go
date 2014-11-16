@@ -57,6 +57,12 @@ func (cfg *NetConfig) parseUrl() (*url.URL, error) {
 		return nil, err
 	}
 
+	if cfg.Tls == nil {
+		if err := cfg.loadTlsCertificates(); err != nil {
+			return nil, err
+		}
+	}
+
 	if u.Scheme == "" {
 		u.Scheme = "tcp"
 	}

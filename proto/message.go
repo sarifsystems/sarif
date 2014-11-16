@@ -44,8 +44,9 @@ func DecodeMessage(raw []byte) (Message, error) {
 
 func CreateMessage(action string, payload interface{}) Message {
 	msg := Message{
-		Id:     GenerateId(),
-		Action: action,
+		Version: VERSION,
+		Id:      GenerateId(),
+		Action:  action,
 	}
 	if err := msg.EncodePayload(payload); err != nil {
 		panic(err)
