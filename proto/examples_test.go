@@ -18,13 +18,13 @@ func ExampleClient() {
 
 	// Hosting a broker
 	broker := proto.NewBroker()
-	go broker.Listen(&proto.ListenConfig{
+	go broker.Listen(&proto.NetConfig{
 		Address: "tcp://localhost:5698",
 	})
 	time.Sleep(time.Millisecond)
 
 	// Connect to broker
-	conn, err := proto.Dial(&proto.DialConfig{
+	conn, err := proto.Dial(&proto.NetConfig{
 		Address: "tcp://localhost:5698",
 	})
 	if err != nil {

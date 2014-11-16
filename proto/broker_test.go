@@ -27,73 +27,97 @@ func TestBrokerMultiple(t *testing.T) {
 		{"ack", "", false, false},
 	}
 
-	oneFired, twoFired := false, false
+	one := newTestService("one", t)
+	two := newTestService("two", t)
 	b := NewBroker()
+	go func() {
+		t.Fatal(b.ListenOnConn(one.NewLocalConn()))
+	}()
+	go func() {
+		t.Fatal(b.ListenOnConn(two.NewLocalConn()))
+	}()
+	time.Sleep(10 * time.Millisecond)
 
-	// Setup first client
-	epOne, oneOther := NewPipe()
-	go func() {
-		for {
-			_, err := epOne.Read()
-			if err != nil {
-				t.Fatal(err)
-			}
-			oneFired = true
-		}
-	}()
-	go func() {
-		t.Fatal(b.ListenOnConn(oneOther))
-	}()
-	err := epOne.Write(CreateMessage("proto/sub", subscription{"ping", "one", nil}))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Setup second client
-	epTwo, twoOther := NewPipe()
-	go func() {
-		for {
-			_, err := epTwo.Read()
-			if err != nil {
-				t.Fatal(err)
-			}
-			twoFired = true
-		}
-	}()
-	go func() {
-		t.Fatal(b.ListenOnConn(twoOther))
-	}()
-	err = epTwo.Write(CreateMessage("proto/sub", subscription{"ping", "two", nil}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = epTwo.Write(CreateMessage("proto/sub", subscription{"ping", "", nil}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	one.Publish(Subscribe("ping", "one"))
+	two.Publish(Subscribe("ping", "two"))
+	two.Publish(Subscribe("ping", ""))
 	time.Sleep(10 * time.Millisecond)
 
 	for i, test := range tests {
-		oneFired, twoFired = false, false
-		err := epOne.Write(Message{
+		one.Reset()
+		two.Reset()
+		one.Publish(Message{
 			Id:          GenerateId(),
 			Action:      test.action,
 			Destination: test.device,
 		})
-		if err != nil {
-			t.Fatal(err)
-		}
 		time.Sleep(10 * time.Millisecond)
-		if test.oneShould && !oneFired {
+
+		if test.oneShould && !one.Fired() {
 			t.Error(i, "one did not fire", test)
 		}
-		if !test.oneShould && oneFired {
+		if !test.oneShould && one.Fired() {
 			t.Error(i, "one should not fire", test)
 		}
-		if test.twoShould && !twoFired {
+		if test.twoShould && !two.Fired() {
 			t.Error(i, "two did not fire", test)
 		}
-		if !test.twoShould && twoFired {
+		if !test.twoShould && two.Fired() {
+			t.Error(i, "two should not fire", test)
+		}
+	}
+}
+
+func TestBrokerBridge(t *testing.T) {
+	tests := []brokerMultiEp{
+		{"ping", "one", true, false},
+		{"ping", "two", false, true},
+		{"ping", "", false, true},
+		{"ack", "one", false, false},
+		{"ack", "two", false, false},
+		{"ack", "", false, false},
+	}
+
+	one := newTestService("one", t)
+	two := newTestService("two", t)
+	b1 := NewBroker()
+	b2 := NewBroker()
+	go func() {
+		t.Fatal(b1.ListenOnConn(one.NewLocalConn()))
+	}()
+	go func() {
+		t.Fatal(b2.ListenOnConn(two.NewLocalConn()))
+	}()
+	go func() {
+		t.Fatal(b2.ListenOnBridge(b1.NewLocalConn()))
+	}()
+	time.Sleep(10 * time.Millisecond)
+
+	one.Publish(Subscribe("ping", "one"))
+	two.Publish(Subscribe("ping", "two"))
+	two.Publish(Subscribe("ping", ""))
+	time.Sleep(10 * time.Millisecond)
+
+	for i, test := range tests {
+		one.Reset()
+		two.Reset()
+		one.Publish(Message{
+			Id:          GenerateId(),
+			Action:      test.action,
+			Destination: test.device,
+		})
+		time.Sleep(10 * time.Millisecond)
+
+		if test.oneShould && !one.Fired() {
+			t.Error(i, "one did not fire", test)
+		}
+		if !test.oneShould && one.Fired() {
+			t.Error(i, "one should not fire", test)
+		}
+		if test.twoShould && !two.Fired() {
+			t.Error(i, "two did not fire", test)
+		}
+		if !test.twoShould && two.Fired() {
 			t.Error(i, "two should not fire", test)
 		}
 	}

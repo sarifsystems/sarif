@@ -96,7 +96,7 @@ func (cfg *Config) Path() string {
 }
 
 func OpenConfig(file string, create bool) (*Config, error) {
-	cfg := New(file)
+	cfg := NewConfig(file)
 	f, err := os.Open(file)
 	if err != nil {
 		if !create || !os.IsNotExist(err) {
@@ -112,14 +112,6 @@ func OpenConfig(file string, create bool) (*Config, error) {
 	dec := json.NewDecoder(f)
 	err = dec.Decode(&cfg.sections)
 	return cfg, err
-}
-
-func OpenConfigDefaultDir(app, module string) (*Config, error) {
-	if module == "" {
-		module = "config"
-	}
-	name := GetDefaultDir(app) + "/" + module + ".json"
-	return Open(name, true)
 }
 
 func GetDefaultDir(name string) string {

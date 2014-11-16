@@ -10,6 +10,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services/events"
@@ -30,6 +32,7 @@ import (
 
 type Config struct {
 	Listen         []*proto.NetConfig
+	Bridges        []*proto.NetConfig
 	EnabledModules []string
 }
 
@@ -77,7 +80,23 @@ func main() {
 	// Listen on connections
 	for _, cfg := range cfg.Listen {
 		go func(cfg *proto.NetConfig) {
+			app.Log.Infoln("[server] listening on", cfg.Address)
 			app.Must(app.Broker.Listen(cfg))
+		}(cfg)
+	}
+
+	// Setup bridges
+	for _, cfg := range cfg.Bridges {
+		go func(cfg *proto.NetConfig) {
+			for {
+				app.Log.Infoln("[server] bridging to ", cfg.Address)
+				conn, err := proto.Dial(cfg)
+				if err == nil {
+					err = app.Broker.ListenOnBridge(conn)
+				}
+				app.Log.Errorln("[server] bridge error:", err)
+				time.Sleep(5 * time.Second)
+			}
 		}(cfg)
 	}
 

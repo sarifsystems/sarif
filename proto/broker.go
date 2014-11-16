@@ -64,13 +64,42 @@ func (b *Broker) checkDuplicate(id string) bool {
 // an error is received, for example when the connection is closed.
 func (b *Broker) ListenOnConn(conn Conn) error {
 	c := &brokerConn{
-		len(b.conns),
 		b,
 		make(map[string]struct{}, 0),
 		make(chan error),
 		conn,
 	}
 	b.conns[c] = struct{}{}
+
+	go func() {
+		for {
+			msg, err := conn.Read()
+			if err != nil {
+				c.errs <- err
+				return
+			}
+			c.publish(msg)
+		}
+	}()
+	return <-c.errs
+}
+
+// ListenOnBridge forms a bridge between two brokers by transmitting all
+// messages in both directions, regardless of subscriptions. The call blocks
+// until an error is received.
+func (b *Broker) ListenOnBridge(conn Conn) error {
+	if err := conn.Write(Subscribe("", "")); err != nil {
+		return err
+	}
+
+	c := &brokerConn{
+		b,
+		make(map[string]struct{}, 0),
+		make(chan error),
+		conn,
+	}
+	b.conns[c] = struct{}{}
+	c.publish(Subscribe("", ""))
 
 	go func() {
 		for {
@@ -122,7 +151,7 @@ func (b *Broker) Publish(msg Message) {
 	}
 
 	topic := getTopic(msg.Action, msg.Destination)
-	topic = strings.TrimLeft(topic, "/")
+	topic = "/" + strings.TrimLeft(topic, "/")
 	t := ""
 	for _, part := range strings.Split(topic, "/") {
 		t += part
@@ -135,12 +164,13 @@ func (b *Broker) Publish(msg Message) {
 				}(c)
 			}
 		}
-		t += "/"
+		if t != "" {
+			t += "/"
+		}
 	}
 }
 
 type brokerConn struct {
-	id     int
 	broker *Broker
 	subs   map[string]struct{}
 	errs   chan error

@@ -19,7 +19,7 @@ func TestNet(t *testing.T) {
 		Destination: "this",
 	}
 
-	l, err := Listen(&ListenConfig{
+	l, err := Listen(&NetConfig{
 		Address: "tcp://",
 	})
 	if err != nil {
@@ -44,7 +44,7 @@ func TestNet(t *testing.T) {
 	}()
 
 	fmt.Println(l.Addr())
-	client, err := Dial(&DialConfig{
+	client, err := Dial(&NetConfig{
 		Address: "tcp://" + l.Addr().String(),
 	})
 	if err != nil {

@@ -5,35 +5,51 @@
 
 package proto
 
-import (
-	"testing"
-)
+import "testing"
 
-func TestGenerateId(t *testing.T) {
-	id := GenerateId()
-	if len(id) != 8 {
-		t.Errorf("Incorrect length of id '%s'", id)
-	}
-	if id == GenerateId() {
-		t.Errorf("Id collision: '%s'", id)
+type testService struct {
+	Name     string
+	T        *testing.T
+	Conn     Conn
+	Received []Message
+}
+
+func newTestService(name string, t *testing.T) *testService {
+	return &testService{
+		name,
+		t,
+		nil,
+		make([]Message, 0),
 	}
 }
 
-func TestGetTopic(t *testing.T) {
-	var tp string
-
-	tp = getTopic("", "mydevice")
-	if tp != "dev/mydevice" {
-		t.Errorf("Incorrect topic: %s", tp)
+func (s *testService) Listen(conn Conn) {
+	s.Conn = conn
+	for {
+		msg, err := conn.Read()
+		if err != nil {
+			s.T.Fatal(err)
+		}
+		s.Received = append(s.Received, msg)
 	}
+}
 
-	tp = getTopic("myaction", "")
-	if tp != "action/myaction" {
-		t.Errorf("Incorrect topic: %s", tp)
-	}
+func (s *testService) NewLocalConn() Conn {
+	a, b := NewPipe()
+	go s.Listen(a)
+	return b
+}
 
-	tp = getTopic("myaction", "mydevice")
-	if tp != "dev/mydevice/action/myaction" {
-		t.Errorf("Incorrect topic: %s", tp)
+func (s *testService) Publish(msg Message) {
+	if err := s.Conn.Write(msg); err != nil {
+		s.T.Fatal(err)
 	}
+}
+
+func (s *testService) Reset() {
+	s.Received = make([]Message, 0)
+}
+
+func (s *testService) Fired() bool {
+	return len(s.Received) > 0
 }

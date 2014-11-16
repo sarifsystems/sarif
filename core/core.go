@@ -10,16 +10,16 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
 
 var verbose = flag.Bool("v", false, "verbose debug output")
+var configPath = flag.String("config", "", "path to config file")
 
 type App struct {
 	AppName  string
-	Config   *core.Config
+	Config   *Config
 	Broker   *proto.Broker
 	Database *DB
 	Orm      *Orm
@@ -64,7 +64,11 @@ func (app *App) Init() error {
 }
 
 func (app *App) initConfig() error {
-	cfg, err := OpenConfigDefaultDir(app.AppName, "")
+	path := *configPath
+	if path == "" {
+		path = GetDefaultDir(app.AppName) + "/config.json"
+	}
+	cfg, err := OpenConfig(path, true)
 	if err != nil {
 		return err
 	}
@@ -87,7 +91,7 @@ func (app *App) Close() {
 func (app *App) initDatabase() error {
 	cfg := DatabaseConfig{
 		Driver: "sqlite3",
-		Source: config.GetDefaultDir(app.AppName) + "/" + app.AppName + ".db",
+		Source: GetDefaultDir(app.AppName) + "/" + app.AppName + ".db",
 	}
 
 	app.Config.Get("database", &cfg)
@@ -103,8 +107,6 @@ func (app *App) initDatabase() error {
 
 func (app *App) initBroker() error {
 	proto.SetDefaultLogger(app.Log)
-	cfg := proto.GetMqttDefaults()
-	app.Config.Get("mqtt", &cfg)
 	app.Broker = proto.NewBroker()
 	return nil
 }
