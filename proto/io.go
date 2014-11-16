@@ -26,13 +26,18 @@ func NewByteConn(conn io.ReadWriteCloser) Conn {
 }
 
 func (t *ByteConn) Write(msg Message) error {
+	if err := msg.IsValid(); err != nil {
+		return err
+	}
 	return t.enc.Encode(msg)
 }
 
 func (t *ByteConn) Read() (Message, error) {
 	var msg Message
-	err := t.dec.Decode(&msg)
-	return msg, err
+	if err := t.dec.Decode(&msg); err != nil {
+		return msg, err
+	}
+	return msg, msg.IsValid()
 }
 
 func (t *ByteConn) Close() error {

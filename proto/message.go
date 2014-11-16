@@ -11,10 +11,10 @@ import (
 	"strings"
 )
 
-const VERSION = "0.4"
+const VERSION = "0.5"
 
 type Message struct {
-	Version     string           `json:"v"`
+	Version     string           `json:"stark"`
 	Id          string           `json:"id"`
 	Action      string           `json:"action"`
 	Source      string           `json:"src"`
