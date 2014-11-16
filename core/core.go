@@ -15,6 +15,7 @@ import (
 )
 
 var verbose = flag.Bool("v", false, "verbose debug output")
+var vverbose = flag.Bool("vv", false, "very verbose debug output: db, individual messages")
 var configPath = flag.String("config", "", "path to config file")
 
 type App struct {
@@ -41,7 +42,7 @@ func NewApp(appName string) *App {
 		instances: make(map[string]interface{}),
 	}
 	app.Log.SetLevel(LogLevelInfo)
-	if *verbose {
+	if *verbose || *vverbose {
 		app.Log.SetLevel(LogLevelDebug)
 	}
 
@@ -100,6 +101,9 @@ func (app *App) initDatabase() error {
 	if err != nil {
 		return err
 	}
+	if *vverbose {
+		db.LogMode(true)
+	}
 	app.Orm = db
 	app.Database = db.Database()
 	return nil
@@ -108,6 +112,9 @@ func (app *App) initDatabase() error {
 func (app *App) initBroker() error {
 	proto.SetDefaultLogger(app.Log)
 	app.Broker = proto.NewBroker()
+	if *vverbose {
+		app.Broker.TraceMessages(true)
+	}
 	return nil
 }
 

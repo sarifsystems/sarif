@@ -13,6 +13,7 @@ type Broker struct {
 	dups     []string
 	dupIndex int
 	Log      Logger
+	trace    bool
 }
 
 // NewBroker returns a new broker that dispatches messages.
@@ -22,12 +23,18 @@ func NewBroker() *Broker {
 		make([]string, 128),
 		0,
 		defaultLog,
+		false,
 	}
 }
 
 // SetLogger sets the default log output.
 func (b *Broker) SetLogger(log Logger) {
 	b.Log = log
+}
+
+// TraceMessages enables debug output of individual messages
+func (b *Broker) TraceMessages(enabled bool) {
+	b.trace = enabled
 }
 
 // SetDuplicateDepth sets the number of stored messages to check for
@@ -148,6 +155,11 @@ func (b *Broker) Publish(msg Message) {
 	if b.checkDuplicate(msg.Id) {
 		b.Log.Debugln("[broker] ignore duplicate:", msg)
 		return
+	}
+
+	if b.trace {
+		raw, _ := msg.Encode()
+		b.Log.Debugln("[broker] publish:", string(raw))
 	}
 
 	topic := getTopic(msg.Action, msg.Destination)
