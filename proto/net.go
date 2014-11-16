@@ -25,12 +25,20 @@ type NetConfig struct {
 	Tls         *tls.Config `json:"-"`
 }
 
-func (cfg *NetConfig) loadTlsCertificates() error {
+func (cfg *NetConfig) loadTlsCertificates(u *url.URL) error {
 	if cfg.Certificate == "" || cfg.Key == "" {
 		return nil
 	}
 
-	cfg.Tls = &tls.Config{}
+	host := u.Host
+	if i := strings.Index(host, ":"); i >= 0 {
+		host = host[0:i]
+	}
+
+	cfg.Tls = &tls.Config{
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		ServerName: host,
+	}
 	cert, err := tls.LoadX509KeyPair(cfg.Certificate, cfg.Key)
 	if err != nil {
 		return err
@@ -45,7 +53,7 @@ func (cfg *NetConfig) loadTlsCertificates() error {
 		}
 		roots.AppendCertsFromPEM(cert)
 		cfg.Tls.RootCAs = roots
-		cfg.Tls.InsecureSkipVerify = true
+		cfg.Tls.ClientCAs = roots
 	}
 
 	return nil
@@ -58,7 +66,7 @@ func (cfg *NetConfig) parseUrl() (*url.URL, error) {
 	}
 
 	if cfg.Tls == nil {
-		if err := cfg.loadTlsCertificates(); err != nil {
+		if err := cfg.loadTlsCertificates(u); err != nil {
 			return nil, err
 		}
 	}
@@ -103,7 +111,7 @@ func Listen(cfg *NetConfig) (*NetListener, error) {
 	}
 
 	if cfg.Tls == nil {
-		if err := cfg.loadTlsCertificates(); err != nil {
+		if err := cfg.loadTlsCertificates(u); err != nil {
 			return nil, err
 		}
 	}
