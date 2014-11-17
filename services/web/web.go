@@ -219,7 +219,7 @@ func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
 			continue
 		}
 		if len(v) == 1 {
-			pl[k] = v[0]
+			pl[k] = parseValue(v[0])
 		} else {
 			pl[k] = v
 		}
@@ -241,4 +241,14 @@ func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.Write([]byte(msg.Id))
+}
+
+func parseValue(s string) interface{} {
+	if v, err := strconv.Atoi(s); err == nil {
+		return v
+	}
+	if v, err := strconv.ParseFloat(s, 64); err == nil {
+		return v
+	}
+	return s
 }
