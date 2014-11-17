@@ -156,6 +156,9 @@ func (s *Server) checkAuthentication(req *http.Request) string {
 	if auth := req.Header.Get("Authorization"); auth != "" {
 		token = parseAuthorizationHeader(auth)
 	}
+	if token == "" && req.FormValue("authtoken") != "" {
+		token = req.FormValue("authtoken")
+	}
 
 	// Find client to API key.
 	for name, stored := range s.cfg.ApiKeys {
@@ -212,6 +215,9 @@ func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
 	}
 	pl := make(map[string]interface{})
 	for k, v := range req.Form {
+		if k == "authtoken" {
+			continue
+		}
 		if len(v) == 1 {
 			pl[k] = v[0]
 		} else {
