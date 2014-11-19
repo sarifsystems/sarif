@@ -8,14 +8,16 @@ package proto
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/url"
 	"strings"
+	"time"
 )
 
-var DefaultPort = "23100"
+const DefaultPort = "23100"
+const DefaultTlsPort = "23443"
+const DefaultKeepalive = 30 * time.Second
 
 type NetConfig struct {
 	Address     string
@@ -23,6 +25,7 @@ type NetConfig struct {
 	Key         string
 	Authority   string
 	Tls         *tls.Config `json:"-"`
+	Keepalive   int         `json:"omitempty"`
 }
 
 func (cfg *NetConfig) loadTlsCertificates(u *url.URL) error {
@@ -75,7 +78,11 @@ func (cfg *NetConfig) parseUrl() (*url.URL, error) {
 		u.Scheme = "tcp"
 	}
 	if !strings.Contains(u.Host, ":") {
-		u.Host += ":" + DefaultPort
+		if cfg.Tls != nil {
+			u.Host += ":" + DefaultTlsPort
+		} else {
+			u.Host += ":" + DefaultPort
+		}
 	}
 
 	return u, nil
@@ -88,7 +95,7 @@ func Dial(cfg *NetConfig) (Conn, error) {
 		return nil, err
 	}
 
-	var conn io.ReadWriteCloser
+	var conn net.Conn
 	if cfg.Tls != nil {
 		conn, err = tls.Dial(u.Scheme, u.Host, cfg.Tls)
 	} else {
@@ -97,10 +104,21 @@ func Dial(cfg *NetConfig) (Conn, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	ka := time.Duration(cfg.Keepalive) * time.Second
+	if ka == 0 {
+		ka = DefaultKeepalive
+	}
+	go func() {
+		for _ = range time.Tick(ka) {
+			conn.Write([]byte(" "))
+		}
+	}()
 	return NewByteConn(conn), nil
 }
 
 type NetListener struct {
+	cfg *NetConfig
 	net.Listener
 }
 
@@ -116,7 +134,7 @@ func Listen(cfg *NetConfig) (*NetListener, error) {
 		}
 	}
 
-	l := &NetListener{}
+	l := &NetListener{cfg, nil}
 	if cfg.Tls != nil {
 		l.Listener, err = tls.Listen(u.Scheme, u.Host, cfg.Tls)
 	} else {
@@ -130,7 +148,7 @@ func Listen(cfg *NetConfig) (*NetListener, error) {
 
 func (l *NetListener) Accept() (Conn, error) {
 	var err error
-	var conn io.ReadWriteCloser
+	var conn net.Conn
 	if conn, err = l.Listener.Accept(); err != nil {
 		return nil, err
 	}
