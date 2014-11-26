@@ -6,6 +6,8 @@
 package know
 
 import (
+	"strings"
+
 	"github.com/xconstruct/know"
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
@@ -62,11 +64,15 @@ type MessageAnswer struct {
 }
 
 func (m MessageAnswer) String() string {
-	if m.Answer == "" {
+	ans := m.Answer
+	if ans == "" {
 		return "No answer found for '" + m.Query + "'."
 	}
+	if strings.Contains(ans, "\n") {
+		ans = ":\n" + ans
+	}
 
-	return m.Query + " is " + m.Answer + "."
+	return m.Query + " is " + ans + "."
 }
 
 func (s *Service) handleQuery(msg proto.Message) {
