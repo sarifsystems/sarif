@@ -17,7 +17,8 @@ const defaultRegularText = `[
 			"verb": "{{.play}}",
 			"object": "{{.music}}",
 			"status": "started"
-		}
+		},
+		"text": "{{.I}} started to {{.play}} {{.music}}."
 	}
 },
 {
@@ -29,7 +30,8 @@ const defaultRegularText = `[
 			"verb": "{{.play}}",
 			"object": "{{.music}}",
 			"status": "ended"
-		}
+		},
+		"text": "{{.I}} finished to {{.play}} {{.music}}."
 	}
 },
 {
@@ -41,18 +43,20 @@ const defaultRegularText = `[
 			"verb": "{{.drink}}",
 			"object": "{{.coffee}}",
 			"status": "singular"
-		}
+		},
+		"text": "{{.I}} {{.drink}} {{.coffee}}."
 	}
 },
 {
-	"example": "Record that [I] [worked]",
+	"example": "Record that [I] [work]",
 	"msg": {
 		"action": "event/new",
 		"p": {
 			"subject": "{{.I}}",
 			"verb": "{{.worked}}",
 			"status": "singular"
-		}
+		},
+		"text": "{{.I}} {{.work}}."
 	}
 },
 {
@@ -146,7 +150,7 @@ const defaultRegularText = `[
 	"example": "What is [the birth day of Tuomas Holopainen]",
 	"msg": {
 		"action": "knowledge/query",
-		"text": "{{.thebirthdayoftuomasholopainen}}"
+		"text": "{{.thebirthdayofTuomasHolopainen}}"
 	}
 }
 ]`

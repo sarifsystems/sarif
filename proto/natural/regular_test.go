@@ -14,13 +14,16 @@ func TestParseRegular(t *testing.T) {
 	}
 
 	// the nutella test
-	msg, ok := s.Parse("I acquire Nutella.")
+	msg, ok := s.Parse("Record that I acquire Nutella.")
 	t.Log(msg)
 	if !ok {
 		t.Error("expected message to parse")
 	}
 	if msg.Action != "event/new" {
 		t.Error("wrong action", msg.Action)
+	}
+	if msg.Text != "I acquire Nutella." {
+		t.Error("wrong text", msg.Text)
 	}
 	got := struct {
 		Verb   string
