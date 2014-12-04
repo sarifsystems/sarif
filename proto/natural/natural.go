@@ -16,41 +16,59 @@ import (
 func ParseSimple(text string) (proto.Message, bool) {
 	msg := proto.Message{}
 
+	// Raw JSON message
 	if strings.HasPrefix(text, "{") {
 		if err := json.Unmarshal([]byte(text), &msg); err == nil {
 			return msg, true
 		}
 	}
 
-	parts := strings.Split(text, " ")
-	msg.Action = parts[0]
-	if msg.Action == "" {
-		return msg, false
-	}
+	// "!cmd arguments", simple commands
+	if strings.HasPrefix(text, "!") || strings.HasPrefix(text, ".") {
+		isCmd := strings.HasPrefix(text, "!")
 
-	payload := make(map[string]interface{}, 0)
-	for _, part := range parts[1:] {
-		keyval := strings.SplitN(part, "=", 2)
-		if len(keyval) == 1 {
+		text = strings.TrimLeft(text, "!. ")
+		parts := strings.Split(text, " ")
+		if parts[0] == "" {
 			return msg, false
 		}
-
-		k, v := keyval[0], keyval[1]
-		switch k {
-		case "text":
-			msg.Text = v
-		case "device":
-			fallthrough
-		case "destination":
-			msg.Destination = v
-		default:
-			payload[k] = v
+		if isCmd {
+			msg.Action = "cmd/" + parts[0]
+		} else {
+			msg.Action = parts[0]
 		}
+
+		msg.Text = ""
+		payload := make(map[string]interface{}, 0)
+		for _, part := range parts[1:] {
+			keyval := strings.SplitN(part, "=", 2)
+			if len(keyval) == 1 {
+				if msg.Text != "" {
+					msg.Text += " "
+				}
+				msg.Text += keyval[0]
+				continue
+			}
+
+			k, v := keyval[0], keyval[1]
+			switch k {
+			case "text":
+				msg.Text = v
+			case "device":
+				fallthrough
+			case "destination":
+				msg.Destination = v
+			default:
+				payload[k] = v
+			}
+		}
+		if len(payload) > 0 {
+			msg.EncodePayload(payload)
+		}
+		return msg, true
 	}
-	if len(payload) > 0 {
-		msg.EncodePayload(payload)
-	}
-	return msg, true
+
+	return msg, false
 }
 
 func FormatSimple(msg proto.Message) string {

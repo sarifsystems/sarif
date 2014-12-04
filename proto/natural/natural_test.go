@@ -21,16 +21,26 @@ type simple struct {
 
 func TestParseSimple(t *testing.T) {
 	tests := []simple{
-		simple{"ping", true, proto.Message{
+		simple{".ping", true, proto.Message{
 			Action: "ping",
 		}, nil},
 
-		simple{"ping device=me", true, proto.Message{
+		simple{".ping device=me", true, proto.Message{
 			Action:      "ping",
 			Destination: "me",
 		}, nil},
 
-		simple{"ping device=me host=another", true, proto.Message{
+		simple{".ping some text", true, proto.Message{
+			Action: "ping",
+			Text:   "some text",
+		}, nil},
+
+		simple{"!ping some text", true, proto.Message{
+			Action: "cmd/ping",
+			Text:   "some text",
+		}, nil},
+
+		simple{".ping device=me host=another", true, proto.Message{
 			Action:      "ping",
 			Destination: "me",
 		}, map[string]interface{}{

@@ -152,6 +152,13 @@ const defaultRegularText = `[
 		"action": "knowledge/query",
 		"text": "{{.thebirthdayofTuomasHolopainen}}"
 	}
+},
+{
+	"example": "[tell] me [some things]",
+	"msg": {
+		"action": "cmd/{{.tell}}",
+		"text": "{{.somethings}}"
+	}
 }
 ]`
 
