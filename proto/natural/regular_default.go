@@ -109,6 +109,26 @@ const defaultRegularText = `[
 	}
 },
 {
+	"example": "Remind me at [some time] to [make coffee]",
+	"msg": {
+		"action": "schedule/time",
+		"p": {
+			"time": "{{.sometime}}"
+		},
+		"text": "{{.makecoffee}}"
+	}
+},
+{
+	"example": "Remind me to [make coffee] at [some time]",
+	"msg": {
+		"action": "schedule/time",
+		"p": {
+			"time": "{{.sometime}}"
+		},
+		"text": "{{.makecoffee}}"
+	}
+},
+{
 	"example": "Remind me in [some duration] that [something is happening]",
 	"msg": {
 		"action": "schedule/duration",
@@ -124,6 +144,25 @@ const defaultRegularText = `[
 		"action": "schedule/duration",
 		"p": {
 			"duration": "{{.someduration}}"
+		}
+	}
+},
+{
+	"example": "Remind me at [some time] that [something is happening]",
+	"msg": {
+		"action": "schedule/time",
+		"p": {
+			"time": "{{.sometime}}"
+		},
+		"text": "{{.somethingishappening}}"
+	}
+},
+{
+	"example": "Remind me at [some time]",
+	"msg": {
+		"action": "schedule/time",
+		"p": {
+			"time": "{{.sometime}}"
 		}
 	}
 },

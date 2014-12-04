@@ -17,7 +17,6 @@ import (
 
 type Task struct {
 	Id         int64         `json:"-"`
-	Duration   string        `json:"duration,omitempty"`
 	Time       time.Time     `json:"time,omitempty"`
 	Location   string        `json:"location,omitempty"`
 	Reply      proto.Message `json:"reply,omitempty"`
@@ -30,9 +29,16 @@ func (t Task) String() string {
 	if text == "" {
 		text = t.Reply.Action
 	}
+	if t.Reply.Action == "schedule/finished" {
+		return fmt.Sprintf("Reminder for '%s' on %s set.",
+			text,
+			util.FuzzyTime(t.Time),
+		)
+	}
+
 	return fmt.Sprintf("Schedule task '%s' on %s.",
 		text,
-		util.FuzzyTime(t.Time),
+		t.Time,
 	)
 }
 

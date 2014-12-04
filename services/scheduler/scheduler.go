@@ -54,20 +54,29 @@ func (s *Scheduler) Enable() error {
 	return nil
 }
 
+type ScheduleMessage struct {
+	Time     string `json:"time,omitempty"`
+	Duration string `json:"duration,omitempty"`
+	Task
+}
+
 func (s *Scheduler) handle(msg proto.Message) {
 	if !msg.IsAction("schedule") {
 		return
 	}
 
-	var t Task
+	var t ScheduleMessage
 	if err := msg.DecodePayload(&t); err != nil {
 		s.Log.Warnln("[scheduler] received bad payload:", err)
 		s.ReplyBadRequest(msg, err)
 		return
 	}
 
-	if t.Time.IsZero() {
-		t.Time = time.Now()
+	if t.Time != "" {
+		t.Task.Time = util.ParseTime(t.Time, time.Now())
+	}
+	if t.Task.Time.IsZero() {
+		t.Task.Time = time.Now()
 	}
 	if t.Duration != "" {
 		dur, err := util.ParseDuration(t.Duration)
@@ -76,25 +85,25 @@ func (s *Scheduler) handle(msg proto.Message) {
 			s.ReplyBadRequest(msg, err)
 			return
 		}
-		t.Time = t.Time.Add(dur)
+		t.Task.Time = t.Task.Time.Add(dur)
 	}
-	if t.Reply.Action == "" {
+	if t.Task.Reply.Action == "" {
 		text := msg.Text
 		if text == "" {
 			text = "Reminder from " + util.FuzzyTime(time.Now()) + " finished."
 		}
-		t.Reply = proto.Message{
+		t.Task.Reply = proto.Message{
 			Action:      "schedule/finished",
 			Destination: msg.Source,
 			Text:        text,
 		}
 	}
-	if t.Reply.CorrId == "" {
+	if t.Task.Reply.CorrId == "" {
 		t.Reply.CorrId = msg.Id
 	}
 	s.Log.Infoln("[scheduler] new task:", t)
 
-	if err := s.DB.StoreTask(t); err != nil {
+	if err := s.DB.StoreTask(t.Task); err != nil {
 		s.Log.Errorln("[scheduler] could not store task:", err)
 		s.ReplyInternalError(msg, err)
 		return
