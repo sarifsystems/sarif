@@ -14,6 +14,7 @@ import (
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/services/commands"
 	"github.com/xconstruct/stark/services/events"
 	"github.com/xconstruct/stark/services/hostscan"
 	"github.com/xconstruct/stark/services/know"
@@ -41,6 +42,7 @@ func main() {
 	app.Must(app.Init())
 	defer app.Close()
 
+	app.RegisterModule(commands.Module)
 	app.RegisterModule(events.Module)
 	app.RegisterModule(hostscan.Module)
 	app.RegisterModule(know.Module)
@@ -57,6 +59,7 @@ func main() {
 	// Default configuration
 	cfg := Config{
 		EnabledModules: []string{
+			"commands",
 			"events",
 			"know",
 			"location",
