@@ -73,7 +73,11 @@ func (s *Scheduler) handle(msg proto.Message) {
 	}
 
 	if t.Time != "" {
-		t.Task.Time = util.ParseTime(t.Time, time.Now())
+		now := time.Now()
+		t.Task.Time = util.ParseTime(t.Time, now)
+		if d := now.Sub(t.Task.Time); d > 0 && d < 24*time.Hour {
+			t.Task.Time = t.Task.Time.Add(24 * time.Hour)
+		}
 	}
 	if t.Task.Time.IsZero() {
 		t.Task.Time = time.Now()
