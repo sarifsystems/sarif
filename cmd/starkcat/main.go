@@ -48,14 +48,14 @@ func main() {
 	flag.Parse()
 
 	// Setup app and read config.
-	app := core.NewApp("stark")
-	app.Must(app.Init())
+	app := core.NewApp("stark", "client")
+	app.Init()
 	defer app.Close()
-	ctx := app.NewContext()
+	conn := app.Dial()
 
 	// Connect to network.
 	name := "starkcat-" + proto.GenerateId()
-	client := proto.NewClient(name, ctx.Proto)
+	client := proto.NewClient(name, conn)
 
 	received := make(chan bool, 10)
 
@@ -114,10 +114,10 @@ OUTER:
 	for {
 		select {
 		case <-received:
-			ctx.Log.Infoln("All messages received, exiting ...")
+			app.Log.Infoln("All messages received, exiting ...")
 			break OUTER
 		case <-timer:
-			ctx.Log.Infof("Timeout, exiting ...")
+			app.Log.Infof("Timeout, exiting ...")
 			break OUTER
 		}
 	}

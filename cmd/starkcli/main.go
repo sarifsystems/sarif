@@ -39,14 +39,14 @@ func main() {
 	isInteractive := flag.NArg() == 0
 
 	// Setup app and read config.
-	app := core.NewApp("stark")
-	app.Must(app.Init())
+	app := core.NewApp("stark", "client")
+	app.Init()
 	defer app.Close()
-	ctx := app.NewContext()
+	conn := app.Dial()
 
 	// Connect to network.
 	name := "starkcli-" + proto.GenerateId()
-	client := proto.NewClient(name, ctx.Proto)
+	client := proto.NewClient(name, conn)
 
 	// Subscribe to all replies and print them to stdout
 	client.Subscribe("", "self", func(msg proto.Message) {
@@ -61,33 +61,36 @@ func main() {
 		}
 	})
 
-	if isInteractive {
-		// Interactive mode sends all lines from stdin.
-		in := bufio.NewReader(os.Stdin)
-		for {
-			line, _, err := in.ReadLine()
-			if err != nil {
-				if err == io.EOF {
-					os.Exit(0)
+	go func() {
+		if isInteractive {
+			// Interactive mode sends all lines from stdin.
+			in := bufio.NewReader(os.Stdin)
+			for {
+				line, _, err := in.ReadLine()
+				if err != nil {
+					if err == io.EOF {
+						os.Exit(0)
+					}
+					app.Log.Fatal(err)
 				}
-				ctx.Log.Fatal(err)
-			}
-			if string(line) == "" {
-				continue
-			}
+				if string(line) == "" {
+					continue
+				}
 
-			// Publish natural message
+				// Publish natural message
+				client.Publish(proto.Message{
+					Action: "natural/handle",
+					Text:   string(line),
+				})
+			}
+		} else {
+			// Non-interactive mode publishes arguments and waits for response.
 			client.Publish(proto.Message{
 				Action: "natural/handle",
-				Text:   string(line),
+				Text:   strings.Join(flag.Args(), " "),
 			})
+
 		}
-	} else {
-		// Non-interactive mode publishes arguments and waits for response.
-		client.Publish(proto.Message{
-			Action: "natural/handle",
-			Text:   strings.Join(flag.Args(), " "),
-		})
-		select {}
-	}
+	}()
+	core.WaitUntilInterrupt()
 }

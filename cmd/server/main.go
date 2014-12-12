@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/xconstruct/stark/core"
+	"github.com/xconstruct/stark/core/server"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services/commands"
 	"github.com/xconstruct/stark/services/events"
@@ -38,8 +39,9 @@ type Config struct {
 }
 
 func main() {
-	app := core.NewApp("stark")
-	app.Must(app.Init())
+	app := server.Init("stark", "server")
+	app.InitDatabase()
+	app.InitBroker()
 	defer app.Close()
 
 	app.RegisterModule(commands.Module)
@@ -108,5 +110,6 @@ func main() {
 		app.Must(app.EnableModule(module))
 	}
 
+	app.WriteConfig()
 	core.WaitUntilInterrupt()
 }

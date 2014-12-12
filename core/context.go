@@ -11,34 +11,6 @@ import (
 	"github.com/xconstruct/stark/proto"
 )
 
-type Context struct {
-	Database *DB
-	Orm      *Orm
-	Log      *Logger
-	Proto    proto.Conn
-	Config   *Config
-}
-
-func (ctx *Context) Must(err error) {
-	if err != nil {
-		ctx.Log.Fatalln(err)
-	}
-}
-
-func NewTestContext() (*Context, proto.Conn) {
-	ctx := &Context{}
-	ctx.Config = NewConfig("")
-	ctx.Log = DefaultLog
-
-	ctx.Orm = OpenDatabaseInMemory()
-	ctx.Database = ctx.Orm.Database()
-
-	a, b := proto.NewPipe()
-	ctx.Proto = a
-
-	return ctx, b
-}
-
 func InjectTest(container interface{}) proto.Conn {
 	orm := OpenDatabaseInMemory()
 	a, b := proto.NewPipe()

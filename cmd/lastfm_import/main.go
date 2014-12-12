@@ -6,13 +6,14 @@
 package main
 
 import (
-	"github.com/xconstruct/stark/core"
+	"github.com/xconstruct/stark/core/server"
 	"github.com/xconstruct/stark/services/lastfm"
 )
 
 func main() {
-	app := core.NewApp("stark")
-	app.Must(app.Init())
+	app := server.Init("stark", "server")
+	app.InitDatabase()
+	app.InitBroker()
 	defer app.Close()
 
 	deps := &lastfm.Dependencies{}

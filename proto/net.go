@@ -25,7 +25,7 @@ type NetConfig struct {
 	Key         string
 	Authority   string
 	Tls         *tls.Config `json:"-"`
-	Keepalive   int         `json:"omitempty"`
+	Keepalive   int         `json:",omitempty"`
 }
 
 func (cfg *NetConfig) loadTlsCertificates(u *url.URL) error {

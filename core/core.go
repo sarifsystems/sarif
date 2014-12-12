@@ -11,7 +11,6 @@ import (
 	"os/signal"
 
 	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
 )
 
 var verbose = flag.Bool("v", false, "verbose debug output")
@@ -19,55 +18,48 @@ var vverbose = flag.Bool("vv", false, "very verbose debug output: db, individual
 var configPath = flag.String("config", "", "path to config file")
 
 type App struct {
-	AppName  string
-	Config   *Config
-	Broker   *proto.Broker
-	Database *DB
-	Orm      *Orm
-	Log      *Logger
-
-	modules   map[string]*services.Module
-	instances map[string]interface{}
+	AppName    string
+	ModuleName string
+	Config     *Config
+	Log        *Logger
 }
 
-func NewApp(appName string) *App {
+func NewApp(appName, moduleName string) *App {
+	if appName == "" {
+		appName = "stark"
+	}
 	if !flag.Parsed() {
 		flag.Parse()
 	}
 
 	app := &App{
-		AppName:   appName,
-		Log:       DefaultLog,
-		modules:   make(map[string]*services.Module),
-		instances: make(map[string]interface{}),
+		AppName:    appName,
+		ModuleName: moduleName,
+		Log:        DefaultLog,
 	}
-	app.Log.SetLevel(LogLevelInfo)
-	if *verbose || *vverbose {
+	if *vverbose {
+		app.Log.SetLevel(LogLevelTrace)
+	} else if *verbose {
 		app.Log.SetLevel(LogLevelDebug)
+	} else {
+		app.Log.SetLevel(LogLevelInfo)
 	}
 
 	return app
 }
 
-func (app *App) Init() error {
+func (app *App) Init() {
 	if err := app.initConfig(); err != nil {
-		return err
-	}
-	if err := app.initDatabase(); err != nil {
-		return err
-	}
-	if err := app.initBroker(); err != nil {
-		return err
+		app.Log.Fatalln(err)
 	}
 
-	app.writeConfig()
-	return nil
+	app.WriteConfig()
 }
 
 func (app *App) initConfig() error {
 	path := *configPath
 	if path == "" {
-		path = GetDefaultDir(app.AppName) + "/config.json"
+		path = GetDefaultDir(app.AppName) + "/" + app.ModuleName + ".json"
 	}
 	cfg, err := OpenConfig(path, true)
 	if err != nil {
@@ -78,7 +70,7 @@ func (app *App) initConfig() error {
 	return nil
 }
 
-func (app *App) writeConfig() {
+func (app *App) WriteConfig() {
 	if app.Config.IsModified() {
 		app.Log.Infof("[core] writing config to '%s'", app.Config.Path())
 		app.Must(app.Config.Write())
@@ -86,36 +78,7 @@ func (app *App) writeConfig() {
 }
 
 func (app *App) Close() {
-	app.writeConfig()
-}
-
-func (app *App) initDatabase() error {
-	cfg := DatabaseConfig{
-		Driver: "sqlite3",
-		Source: GetDefaultDir(app.AppName) + "/" + app.AppName + ".db",
-	}
-
-	app.Config.Get("database", &cfg)
-
-	db, err := OpenDatabase(cfg)
-	if err != nil {
-		return err
-	}
-	if *vverbose {
-		db.LogMode(true)
-	}
-	app.Orm = db
-	app.Database = db.Database()
-	return nil
-}
-
-func (app *App) initBroker() error {
-	proto.SetDefaultLogger(app.Log)
-	app.Broker = proto.NewBroker()
-	if *vverbose {
-		app.Broker.TraceMessages(true)
-	}
-	return nil
+	app.WriteConfig()
 }
 
 func (app *App) Must(err error) {
@@ -124,83 +87,35 @@ func (app *App) Must(err error) {
 	}
 }
 
-func (app *App) setupInjector(name string) *Injector {
-	inj := NewInjector()
+func (app *App) SetupInjector(inj *Injector, name string) {
 	inj.Instance(app.Config)
-	inj.Instance(app.Orm.DB)
-	inj.Instance(app.Orm.Database())
 	inj.Instance(app.Log)
-	inj.Instance(app.Broker)
 	inj.Factory(func() proto.Logger {
 		return app.Log
 	})
-	inj.Factory(func() proto.Conn {
-		return app.Broker.NewLocalConn()
-	})
-	inj.Factory(func() *proto.Client {
-		conn := app.Broker.NewLocalConn()
-		c := proto.NewClient(name, conn)
-		c.SetLogger(app.Log)
-		return c
-	})
-	return inj
 }
 
 func (app *App) Inject(name string, container interface{}) error {
-	inj := app.setupInjector(name)
+	inj := NewInjector()
+	app.SetupInjector(inj, name)
 	return inj.Inject(container)
 }
 
-func (app *App) EnableModule(name string) error {
-	i, ok := app.instances[name]
-	if ok {
-		return nil
+func (app *App) Dial() proto.Conn {
+	cfg := proto.NetConfig{
+		Address: "tcp://localhost:" + proto.DefaultPort,
 	}
-
-	m, err := app.GetModule(name)
+	app.Config.Get("dial", &cfg)
+	app.WriteConfig()
+	conn, err := proto.Dial(&cfg)
 	if err != nil {
-		return err
+		app.Log.Fatal(err)
 	}
-
-	inj := app.setupInjector(name)
-	i, err = inj.Create(m.NewInstance)
-	app.instances[name] = i
-	if err != nil {
-		return err
-	}
-	app.Log.Infof("[core] module '%s' enabled", name)
-
-	if i, ok := i.(enabler); ok {
-		return i.Enable()
-	}
-	return nil
-}
-
-func (app *App) DisableModule(name string) error {
-	i, ok := app.instances[name]
-	if !ok {
-		return nil
-	}
-	app.instances[name] = nil
-	app.Log.Infof("[core] module '%s' disabled", name)
-	if i, ok := i.(disabler); ok {
-		return i.Disable()
-	}
-	return nil
+	return conn
 }
 
 func WaitUntilInterrupt() {
 	ch := make(chan os.Signal, 2)
 	signal.Notify(ch, os.Interrupt)
 	<-ch
-}
-
-func (app *App) NewContext() *Context {
-	return &Context{
-		app.Database,
-		app.Orm,
-		app.Log,
-		app.Broker.NewLocalConn(),
-		app.Config,
-	}
 }

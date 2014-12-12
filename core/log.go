@@ -13,7 +13,8 @@ import (
 type LogLevel int
 
 const (
-	LogLevelDebug LogLevel = iota
+	LogLevelTrace LogLevel = iota
+	LogLevelDebug
 	LogLevelInfo
 	LogLevelWarn
 	LogLevelError
@@ -40,6 +41,10 @@ func New(level LogLevel, l *log.Logger) *Logger {
 
 func (l *Logger) SetLevel(level LogLevel) {
 	l.level = level
+}
+
+func (l *Logger) GetLevel() LogLevel {
+	return l.level
 }
 
 func (l *Logger) Debugf(format string, v ...interface{}) {
