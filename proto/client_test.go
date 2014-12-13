@@ -49,3 +49,33 @@ func TestClientSingle(t *testing.T) {
 		}
 	}
 }
+
+func TestClientRequest(t *testing.T) {
+	aconn, bconn := NewPipe()
+	a := NewClient("a", aconn)
+	b := NewClient("b", bconn)
+
+	a.Subscribe("hello_a", "", func(msg Message) {
+		a.Reply(msg, Message{
+			Action: "hi",
+		})
+	})
+
+	msg, ok := <-b.Request(Message{
+		Action: "hello_a",
+	})
+	if !ok {
+		t.Fatal("A did not respond")
+	}
+	if msg.Action != "hi" {
+		t.Log(msg)
+		t.Fatal("did not receive correct response")
+	}
+
+	msg, ok = <-b.Request(Message{
+		Action: "hello_no_one",
+	})
+	if ok {
+		t.Fatal("expected no response, got", msg)
+	}
+}

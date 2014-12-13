@@ -5,23 +5,36 @@
 
 package proto
 
-import "errors"
+import (
+	"errors"
+	"sync"
+	"time"
+)
 
 type Client struct {
-	DeviceId string
-	conn     Conn
-	handler  Handler
-	log      Logger
-	subs     []subscription
+	DeviceId       string
+	RequestTimeout time.Duration
+
+	conn    Conn
+	handler Handler
+	log     Logger
+	subs    []subscription
+
+	reqMutex *sync.Mutex
+	requests map[string]chan Message
 }
 
 func NewClient(deviceId string, e Conn) *Client {
 	c := &Client{
 		deviceId,
+		2 * time.Second,
+
 		e,
 		nil,
 		defaultLog,
 		make([]subscription, 0),
+		&sync.Mutex{},
+		make(map[string]chan Message),
 	}
 	c.conn = e
 	go func() {
@@ -31,7 +44,7 @@ func NewClient(deviceId string, e Conn) *Client {
 				c.log.Errorln("[client] read:", err)
 				return
 			}
-			c.handle(msg)
+			go c.handle(msg)
 		}
 
 	}()
@@ -65,6 +78,10 @@ func (c *Client) Publish(msg Message) error {
 }
 
 func (c *Client) handle(msg Message) {
+	if ok := c.resolveRequest(msg.CorrId, msg); ok {
+		return
+	}
+
 	for _, s := range c.subs {
 		if s.Matches(msg) {
 			s.Handler(msg)
@@ -118,4 +135,44 @@ func (c *Client) ReplyInternalError(orig Message, err error) error {
 	c.log.Errorf("[client %s] internal error: %v, %v", c.DeviceId, orig, err)
 	reply := orig.Reply(InternalError(err))
 	return c.Publish(reply)
+}
+
+func (c *Client) Request(msg Message) <-chan Message {
+	c.fillMessage(&msg)
+	ch := make(chan Message, 1)
+	if err := c.Publish(msg); err != nil {
+		close(ch)
+		return ch
+	}
+
+	go func(id string) {
+		time.Sleep(c.RequestTimeout)
+		c.resolveRequest(id, Message{})
+	}(msg.Id)
+
+	c.reqMutex.Lock()
+	defer c.reqMutex.Unlock()
+	c.requests[msg.Id] = ch
+	return ch
+}
+
+func (c *Client) resolveRequest(id string, msg Message) bool {
+	if id == "" {
+		return false
+	}
+
+	c.reqMutex.Lock()
+	defer c.reqMutex.Unlock()
+	ch, ok := c.requests[id]
+	if !ok {
+		return false
+	}
+
+	if msg.Id != "" {
+		ch <- msg
+	} else {
+		delete(c.requests, id)
+		close(ch)
+	}
+	return true
 }

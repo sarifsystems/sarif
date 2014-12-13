@@ -193,6 +193,20 @@ const defaultRegularText = `[
 	}
 },
 {
+	"example": "[counter]++",
+	"msg": {
+		"action": "cmd/increment",
+		"text": "{{.counter}}"
+	}
+},
+{
+	"example": "[counter]--",
+	"msg": {
+		"action": "cmd/decrement",
+		"text": "{{.counter}}"
+	}
+},
+{
 	"example": "[tell] me [some things]",
 	"msg": {
 		"action": "cmd/{{.tell}}",

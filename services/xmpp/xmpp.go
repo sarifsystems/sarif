@@ -125,6 +125,9 @@ func (c *Client) newConversation(remote string) *conversation {
 	if err := client.Subscribe("", "self", cv.handleProtoMessage); err != nil {
 		c.Log.Errorln("[xmpp] new:", err)
 	}
+	if err := client.Subscribe("", "user", cv.handleProtoMessage); err != nil {
+		c.Log.Errorln("[xmpp] new:", err)
+	}
 	c.conversations[user] = cv
 	return cv
 }

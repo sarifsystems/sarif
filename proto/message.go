@@ -98,6 +98,10 @@ type stringer interface {
 	String() string
 }
 
+type texter interface {
+	Text() string
+}
+
 func (m *Message) EncodePayload(v interface{}) error {
 	raw, err := json.Marshal(v)
 	if err != nil {
@@ -106,7 +110,9 @@ func (m *Message) EncodePayload(v interface{}) error {
 	rawjson := json.RawMessage(raw)
 	m.Payload = &rawjson
 	if m.Text == "" {
-		if s, ok := v.(stringer); ok {
+		if s, ok := v.(texter); ok {
+			m.Text = s.Text()
+		} else if s, ok := v.(stringer); ok {
 			m.Text = s.String()
 		}
 	}
