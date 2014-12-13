@@ -13,8 +13,8 @@ import (
 	"github.com/agl/xmpp"
 
 	"github.com/xconstruct/stark/core"
+	"github.com/xconstruct/stark/pkg/natural"
 	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/proto/natural"
 	"github.com/xconstruct/stark/services"
 )
 

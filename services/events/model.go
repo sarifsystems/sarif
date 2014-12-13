@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/xconstruct/stark/util"
+	"github.com/xconstruct/stark/pkg/util"
 )
 
 const (

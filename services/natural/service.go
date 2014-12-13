@@ -6,8 +6,8 @@
 package natural
 
 import (
+	"github.com/xconstruct/stark/pkg/natural"
 	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/proto/natural"
 	"github.com/xconstruct/stark/services"
 )
 

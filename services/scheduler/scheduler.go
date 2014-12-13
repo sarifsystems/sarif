@@ -10,9 +10,9 @@ import (
 	"time"
 
 	"github.com/xconstruct/stark/core"
+	"github.com/xconstruct/stark/pkg/util"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
-	"github.com/xconstruct/stark/util"
 )
 
 var Module = &services.Module{

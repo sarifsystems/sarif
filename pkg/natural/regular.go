@@ -6,12 +6,11 @@
 package natural
 
 import (
-	"bytes"
 	"encoding/json"
 	"regexp"
 	"strings"
-	"text/template"
 
+	"github.com/xconstruct/stark/pkg/template"
 	"github.com/xconstruct/stark/proto"
 )
 
@@ -54,7 +53,7 @@ func LoadRegularSchemata(text string) (RegularSchemata, error) {
 			return schemata, err
 		}
 
-		schemata[i].Template, err = template.New("").Parse("<script>" + string(*s.Message) + "</script>")
+		schemata[i].Template, err = template.New().Parse(string(*s.Message))
 		if err != nil {
 			return schemata, err
 		}
@@ -73,14 +72,8 @@ func (s RegularSchema) Parse(text string) (proto.Message, bool) {
 	for i, field := range s.Regexp.SubexpNames() {
 		vars[field] = match[i]
 	}
-	var b bytes.Buffer
-	if err := s.Template.Execute(&b, vars); err != nil {
-		panic(err)
-	}
-	by := b.Bytes()
-	by = by[8 : len(by)-9] // Strip <script> tags.
 	var msg proto.Message
-	if err := json.Unmarshal(by, &msg); err != nil {
+	if err := s.Template.Execute(&msg, vars); err != nil {
 		panic(err)
 	}
 	if msg.Text == "" {

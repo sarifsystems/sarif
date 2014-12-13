@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/xconstruct/stark/pkg/util"
 	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/util"
 )
 
 type Task struct {
