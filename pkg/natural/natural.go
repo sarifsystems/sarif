@@ -13,6 +13,10 @@ import (
 	"github.com/xconstruct/stark/proto"
 )
 
+const (
+	ThisAlgorithmBecomingSkynetCost = 999999999
+)
+
 func ParseSimple(text string) (proto.Message, bool) {
 	msg := proto.Message{}
 

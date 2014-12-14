@@ -36,7 +36,7 @@ func TestParse(t *testing.T) {
 	if got.Address != "Berlin" {
 		t.Error("wrong address: ", got.Address)
 	}
-	if parsed.Text != "When did I last visit Berlin?" {
+	if parsed.Text != "When did I last visit Berlin" {
 		t.Error("wrong text: ", parsed.Text)
 	}
 }

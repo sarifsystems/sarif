@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/xconstruct/stark/pkg/schema"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -51,6 +52,12 @@ func (s *Service) Enable() error {
 		return err
 	}
 	if err := s.Subscribe("cmd/count", "", s.handleCounter); err != nil {
+		return err
+	}
+	if err := s.Subscribe("cmd/ask", "", s.handleAsk); err != nil {
+		return err
+	}
+	if err := s.Subscribe("question/answer", "self", s.handleQuestionAnswer); err != nil {
 		return err
 	}
 	return nil
@@ -137,4 +144,48 @@ func (s *Service) counterSet(name string, cnt int) error {
 
 func (s *Service) handleUnknown(msg proto.Message) {
 	s.Log.Warnln("received unknown message:", msg)
+}
+
+type questionMessage struct {
+	Question string      `json:"question"`
+	Action   interface{} `json:"action"`
+}
+
+func (msg questionMessage) Text() string {
+	return msg.Question
+}
+
+func (s *Service) handleAsk(msg proto.Message) {
+	q := msg.Text
+	if q == "" {
+		q = "What is the answer to life, the universe and everything?"
+	}
+
+	pl := schema.Fill(&questionMessage{
+		Question: q,
+		Action: schema.Fill(&schema.TextEntryAction{
+			Reply: "question/answer/ultimate",
+			Name:  "Answer this question.",
+		}),
+	})
+	s.Reply(msg, proto.CreateMessage("question", pl))
+}
+
+func (s *Service) handleQuestionAnswer(msg proto.Message) {
+	if msg.IsAction("question/answer/ultimate") {
+		reply := "Wrong. The answer is 42."
+		if msg.Text == "42" {
+			reply = "Precisely."
+		}
+		s.Reply(msg, proto.Message{
+			Action: "question/accepted",
+			Text:   reply,
+		})
+		return
+	}
+
+	s.Reply(msg, proto.Message{
+		Action: "err/question/unknown",
+		Text:   "I can't remember asking you a question.",
+	})
 }
