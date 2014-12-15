@@ -10,13 +10,14 @@ func TestUtils(t *testing.T) {
 	st := New(t)
 
 	// test service to test the tester
+	conn := st.CreateConn()
 	go func() {
 		for {
-			st.Conn.Read()
-			st.Conn.Write(proto.Message{
+			conn.Read()
+			conn.Write(proto.Message{
 				Action: "hi",
 			})
-			st.Conn.Write(proto.Message{
+			conn.Write(proto.Message{
 				Action: "still/there",
 			})
 		}

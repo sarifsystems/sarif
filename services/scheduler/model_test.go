@@ -16,8 +16,10 @@ import (
 
 func TestStoreRetrieve(t *testing.T) {
 	// setup test database
-	ctx, _ := core.NewTestContext()
-	db := &sqlDatabase{ctx.Database.Driver(), ctx.Database.DB}
+	deps := &Dependencies{}
+	core.InjectTest(deps)
+
+	db := &sqlDatabase{deps.DB.Driver(), deps.DB.DB}
 	if err := db.Setup(); err != nil {
 		t.Fatal(err)
 	}

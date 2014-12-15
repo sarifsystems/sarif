@@ -11,75 +11,72 @@ import (
 	"time"
 
 	"github.com/xconstruct/stark/core"
+	"github.com/xconstruct/stark/pkg/testutils"
 	"github.com/xconstruct/stark/proto"
 )
 
 func TestService(t *testing.T) {
+	st := testutils.New(t)
 	// setup context
 	deps := &Dependencies{}
-	conn := core.InjectTest(deps)
-	var lastReply *proto.Message
-	go func() {
-		for {
-			msg, _ := conn.Read()
-			lastReply = &msg
-		}
-	}()
+	st.UseConn(core.InjectTest(deps))
 
 	// init service
 	srv := NewService(deps)
 	if err := srv.Enable(); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(10 * time.Millisecond)
+	st.Wait()
 
-	// send simple default task
-	conn.Write(proto.CreateMessage("schedule/duration", map[string]interface{}{
-		"duration": "300ms",
-	}))
+	st.Describe("Scheduler", func() {
 
-	// wait for confirmation
-	time.Sleep(10 * time.Millisecond)
-	t.Log("confirmation:", lastReply)
-	if lastReply.Action != "schedule/created" {
-		t.Error("did not receive confirmation for creation")
-	}
+		st.It("should receive simple task", func() {
+			st.When(proto.CreateMessage("schedule/duration", map[string]interface{}{
+				"duration": "300ms",
+			}))
 
-	lastReply = nil
-	// send task with payload
-	conn.Write(proto.CreateMessage("schedule/duration", map[string]interface{}{
-		"duration": "100ms",
-		"reply": proto.Message{
-			Action: "push/text",
-			Text:   "reminder finished",
-		},
-	}))
+			st.Expect(func(msg proto.Message) {
+				if msg.Action != "schedule/created" {
+					st.Error("did not receive confirmation for creation")
+				}
+			})
+		})
 
-	// wait for confirmation
-	time.Sleep(10 * time.Millisecond)
-	t.Log("confirmation:", lastReply)
-	if lastReply.Action != "schedule/created" {
-		t.Error("did not receive confirmation for creation")
-	}
-	lastReply = nil
+		st.It("should receive complex task", func() {
+			st.When(proto.CreateMessage("schedule/duration", map[string]interface{}{
+				"duration": "100ms",
+				"reply": proto.Message{
+					Action: "push/text",
+					Text:   "reminder finished",
+				},
+			}))
 
-	// wait for task with payload to fire
-	time.Sleep(200 * time.Millisecond)
-	t.Log("reply:", lastReply)
-	if lastReply.Action != "push/text" {
-		t.Error("did not receive scheduler reply")
-	}
-	if lastReply.Text != "reminder finished" {
-		t.Error("did not receive correct payload:", lastReply.Text)
-	}
+			st.Expect(func(msg proto.Message) {
+				if msg.Action != "schedule/created" {
+					st.Error("did not receive confirmation for creation")
+				}
+			})
+		})
 
-	// wait for simple task to fire
-	time.Sleep(200 * time.Millisecond)
-	t.Log("reply:", lastReply)
-	if lastReply.Action != "schedule/finished" {
-		t.Error("did not receive scheduler reply")
-	}
-	if !strings.HasPrefix(lastReply.Text, "Reminder from") {
-		t.Error("did not receive correct payload")
-	}
+		st.It("should emit both tasks", func() {
+			time.Sleep(400 * time.Millisecond)
+			st.Expect(func(msg proto.Message) {
+				if msg.Action != "push/text" {
+					t.Error("did not receive scheduler reply")
+				}
+				if msg.Text != "reminder finished" {
+					t.Error("did not receive correct payload:", msg.Text)
+				}
+			})
+
+			st.Expect(func(msg proto.Message) {
+				if msg.Action != "schedule/finished" {
+					t.Error("did not receive scheduler reply")
+				}
+				if !strings.HasPrefix(msg.Text, "Reminder from") {
+					t.Error("did not receive correct payload")
+				}
+			})
+		})
+	})
 }

@@ -14,8 +14,7 @@ import (
 
 type Tester struct {
 	*testing.T
-	Conn      proto.Conn
-	localConn proto.Conn
+	conn proto.Conn
 
 	Unit string
 	Test Test
@@ -28,22 +27,29 @@ type Test struct {
 }
 
 func New(t *testing.T) *Tester {
-	a, b := proto.NewPipe()
-	st := &Tester{
+	return &Tester{
 		t,
-		a,
-		b,
+		nil,
 
 		"",
 		Test{},
 	}
-	go st.listen()
-	return st
+}
+
+func (t *Tester) UseConn(conn proto.Conn) {
+	t.conn = conn
+	go t.listen()
+}
+
+func (t *Tester) CreateConn() proto.Conn {
+	a, b := proto.NewPipe()
+	t.UseConn(a)
+	return b
 }
 
 func (t *Tester) listen() {
 	for {
-		msg, err := t.localConn.Read()
+		msg, err := t.conn.Read()
 		if err != nil {
 			t.T.Fatal(err)
 		}
@@ -52,7 +58,7 @@ func (t *Tester) listen() {
 }
 
 func (t *Tester) Publish(msg proto.Message) {
-	if err := t.localConn.Write(msg); err != nil {
+	if err := t.conn.Write(msg); err != nil {
 		t.T.Fatal(err)
 	}
 }
@@ -85,6 +91,7 @@ func (t *Tester) When(msgs ...proto.Message) {
 	for _, msg := range msgs {
 		t.Publish(msg)
 	}
+	t.Test.Waited = false
 }
 
 func (t *Tester) HasReplies() bool {
