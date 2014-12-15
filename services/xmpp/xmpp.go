@@ -37,10 +37,9 @@ type Config struct {
 }
 
 type conversation struct {
-	Remote      string
-	Proto       *proto.Client
-	LastMessage proto.Message
-	Xmpp        *Client
+	Remote string
+	Proto  *proto.Client
+	Xmpp   *Client
 }
 
 type Client struct {
@@ -87,7 +86,6 @@ func (c *Client) reconnectLoop() {
 }
 
 func (cv *conversation) handleProtoMessage(msg proto.Message) {
-	cv.LastMessage = msg
 	text := natural.FormatSimple(msg)
 	cv.Xmpp.Log.Debugf("[xmpp] send '%s' to '%s'", text, cv.Remote)
 	if err := cv.Xmpp.xmpp.Send(cv.Remote, text); err != nil {
@@ -122,9 +120,6 @@ func (c *Client) newConversation(remote string) *conversation {
 		Xmpp:   c,
 	}
 	if err := client.Subscribe("", "self", cv.handleProtoMessage); err != nil {
-		c.Log.Errorln("[xmpp] new:", err)
-	}
-	if err := client.Subscribe("", "user", cv.handleProtoMessage); err != nil {
 		c.Log.Errorln("[xmpp] new:", err)
 	}
 	c.conversations[user] = cv

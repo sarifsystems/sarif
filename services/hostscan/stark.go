@@ -42,7 +42,7 @@ func NewService(deps *Dependencies) *Service {
 }
 
 func (s *Service) Enable() error {
-	time.AfterFunc(5*time.Second, s.scheduledUpdate)
+	time.AfterFunc(5*time.Minute, s.scheduledUpdate)
 	return s.Subscribe("devices/fetch_last_status", "", s.HandleLastStatus)
 }
 
@@ -52,6 +52,13 @@ func (s *Service) scheduledUpdate() {
 		s.Log.Errorln("[hostscan:update] error:", err)
 	} else {
 		s.Log.Infoln("[hostscan:update] done:", hosts)
+	}
+	for _, host := range hosts {
+		name := host.Name
+		if name == "" {
+			name = host.Ip
+		}
+		s.Publish(proto.CreateMessage("devices/changed/"+name+"/"+host.Status, &host))
 	}
 	time.AfterFunc(5*time.Minute, s.scheduledUpdate)
 }

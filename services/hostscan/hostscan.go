@@ -43,10 +43,10 @@ CREATE INDEX IF NOT EXISTS hostname ON hostscan (hostname);
 var re_nmap_hosts = regexp.MustCompile(`Host: ([\d\.]+) \(([\w\.\-]*)\)`)
 
 type Host struct {
-	Ip        string
-	Name      string
-	Status    string
-	Timestamp time.Time
+	Ip        string    `json:"ip"`
+	Name      string    `json:"name,omitempty"`
+	Status    string    `json:"status"`
+	Timestamp time.Time `json:"time"`
 }
 
 func (h Host) String() string {

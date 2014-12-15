@@ -168,7 +168,7 @@ func (b *Broker) Publish(msg Message) {
 
 	if b.trace {
 		raw, _ := msg.Encode()
-		b.Log.Debugln("[broker] publish:", string(raw), msg.Action)
+		b.Log.Debugln("[broker] publish:", string(raw))
 	}
 
 	topic := getTopic(msg.Action, msg.Destination)
