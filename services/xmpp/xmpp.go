@@ -6,7 +6,6 @@
 package xmpp
 
 import (
-	"encoding/json"
 	"strings"
 	"time"
 
@@ -143,16 +142,6 @@ func (c *Client) handleChatMessage(chat *xmpp.ClientMessage) {
 		cv = c.newConversation(chat.From)
 	}
 
-	if chat.Body == ".full" {
-		text, err := json.MarshalIndent(cv.LastMessage, "", "    ")
-		if err != nil {
-			panic(err)
-		}
-		if err := c.xmpp.Send(chat.From, string(text)); err != nil {
-			c.Log.Errorln("[xmpp] send:", err)
-		}
-		return
-	}
 	if strings.HasPrefix(chat.Body, ".subscribe ") {
 		action := strings.TrimPrefix(chat.Body, ".subscribe ")
 		if action != "" {
