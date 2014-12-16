@@ -8,7 +8,6 @@ package scheduler
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/pkg/testutils"
@@ -35,11 +34,7 @@ func TestService(t *testing.T) {
 				"duration": "300ms",
 			}))
 
-			st.Expect(func(msg proto.Message) {
-				if msg.Action != "schedule/created" {
-					st.Error("did not receive confirmation for creation")
-				}
-			})
+			st.ExpectAction("schedule/created")
 		})
 
 		st.It("should receive complex task", func() {
@@ -51,15 +46,10 @@ func TestService(t *testing.T) {
 				},
 			}))
 
-			st.Expect(func(msg proto.Message) {
-				if msg.Action != "schedule/created" {
-					st.Error("did not receive confirmation for creation")
-				}
-			})
+			st.ExpectAction("schedule/created")
 		})
 
 		st.It("should emit both tasks", func() {
-			time.Sleep(400 * time.Millisecond)
 			st.Expect(func(msg proto.Message) {
 				if msg.Action != "push/text" {
 					t.Error("did not receive scheduler reply")

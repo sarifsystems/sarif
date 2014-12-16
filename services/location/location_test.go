@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/xconstruct/stark/core"
+	"github.com/xconstruct/stark/pkg/testutils"
 	"github.com/xconstruct/stark/proto"
 )
 
@@ -52,141 +53,121 @@ func TestStoreRetrieve(t *testing.T) {
 }
 
 func TestService(t *testing.T) {
+	st := testutils.New(t)
 	deps := &Dependencies{}
-	ep := core.InjectTest(deps)
+	st.UseConn(core.InjectTest(deps))
+	st.WaitTimeout = 5 * time.Second
 
-	var lastReply *proto.Message
-	ep.RegisterHandler(func(msg proto.Message) {
-		lastReply = &msg
-	})
-
+	// init service
 	srv := NewService(deps)
 	if err := srv.Enable(); err != nil {
 		t.Fatal(err)
 	}
+	st.Wait()
 
-	err := ep.Publish(proto.CreateMessage("location/update", map[string]interface{}{
-		"timestamp": time.Now().Format(time.RFC3339),
-		"latitude":  52.3744779,
-		"longitude": 9.7385532,
-		"accuracy":  10,
-		"source":    "Hannover",
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	st.Describe("Location service", func() {
 
-	err = ep.Publish(proto.CreateMessage("location/last", map[string]interface{}{
-		"bounds": []float64{52, 53, 9, 10},
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+		st.It("should store a location update", func() {
+			st.When(proto.CreateMessage("location/update", map[string]interface{}{
+				"timestamp": time.Now().Format(time.RFC3339),
+				"latitude":  52.3744779,
+				"longitude": 9.7385532,
+				"accuracy":  10,
+				"source":    "Hannover",
+			}))
 
-	got := struct {
-		Source string
-	}{}
-	lastReply.DecodePayload(&got)
-	t.Log(lastReply, got)
-	if got.Source != "Hannover" {
-		t.Errorf("Unexpected location: %s", got.Source)
-	}
+			st.When(proto.CreateMessage("location/last", map[string]interface{}{
+				"bounds": []float64{52, 53, 9, 10},
+			}))
 
-	lastReply = nil
+			st.Expect(func(msg proto.Message) {
+				got := struct {
+					Source string
+				}{}
+				msg.DecodePayload(&got)
+				if got.Source != "Hannover" {
+					t.Errorf("Unexpected location: %s", got.Source)
+				}
+			})
+		})
 
-	err = ep.Publish(proto.CreateMessage("location/last", map[string]interface{}{
-		"address": "Hannover, Germany",
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+		st.It("should answer a geocoded address", func() {
+			st.When(proto.CreateMessage("location/last", map[string]interface{}{
+				"address": "Hannover, Germany",
+			}))
 
-	got = struct {
-		Source string
-	}{}
-	lastReply.DecodePayload(&got)
-	t.Log(lastReply, got)
-	if got.Source != "Hannover" {
-		t.Errorf("Unexpected location: %s", got.Source)
-	}
-}
-
-func TestGeofence(t *testing.T) {
-	deps := &Dependencies{}
-	ep := core.InjectTest(deps)
-
-	var lastReply proto.Message
-	ep.RegisterHandler(func(msg proto.Message) {
-		lastReply = msg
+			st.Expect(func(msg proto.Message) {
+				got := struct {
+					Source string
+				}{}
+				msg.DecodePayload(&got)
+				if got.Source != "Hannover" {
+					t.Errorf("Unexpected location: %s", got.Source)
+				}
+			})
+		})
 	})
 
-	srv := NewService(deps)
-	if err := srv.Enable(); err != nil {
-		t.Fatal(err)
-	}
+	st.Describe("Geofence service", func() {
 
-	err := ep.Publish(proto.CreateMessage("location/fence/create", map[string]interface{}{
-		"name":    "City",
-		"lat_min": 5.1,
-		"lat_max": 5.3,
-		"lng_min": 6.1,
-		"lng_max": 6.3,
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !lastReply.IsAction("location/fence/created") {
-		t.Fatal("expected a successful fence, not:", lastReply)
-	}
+		st.It("should store a geofence", func() {
+			st.When(proto.CreateMessage("location/fence/create", map[string]interface{}{
+				"name":    "City",
+				"lat_min": 5.1,
+				"lat_max": 5.3,
+				"lng_min": 6.1,
+				"lng_max": 6.3,
+			}))
 
-	// outside of the fence
-	err = ep.Publish(proto.CreateMessage("location/update", map[string]interface{}{
-		"latitude":  5.2,
-		"longitude": 6.0,
-		"accuracy":  20,
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	// inside of the fence
-	err = ep.Publish(proto.CreateMessage("location/update", map[string]interface{}{
-		"latitude":  5.2,
-		"longitude": 6.2,
-		"accuracy":  20,
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !lastReply.IsAction("location/fence/enter") {
-		t.Error("expected fence/enter, not:", lastReply)
-	}
+			st.Expect(func(msg proto.Message) {
+				if !msg.IsAction("location/fence/created") {
+					t.Fatal("expected a successful fence, not:", msg)
+				}
+			})
+		})
 
-	// still inside
-	err = ep.Publish(proto.CreateMessage("location/update", map[string]interface{}{
-		"latitude":  5.2,
-		"longitude": 6.2,
-		"accuracy":  20,
-	}))
-	lastReply = proto.Message{}
-	if err != nil {
-		t.Fatal(err)
-	}
-	if lastReply.Action != "" {
-		t.Error("expected no message, but got", lastReply)
-	}
+		st.It("should emit a geofence enter event", func() {
+			// outside of the fence
+			st.When(proto.CreateMessage("location/update", map[string]interface{}{
+				"latitude":  5.2,
+				"longitude": 6.0,
+				"accuracy":  20,
+			}))
 
-	// back outside
-	lastReply = proto.Message{}
-	err = ep.Publish(proto.CreateMessage("location/update", map[string]interface{}{
-		"latitude":  5.4,
-		"longitude": 6.0,
-		"accuracy":  20,
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+			// inside of the fence
+			st.When(proto.CreateMessage("location/update", map[string]interface{}{
+				"latitude":  5.2,
+				"longitude": 6.2,
+				"accuracy":  20,
+			}))
 
-	if !lastReply.IsAction("location/fence/leave") {
-		t.Error("expected fence/leave, not:", lastReply)
-	}
+			st.Expect(func(msg proto.Message) {
+				if !msg.IsAction("location/fence/enter") {
+					t.Error("expected fence/enter, not:", msg)
+				}
+			})
+		})
+
+		st.It("should emit a geofence leave event", func() {
+			// still inside
+			st.When(proto.CreateMessage("location/update", map[string]interface{}{
+				"latitude":  5.2,
+				"longitude": 6.2,
+				"accuracy":  20,
+			}))
+
+			// back outside
+			st.When(proto.CreateMessage("location/update", map[string]interface{}{
+				"latitude":  5.4,
+				"longitude": 6.0,
+				"accuracy":  20,
+			}))
+
+			st.Expect(func(msg proto.Message) {
+				if !msg.IsAction("location/fence/leave") {
+					t.Error("expected fence/enter, not:", msg)
+				}
+			})
+		})
+	})
 }

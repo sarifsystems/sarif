@@ -44,13 +44,8 @@ func TestUtils(t *testing.T) {
 		st.It("Should reply again", func() {
 			st.When(proto.CreateMessage("hello", nil))
 
-			st.Expect(func(msg proto.Message) {
-				if !msg.IsAction("hi") {
-					st.Fatal("expected hi, not ", msg.Action)
-				}
-			})
-
-			st.DiscardTheRest()
+			st.ExpectAction("hi")
+			st.ExpectAction("still/there")
 		})
 	})
 }

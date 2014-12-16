@@ -14,25 +14,25 @@ import (
 
 type Tester struct {
 	*testing.T
-	conn proto.Conn
+	conn        proto.Conn
+	WaitTimeout time.Duration
+	IgnoreSubs  bool
 
-	Unit string
-	Test Test
-}
-
-type Test struct {
+	Unit      string
 	Behaviour string
-	Received  []proto.Message
-	Waited    bool
+	Received  chan proto.Message
 }
 
 func New(t *testing.T) *Tester {
 	return &Tester{
 		t,
 		nil,
+		time.Second,
+		true,
 
 		"",
-		Test{},
+		"",
+		make(chan proto.Message, 5),
 	}
 }
 
@@ -53,7 +53,10 @@ func (t *Tester) listen() {
 		if err != nil {
 			t.T.Fatal(err)
 		}
-		t.Test.Received = append(t.Test.Received, msg)
+		if t.IgnoreSubs && msg.IsAction("proto/sub") {
+			continue
+		}
+		t.Received <- msg
 	}
 }
 
@@ -68,7 +71,7 @@ func (t *Tester) Wait() {
 }
 
 func (t *Tester) Reset() {
-	t.Test = Test{}
+	t.Received = make(chan proto.Message, 20)
 }
 
 func (t *Tester) Describe(unit string, f func()) {
@@ -78,12 +81,12 @@ func (t *Tester) Describe(unit string, f func()) {
 
 func (t *Tester) It(behaviour string, f func()) {
 	t.Reset()
-	t.Test.Behaviour = behaviour
+	t.Behaviour = behaviour
 	f()
 
 	if t.HasReplies() {
-		t.T.Log(t.Test.Received)
-		t.T.Fatal(t.Unit, t.Test.Behaviour+": still replies left")
+		t.T.Log(t.Received)
+		t.T.Fatal(t.Unit, t.Behaviour+": still replies left")
 	}
 }
 
@@ -91,26 +94,25 @@ func (t *Tester) When(msgs ...proto.Message) {
 	for _, msg := range msgs {
 		t.Publish(msg)
 	}
-	t.Test.Waited = false
 }
 
 func (t *Tester) HasReplies() bool {
-	return t.Test.Received != nil && len(t.Test.Received) > 0
+	return len(t.Received) > 0
 }
 
 func (t *Tester) Expect(f func(proto.Message)) {
-	if !t.Test.Waited {
-		t.Test.Waited = true
-		t.Wait()
+	select {
+	case msg := <-t.Received:
+		f(msg)
+	case <-time.After(t.WaitTimeout):
+		t.T.Fatal(t.Unit, t.Behaviour+": no message received")
 	}
-
-	if !t.HasReplies() {
-		t.T.Fatal(t.Unit, t.Test.Behaviour+": no message received")
-	}
-	f(t.Test.Received[0])
-	t.Test.Received = t.Test.Received[1:]
 }
 
-func (t *Tester) DiscardTheRest() {
-	t.Test.Received = nil
+func (t *Tester) ExpectAction(action string) {
+	t.Expect(func(msg proto.Message) {
+		if !msg.IsAction(action) {
+			t.T.Fatal(t.Unit, t.Behaviour+": expected action", action, "not", msg.Action)
+		}
+	})
 }
