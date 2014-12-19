@@ -172,7 +172,8 @@ func (h *HostScan) LastStatusAll() ([]Host, error) {
 		SELECT d1.ip, d1.hostname, d1.status, d1.timestamp FROM hostscan d1
 		JOIN (SELECT MAX(id) id FROM hostscan GROUP BY ip) d2
 			ON d1.id = d2.id
-	`)
+		WHERE  d1.timestamp > ?
+	`, time.Now().AddDate(0, -1, 0))
 	if err != nil {
 		return nil, err
 	}
