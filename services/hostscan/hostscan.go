@@ -58,11 +58,12 @@ func (h Host) String() string {
 }
 
 type HostScan struct {
-	db *sql.DB
+	db              *sql.DB
+	MinDownInterval time.Duration
 }
 
 func New(db *sql.DB) *HostScan {
-	return &HostScan{db}
+	return &HostScan{db, 9 * time.Minute}
 }
 
 func (h *HostScan) FindLocalNetwork() (string, error) {
@@ -132,8 +133,12 @@ func (h *HostScan) Update() ([]Host, error) {
 		return nil, err
 	}
 
+	now := time.Now()
 	changed := make([]Host, 0)
 	for _, host := range last {
+		if now.Sub(host.Timestamp) < h.MinDownInterval {
+			continue
+		}
 		if host.Status == "up" && !HostInSlice(host, curr) {
 			host.Status = "down"
 			host.Timestamp = time.Now()

@@ -49,7 +49,7 @@ func NewService(deps *Dependencies) *Service {
 }
 
 func (s *Service) Enable() error {
-	s.Client.RequestTimeout = 10 * time.Second
+	s.Client.RequestTimeout = 2 * time.Minute
 	if err := s.Subscribe("natural/handle", "", s.handleNatural); err != nil {
 		return err
 	}
