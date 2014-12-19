@@ -20,16 +20,18 @@ const (
 )
 
 type Event struct {
-	Id        int64                  `json:"-"`
-	Timestamp time.Time              `json:"timestamp,omitempty"`
-	Subject   string                 `json:"subject"`
-	Verb      string                 `json:"verb"`
-	Object    string                 `json:"object"`
-	Status    string                 `json:"status"`
-	Source    string                 `json:"source"`
-	Text      string                 `json:"-"`
-	Meta      map[string]interface{} `json:"meta" sql:"-"`
-	MetaRaw   []byte                 `json:"-" gorm:"column:meta"`
+	Id          int64                  `json:"-"`
+	Timestamp   time.Time              `json:"timestamp,omitempty"`
+	Subject     string                 `json:"subject"`
+	SubjectType string                 `json:"subject_type"`
+	Verb        string                 `json:"verb"`
+	Object      string                 `json:"object"`
+	ObjectType  string                 `json:"object_type"`
+	Status      string                 `json:"status"`
+	Source      string                 `json:"source"`
+	Text        string                 `json:"-"`
+	Meta        map[string]interface{} `json:"meta" sql:"-"`
+	MetaRaw     []byte                 `json:"-" gorm:"column:meta"`
 }
 
 func (e *Event) BeforeSave() (err error) {

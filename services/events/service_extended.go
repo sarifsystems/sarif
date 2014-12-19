@@ -29,12 +29,13 @@ func (s *Service) handleLocationFence(msg proto.Message) {
 	meta := make(map[string]interface{})
 	msg.DecodePayload(&meta)
 	e := Event{
-		Subject: "user",
-		Verb:    "geofence",
-		Object:  pl.Fence.Name,
-		Meta:    meta,
-		Status:  status,
-		Text:    "User " + pl.Status + "s " + pl.Fence.Name + ".",
+		Subject:    "user",
+		Verb:       pl.Status,
+		Object:     pl.Fence.Name,
+		ObjectType: "geofence",
+		Meta:       meta,
+		Status:     status,
+		Text:       "User " + pl.Status + "s " + pl.Fence.Name + ".",
 	}
 	reply := proto.CreateMessage("event/new", e)
 	s.Publish(reply)
