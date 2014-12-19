@@ -53,3 +53,23 @@ func (s *testService) Reset() {
 func (s *testService) Fired() bool {
 	return len(s.Received) > 0
 }
+
+func TestActionParents(t *testing.T) {
+	a := ActionParents("some/action/with/sub")
+	t.Log(a)
+	if len(a) != 4 {
+		t.Fatal("expected 4 actions, not ", len(a))
+	}
+	if a[0] != "some" {
+		t.Error("expected some, not", a[0])
+	}
+	if a[1] != "some/action" {
+		t.Error("expected some/action, not", a[1])
+	}
+	if a[2] != "some/action/with" {
+		t.Error("expected some/action/with, not", a[2])
+	}
+	if a[3] != "some/action/with/sub" {
+		t.Error("expected some/action/with/sub, not", a[3])
+	}
+}

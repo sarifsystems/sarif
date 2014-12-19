@@ -11,7 +11,7 @@ package template
 import (
 	"bytes"
 	"encoding/json"
-	"text/template"
+	"html/template"
 
 	"github.com/xconstruct/stark/proto"
 )
@@ -39,4 +39,10 @@ func (t *Template) Execute(msg *proto.Message, data interface{}) error {
 	by := b.Bytes()
 	by = by[8 : len(by)-9] // Strip <script> tags.
 	return json.Unmarshal(by, &msg)
+}
+
+func MessageToData(msg proto.Message) interface{} {
+	data := make(map[string]interface{})
+	msg.DecodePayload(&data)
+	return data
 }

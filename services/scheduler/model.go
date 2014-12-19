@@ -20,8 +20,8 @@ type Task struct {
 	Time       time.Time     `json:"time,omitempty"`
 	Location   string        `json:"location,omitempty"`
 	Reply      proto.Message `json:"reply,omitempty"`
-	CreatedOn  time.Time     `json:"created,omitempty"`
-	FinishedOn time.Time     `json:"finished,omitempty"`
+	CreatedOn  time.Time     `json:"-"`
+	FinishedOn time.Time     `json:"-"`
 }
 
 func (t Task) String() string {

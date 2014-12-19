@@ -114,7 +114,7 @@ func (s *Scheduler) handle(msg proto.Message) {
 	}
 
 	reply := proto.Message{Action: "schedule/created"}
-	if err := reply.EncodePayload(t); err != nil {
+	if err := reply.EncodePayload(t.Task); err != nil {
 		s.Log.Errorln("[scheduler] could not encode reply:", err)
 		s.ReplyInternalError(msg, err)
 		return

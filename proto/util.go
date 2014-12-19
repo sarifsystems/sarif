@@ -30,3 +30,14 @@ func getTopic(action, device string) string {
 	}
 	return strings.TrimLeft(t, "/")
 }
+
+func ActionParents(action string) []string {
+	parts := strings.Split(action, "/")
+	pre := ""
+	for i, part := range parts {
+		full := pre + part
+		parts[i] = full
+		pre = full + "/"
+	}
+	return parts
+}

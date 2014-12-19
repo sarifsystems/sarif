@@ -14,10 +14,10 @@ import (
 const VERSION = "0.5"
 
 type Message struct {
-	Version     string           `json:"stark"`
-	Id          string           `json:"id"`
-	Action      string           `json:"action"`
-	Source      string           `json:"src"`
+	Version     string           `json:"stark,omitempty"`
+	Id          string           `json:"id,omitempty"`
+	Action      string           `json:"action,omitempty"`
+	Source      string           `json:"src,omitempty"`
 	Destination string           `json:"dst,omitempty"`
 	Payload     *json.RawMessage `json:"p,omitempty"`
 	CorrId      string           `json:"corr,omitempty"`
