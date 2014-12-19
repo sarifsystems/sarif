@@ -7,6 +7,7 @@ package lastfm
 
 import (
 	"database/sql"
+	"sort"
 	"strings"
 	"time"
 )
@@ -70,11 +71,18 @@ func (d *sqlDatabase) Setup() error {
 	return err
 }
 
+type ByDate []Track
+
+func (a ByDate) Len() int           { return len(a) }
+func (a ByDate) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByDate) Less(i, j int) bool { return a[i].Time.Before(a[j].Time) }
+
 func (d *sqlDatabase) StoreTracks(ts []Track) error {
 	stmt, err := d.Db.Prepare(`INSERT INTO lastfm_tracks (time, artist, album, title) VALUES (?, ?, ?, ?)`)
 	if err != nil {
 		return err
 	}
+	sort.Sort(ByDate(ts))
 	for _, t := range ts {
 		if t.Title == "" {
 			continue
