@@ -7,7 +7,8 @@ package natural
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/xconstruct/stark/pkg/natural"
@@ -28,6 +29,7 @@ type Dependencies struct {
 }
 
 type Conversation struct {
+	Device      string
 	LastTime    time.Time
 	LastMessage proto.Message
 }
@@ -49,14 +51,13 @@ func NewService(deps *Dependencies) *Service {
 }
 
 func (s *Service) Enable() error {
-	s.Client.RequestTimeout = 2 * time.Minute
 	if err := s.Subscribe("natural/handle", "", s.handleNatural); err != nil {
 		return err
 	}
 	if err := s.Subscribe("natural/parse", "", s.handleNaturalParse); err != nil {
 		return err
 	}
-	if err := s.Subscribe("", "self", s.handleUnknownResponse); err != nil {
+	if err := s.Subscribe("", "user", s.handleUserMessage); err != nil {
 		return err
 	}
 	return nil
@@ -102,8 +103,11 @@ func (s *Service) parseNatural(msg proto.Message) (proto.Message, bool) {
 func (s *Service) getConversation(device string) *Conversation {
 	cv, ok := s.conversations[device]
 	if !ok {
-		cv = &Conversation{}
+		cv = &Conversation{
+			Device: device,
+		}
 		s.conversations[device] = cv
+		s.Subscribe("", s.DeviceId+"/"+device, s.handleNetworkMessage)
 	}
 	return cv
 }
@@ -111,6 +115,47 @@ func (s *Service) getConversation(device string) *Conversation {
 type Actionable struct {
 	Action  *schema.Action   `json:"action"`
 	Actions []*schema.Action `json:"actions"`
+}
+
+func (a Actionable) IsAction() bool {
+	if a.Action == nil {
+		return false
+	}
+	if a.Action.SchemaType == "TextEntryAction" {
+		return true
+	}
+
+	return false
+}
+
+func answer(a *schema.Action, text string) (proto.Message, bool) {
+	reply := proto.Message{
+		Action: a.Reply,
+		Text:   text,
+	}
+	if text == ".cancel" || text == "cancel" || strings.HasPrefix(text, "cancel ") {
+		return reply, false
+	}
+	if a.SchemaType == "TextEntryAction" {
+		return reply, true
+	}
+	return reply, false
+}
+
+func (s *Service) publishForClient(cv *Conversation, msg proto.Message) {
+	msg.Source = s.DeviceId + "/" + cv.Device
+	s.Publish(msg)
+}
+
+func (s *Service) forwardToClient(cv *Conversation, msg proto.Message) {
+	// Save conversation.
+	cv.LastTime = time.Now()
+	cv.LastMessage = msg
+
+	// Forward response to client.
+	msg.Id = proto.GenerateId()
+	msg.Destination = cv.Device
+	s.Publish(msg)
 }
 
 func (s *Service) handleNatural(msg proto.Message) {
@@ -127,57 +172,31 @@ func (s *Service) handleNatural(msg proto.Message) {
 		})
 		return
 	}
-	if msg.Text == ".cancel" {
-		cv.LastTime = time.Time{}
-		return
-	}
 
-	var ok bool
-	var parsed proto.Message
-
-	// Check if client answers a conversation
+	// Check if client answers a conversation.
 	if time.Now().Sub(cv.LastTime) < 5*time.Minute {
 		var act Actionable
 		if err := cv.LastMessage.DecodePayload(&act); err == nil {
-			if act.Action != nil && act.Action.SchemaType == "TextEntryAction" {
-				parsed = proto.Message{
-					Action:      act.Action.Reply,
-					Text:        msg.Text,
-					Destination: cv.LastMessage.Source,
-				}
-				ok = true
+			if act.IsAction() {
+				parsed, ok := answer(act.Action, msg.Text)
+				parsed.Destination = cv.LastMessage.Source
 				cv.LastTime = time.Time{}
+				if ok {
+					s.publishForClient(cv, parsed)
+				}
+				return
 			}
 		}
 	}
 
-	if !ok {
-		parsed, ok = s.parseNatural(msg)
-	}
-
+	// Otherwise parse message as normal request.
+	parsed, ok := s.parseNatural(msg)
 	if !ok {
 		reply := proto.CreateMessage("err/natural", MsgErrNatural{msg.Text})
 		s.Publish(msg.Reply(reply))
 		return
 	}
-
-	if msg.IsAction("natural/handle/direct") {
-		parsed.Source = msg.Source
-		return
-	}
-
-	// Execute parsed message for the client and retrieve responses.
-	for reply := range s.Request(parsed) {
-		// Save conversation.
-		cv.LastTime = time.Now()
-		cv.LastMessage = reply
-
-		// Forward response to client.
-		reply.Id = proto.GenerateId()
-		reply.Destination = msg.Source
-		reply.CorrId = msg.Id
-		s.Publish(reply)
-	}
+	s.publishForClient(cv, parsed)
 }
 
 func (s *Service) handleNaturalParse(msg proto.Message) {
@@ -192,6 +211,15 @@ func (s *Service) handleNaturalParse(msg proto.Message) {
 	s.Publish(msg.Reply(reply))
 }
 
-func (s *Service) handleUnknownResponse(msg proto.Message) {
-	s.ReplyBadRequest(msg, errors.New("Received unknown reply."))
+func (s *Service) handleNetworkMessage(msg proto.Message) {
+	client := strings.TrimPrefix(msg.Destination, s.DeviceId+"/")
+	fmt.Println(client, "moo")
+	cv := s.getConversation(client)
+	s.forwardToClient(cv, msg)
+}
+
+func (s *Service) handleUserMessage(msg proto.Message) {
+	for _, cv := range s.conversations {
+		s.forwardToClient(cv, msg)
+	}
 }
