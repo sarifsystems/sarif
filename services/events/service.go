@@ -7,6 +7,7 @@ package events
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -57,6 +58,9 @@ func (s *Service) Enable() error {
 		return err
 	}
 	if err := s.Subscribe("event/count", "", s.handleEventCount); err != nil {
+		return err
+	}
+	if err := s.Subscribe("event/list", "", s.handleEventList); err != nil {
 		return err
 	}
 	if err := s.Subscribe("event/sum/duration", "", s.handleEventSumDuration); err != nil {
@@ -162,8 +166,8 @@ func (s *Service) handleEventLast(msg proto.Message) {
 }
 
 type countPayload struct {
-	Count  int
-	Filter Event
+	Count  int   `json:"count"`
+	Filter Event `json:"filter"`
 }
 
 func (pl countPayload) Text() string {
@@ -186,7 +190,42 @@ func (s *Service) handleEventCount(msg proto.Message) {
 	}
 	s.Log.Infoln("[events] count", count)
 
-	s.Reply(msg, proto.CreateMessage("action/counted", &countPayload{count, filter.Event}))
+	s.Reply(msg, proto.CreateMessage("events/counted", &countPayload{count, filter.Event}))
+}
+
+type listPayload struct {
+	countPayload
+	Events []*Event `json:"events"`
+}
+
+func (pl listPayload) Text() string {
+	s := pl.countPayload.Text() + "\n"
+	for _, e := range pl.Events {
+		s += "- " + e.String() + "\n"
+	}
+	return strings.TrimRight(s, "\n")
+}
+
+func (s *Service) handleEventList(msg proto.Message) {
+	var filter EventFilter
+	if err := msg.DecodePayload(&filter); err != nil {
+		s.ReplyBadRequest(msg, err)
+		return
+	}
+	fixEvent(&filter.Event)
+
+	s.Log.Infoln("[events] list by filter:", filter)
+	var events []*Event
+	if err := s.DB.Scopes(applyFilter(filter)).Order("timestamp asc").Find(&events).Error; err != nil {
+		s.ReplyInternalError(msg, err)
+		return
+	}
+	s.Log.Infoln("[events] found", len(events))
+
+	s.Reply(msg, proto.CreateMessage("events/listed", &listPayload{
+		countPayload{len(events), filter.Event},
+		events,
+	}))
 }
 
 type sumDurationPayload struct {
@@ -237,5 +276,5 @@ func (s *Service) handleEventSumDuration(msg proto.Message) {
 		}
 	}
 
-	s.Reply(msg, proto.CreateMessage("action/summarized/duration", &sumDurationPayload{d, filter.Event}))
+	s.Reply(msg, proto.CreateMessage("events/summarized/duration", &sumDurationPayload{d, filter.Event}))
 }

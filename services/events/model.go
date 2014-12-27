@@ -22,15 +22,15 @@ const (
 type Event struct {
 	Id          int64                  `json:"-"`
 	Timestamp   time.Time              `json:"timestamp,omitempty"`
-	Subject     string                 `json:"subject"`
-	SubjectType string                 `json:"subject_type"`
-	Verb        string                 `json:"verb"`
-	Object      string                 `json:"object"`
-	ObjectType  string                 `json:"object_type"`
-	Status      string                 `json:"status"`
-	Source      string                 `json:"source"`
+	Subject     string                 `json:"subject,omitempty"`
+	SubjectType string                 `json:"subject_type,omitempty"`
+	Verb        string                 `json:"verb,omitempty"`
+	Object      string                 `json:"object,omitempty"`
+	ObjectType  string                 `json:"object_type,omitempty"`
+	Status      string                 `json:"status,omitempty"`
+	Source      string                 `json:"source,omitempty"`
 	Text        string                 `json:"-"`
-	Meta        map[string]interface{} `json:"meta" sql:"-"`
+	Meta        map[string]interface{} `json:"meta,omitempty" sql:"-"`
 	MetaRaw     []byte                 `json:"-" gorm:"column:meta"`
 }
 
