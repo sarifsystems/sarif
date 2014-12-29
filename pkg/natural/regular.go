@@ -29,12 +29,8 @@ type RegularSchemata []RegularSchema
 func buildRegexp(field string) string {
 	matches := reMatchVars.FindStringSubmatch(field)
 	field = matches[1]
-	repl := `[^\s]+`
-	if strings.ContainsRune(field, ' ') {
-		repl = `.+`
-	}
 	field = strings.Replace(field, " ", "", -1)
-	return `(?P<` + field + `>` + repl + `)`
+	return `(?P<` + field + `>.+)`
 }
 
 func LoadRegularSchemata(text string) (RegularSchemata, error) {
