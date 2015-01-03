@@ -6,11 +6,10 @@
 package location
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
 
-	"github.com/xconstruct/stark/core"
+	"github.com/jinzhu/gorm"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -22,29 +21,42 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	DB     *core.DB
+	DB     *gorm.DB
 	Log    proto.Logger
 	Client *proto.Client
 }
 
 type Service struct {
-	DB  Database
+	DB  *gorm.DB
 	Log proto.Logger
 	*proto.Client
 }
 
 func NewService(deps *Dependencies) *Service {
 	return &Service{
-		&sqlDatabase{deps.DB.Driver(), deps.DB.DB},
-		deps.Log,
-		deps.Client,
+		DB:     deps.DB,
+		Log:    deps.Log,
+		Client: deps.Client,
 	}
 }
 
 func (s *Service) Enable() error {
-	if err := s.DB.Setup(); err != nil {
+	createIndizes := !s.DB.HasTable(&Location{})
+	if err := s.DB.AutoMigrate(&Location{}).Error; err != nil {
 		return err
 	}
+	if err := s.DB.AutoMigrate(&Geofence{}).Error; err != nil {
+		return err
+	}
+	if createIndizes {
+		if err := s.DB.Model(&Location{}).AddIndex("lat_long", "latitude", "longitude").Error; err != nil {
+			return err
+		}
+		if err := s.DB.Model(&Geofence{}).AddIndex("bounds", "lat_min", "lat_max", "lng_min", "lng_max").Error; err != nil {
+			return err
+		}
+	}
+	s.DB.LogMode(true)
 
 	if err := s.Subscribe("location/update", "", s.handleLocationUpdate); err != nil {
 		return err
@@ -55,10 +67,6 @@ func (s *Service) Enable() error {
 	if err := s.Subscribe("location/fence/create", "", s.handleGeofenceCreate); err != nil {
 		return err
 	}
-	return nil
-}
-
-func (s *Service) Disable() error {
 	return nil
 }
 
@@ -82,11 +90,12 @@ func (m GeofenceEventPayload) String() string {
 }
 
 func (s *Service) checkGeofences(last, curr Location) {
-	lastFences, err := s.DB.GetGeofencesInLocation(last)
+	var lastFences, currFences []Geofence
+	err := s.DB.Where("? BETWEEN lat_min AND lat_max AND ? BETWEEN lng_min AND lng_max", last.Latitude, last.Longitude).Find(&lastFences).Error
 	if err != nil {
 		s.Log.Errorln("[location] retrieve last fences", err)
 	}
-	currFences, err := s.DB.GetGeofencesInLocation(curr)
+	err = s.DB.Where("? BETWEEN lat_min AND lat_max AND ? BETWEEN lng_min AND lng_max", curr.Latitude, curr.Longitude).Find(&currFences).Error
 	if err != nil {
 		s.Log.Errorln("[location] retrieve curr fences", err)
 	}
@@ -120,12 +129,12 @@ func (s *Service) handleLocationUpdate(msg proto.Message) {
 	}
 	s.Log.Debugln("[location] store update:", loc)
 
-	last, err := s.DB.GetLastLocation()
-	if err != nil {
+	var last Location
+	if err := s.DB.Order("timestamp DESC").First(&last).Error; err != nil && err != gorm.RecordNotFound {
 		s.Log.Errorln("[location] retrieve last err", err)
 	}
 
-	if err := s.DB.StoreLocation(loc); err != nil {
+	if err := s.DB.Save(&loc).Error; err != nil {
 		s.ReplyInternalError(msg, err)
 	}
 
@@ -167,18 +176,17 @@ func (s *Service) queryLocationLast(pl locationLastMessage) proto.Message {
 	}
 
 	var loc Location
-	var err error
+	db := s.DB
 	if len(pl.Bounds) == 4 {
 		g := Geofence{}
 		g.SetBounds(pl.Bounds)
-		loc, err = s.DB.GetLastLocationInGeofence(g)
+		db = db.Where("latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?",
+			pl.Bounds[0], pl.Bounds[1], pl.Bounds[2], pl.Bounds[3])
 		loc.Address = pl.Address
-	} else {
-		loc, err = s.DB.GetLastLocation()
 	}
 
-	if err != nil {
-		if err == sql.ErrNoRows {
+	if err := db.Order("timestamp DESC").First(&loc).Error; err != nil {
+		if err == gorm.RecordNotFound {
 			return MsgNotFound
 		}
 		return proto.InternalError(err)
@@ -229,7 +237,7 @@ func (s *Service) handleGeofenceCreate(msg proto.Message) {
 		g.Name = proto.GenerateId()
 	}
 
-	if err := s.DB.StoreGeofence(g); err != nil {
+	if err := s.DB.Save(&g).Error; err != nil {
 		s.ReplyInternalError(msg, err)
 	}
 

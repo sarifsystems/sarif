@@ -6,7 +6,6 @@
 package location
 
 import (
-	"database/sql"
 	"testing"
 	"time"
 
@@ -14,43 +13,6 @@ import (
 	"github.com/xconstruct/stark/pkg/testutils"
 	"github.com/xconstruct/stark/proto"
 )
-
-func TestStoreRetrieve(t *testing.T) {
-	deps := &Dependencies{}
-	core.InjectTest(deps)
-
-	db := &sqlDatabase{deps.DB.Driver(), deps.DB.DB}
-	if err := db.Setup(); err != nil {
-		t.Fatal(err)
-	}
-
-	err := db.StoreLocation(Location{
-		Latitude:  52.3744779,
-		Longitude: 9.7385532,
-		Accuracy:  10,
-		Source:    "Hannover",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	g := Geofence{}
-	g.SetBounds([]float64{52, 53, 9, 10})
-	last, err := db.GetLastLocationInGeofence(g)
-	if err != nil {
-		t.Error(err)
-	}
-	if last.Source != "Hannover" {
-		t.Errorf("Unexpected location: %s", last.Source)
-	}
-
-	g = Geofence{}
-	g.SetBounds([]float64{52, 53, 10, 11})
-	_, err = db.GetLastLocationInGeofence(g)
-	if err != sql.ErrNoRows {
-		t.Error(err)
-	}
-}
 
 func TestService(t *testing.T) {
 	st := testutils.New(t)
