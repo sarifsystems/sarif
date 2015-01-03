@@ -72,7 +72,9 @@ func (m Message) IsValid() error {
 
 func (orig Message) Reply(m Message) Message {
 	if m.CorrId == "" {
-		m.CorrId = orig.Id
+		if m.CorrId = orig.CorrId; m.CorrId == "" {
+			m.CorrId = orig.Id
+		}
 	}
 	if m.Destination == "" {
 		m.Destination = orig.Source
@@ -103,6 +105,11 @@ type texter interface {
 }
 
 func (m *Message) EncodePayload(v interface{}) error {
+	if v == nil {
+		m.Payload = nil
+		return nil
+	}
+
 	raw, err := json.Marshal(v)
 	if err != nil {
 		return err

@@ -7,7 +7,6 @@ package natural
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
@@ -196,6 +195,7 @@ func (s *Service) handleNatural(msg proto.Message) {
 		s.Publish(msg.Reply(reply))
 		return
 	}
+	parsed.CorrId = msg.Id
 	s.publishForClient(cv, parsed)
 }
 
@@ -213,7 +213,6 @@ func (s *Service) handleNaturalParse(msg proto.Message) {
 
 func (s *Service) handleNetworkMessage(msg proto.Message) {
 	client := strings.TrimPrefix(msg.Destination, s.DeviceId+"/")
-	fmt.Println(client, "moo")
 	cv := s.getConversation(client)
 	s.forwardToClient(cv, msg)
 }

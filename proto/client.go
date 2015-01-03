@@ -91,13 +91,7 @@ func (c *Client) handle(msg Message) {
 
 func (c *Client) handlePing(msg Message) {
 	c.log.Debugf("%s got ping", c.DeviceId)
-	err := c.Publish(msg.Reply(Message{
-		Action: "ack",
-		CorrId: msg.Id,
-	}))
-	if err != nil {
-		c.log.Warnf("%s", err)
-	}
+	c.Reply(msg, CreateMessage("ack", nil))
 }
 
 func (c *Client) Subscribe(action, device string, h Handler) error {
