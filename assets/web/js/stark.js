@@ -34,10 +34,7 @@ function StarkClient(deviceId) {
 		if (msg.corr) {
 			var handler = client.replyHandlers[msg.corr]
 			if (handler) {
-				if (handler(msg)) {
-					delete client.replyHandlers[msg.corr];
-				}
-				return
+				return handler(msg)
 			}
 		}
 		if (client.onMessage) {
@@ -54,7 +51,7 @@ function StarkClient(deviceId) {
 }
 
 StarkClient.prototype.Publish = function(msg) {
-	msg.v = msg.v || "0.3"
+	msg.stark = msg.stark || "0.5"
 	msg.id = msg.id || GenerateId()
 	msg.src = msg.src || this.deviceId
 
@@ -86,6 +83,10 @@ StarkClient.prototype.Subscribe = function(action, device) {
 StarkClient.prototype.Request = function(msg, onReply) {
 	msg.id = msg.id || GenerateId()
 	this.replyHandlers[msg.id] = onReply;
+	var client = this
+	window.setTimeout(function() {
+		delete client.replyHandlers[msg.id];
+	}, 300000)
 	return this.Publish(msg)
 }
 

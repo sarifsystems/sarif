@@ -1,20 +1,28 @@
-var mainApp = angular.module('mainApp', ['timeAgo']);
+var mainApp = angular.module('mainApp', ['timeAgo', 'ui.bootstrap']);
 
 mainApp.factory('stark', function($rootScope, $q) {
 	var client = new StarkClient("web-" + GenerateId());
-	client.Request = function(msg) {
-		var deferred = $q.defer();
-		StarkClient.prototype.Request.call(client, msg, function(msg) {
-			deferred.resolve(msg);
-			$rootScope.$digest();
-		});
-		return deferred.promise;
+	client.Request = function(msg, onReply) {
+		if (onReply) {
+			StarkClient.prototype.Request.call(client, msg, function(msg) {
+				onReply(msg);
+				$rootScope.$digest();
+			});
+		} else {
+			var deferred = $q.defer();
+			StarkClient.prototype.Request.call(client, msg, function(msg) {
+				deferred.resolve(msg);
+				$rootScope.$digest();
+			});
+			return deferred.promise;
+		}
 	};
 	return client;
 });
 
 mainApp.controller('ChatCtrl', function ($scope, stark) {
 	$scope.responses = [];
+	$scope.dropdownOpen = false;
 
 	$scope.publish = function() {
 		if (!$scope.message) {
@@ -27,15 +35,15 @@ mainApp.controller('ChatCtrl', function ($scope, stark) {
 				action: "natural/handle",
 				text: $scope.message,
 			};
-			stark.Request(msg).then($scope.addMessage)
-			stark.onMessage = function(msg) {
-				$scope.$apply(function() {
-					$scope.addMessage(msg);
-				});
-			};
+			stark.Request(msg, $scope.addMessage);
+			$scope.addMessage(msg);
 		}
 		$scope.message = "";
 	};
+
+	$scope.openDropdown = function() {
+		$scope.dropdownOpen = true;
+	}
 
 	$scope.addMessage = function(msg) {
 		var chat = {
@@ -45,6 +53,7 @@ mainApp.controller('ChatCtrl', function ($scope, stark) {
 			text: msg.text || (msg.action + " from " + msg.src)
 		}
 		$scope.responses.push(chat);
+		$scope.openDropdown();
 	};
 });
 

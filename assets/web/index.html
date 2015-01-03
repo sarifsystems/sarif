@@ -6,14 +6,14 @@
 		<link rel="stylesheet" href="/css/bootstrap.min.css" type="text/css" media="all" />
 		<link rel="stylesheet" href="/css/master.css" type="text/css" media="all" />
 		<script src="/js/vendor/angular.min.js" type="text/javascript" charset="utf-8"></script>
-		<script src="/js/vendor/ui-bootstrap-0.9.0.min.js" type="text/javascript" charset="utf-8"></script>
+		<script src="/js/vendor/ui-bootstrap.min.js" type="text/javascript" charset="utf-8"></script>
 		<script src="/js/vendor/d3.v3.min.js" type="text/javascript" charset="utf-8"></script>
 		<script src="/js/stark.js" type="text/javascript" charset="utf-8"></script>
 		<script src="/js/timeago.js" type="text/javascript" charset="utf-8"></script>
 		<script src="/js/app.js" type="text/javascript" charset="utf-8"></script>
 	</head>
 	<body>
-		<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+		<div class="navbar navbar-default navbar-fixed-top" role="navigation" ng-controller="ChatCtrl">
 			<div class="container-fluid">
 				<div class="navbar-header">
 					<button type="button" class="navbar-toggle collapsed" ng-init="isCollapsed = true" ng-click="isCollapsed = !isCollapsed">
@@ -29,6 +29,39 @@
 						<li class="active"><a href="#">Home</a></li>
 						<li><a href="#about">About</a></li>
 					</ul>
+					<form class="navbar-form" ng-submit="publish()">
+						<div class="input-group">
+							<div class="dropdown" dropdown is-open="dropdownOpen">
+								<input ng-model="message" type="text" class="form-control"
+									ng-keyup="$event.keyCode == 13 && publish()"
+									ng-click="openDropdown(); $event.stopPropagation()" placeholder="Talk to me ...">
+								<div class="input-group-btn">
+									<button type="submit" class="btn btn-primary">
+										<span class="glyphicon glyphicon-comment"></span>
+									</button>
+								</div>
+								<div class="dropdown-menu chat-panel" ng-click="$event.stopPropagation()">
+									<table class="table">
+										<tr ng-repeat="chat in responses" ng-class="chat.isSelf ? 'text-info' : ''">
+											<td class="col-md-1 text-muted small"><small>{{chat.time | date:'HH:mm'}}</small></td>
+											<td class="col-md-1">
+												<span class="glyphicon" ng-class="chat.isSelf ? 'glyphicon-arrow-right' : 'glyphicon-arrow-left'"></span>
+											</td>
+											<td>
+												{{chat.text}}
+												<pre ng-if="chat.showSource">{{chat.msg | json}}</pre>
+											</td>
+											<td class="text-right">
+												<button class="btn btn-default btn-xs" ng-click="chat.showSource = !chat.showSource">
+													<span class="glyphicon glyphicon-cog"></span>
+												</button>
+											</td>
+										</tr>
+									</table>
+								</div>
+							</div>
+						</form>
+					</div>
 				</div><!--/.nav-collapse -->
 			</div>
 		</div>
