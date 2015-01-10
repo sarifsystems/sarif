@@ -143,12 +143,29 @@ func (s *Service) handleLocationUpdate(msg proto.Message) {
 	}
 }
 
-type locationLastMessage struct {
-	Address   string
-	Bounds    []float64
-	Latitude  float64
-	Longitude float64
-	Accuracy  float64
+type LocationFilter struct {
+	Location
+	Bounds []float64
+	After  time.Time `json:"after"`
+	Before time.Time `json:"before"`
+}
+
+func applyFilter(f LocationFilter) func(*gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		f.Address = ""
+		if !f.After.IsZero() {
+			db = db.Where("timestamp > ?", f.After)
+		}
+		if !f.Before.IsZero() {
+			db = db.Where("timestamp < ?", f.Before)
+		}
+		if len(f.Bounds) == 4 {
+			db = db.Where("latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?",
+				f.Bounds[0], f.Bounds[1], f.Bounds[2], f.Bounds[3])
+		}
+		db = db.Where(&f.Location)
+		return db
+	}
 }
 
 var MsgNotFound = proto.Message{
@@ -161,14 +178,23 @@ var MsgAddressNotFound = proto.Message{
 	Text:   "Requested address could not be found",
 }
 
-func (s *Service) queryLocationLast(pl locationLastMessage) proto.Message {
+func (s *Service) handleLocationLast(msg proto.Message) {
+	var pl LocationFilter
+	if err := msg.DecodePayload(&pl); err != nil {
+		s.ReplyBadRequest(msg, err)
+		return
+	}
+	s.Log.Debugln("[location] last loc request:", pl)
+
 	if pl.Address != "" {
 		geo, err := Geocode(pl.Address)
 		if err != nil {
-			return proto.InternalError(err)
+			s.ReplyInternalError(msg, err)
+			return
 		}
 		if len(geo) == 0 {
-			return MsgNotFound
+			s.Reply(msg, MsgNotFound)
+			return
 		}
 		first := geo[0]
 		pl.Address = first.Pretty()
@@ -176,42 +202,67 @@ func (s *Service) queryLocationLast(pl locationLastMessage) proto.Message {
 	}
 
 	var loc Location
-	db := s.DB
-	if len(pl.Bounds) == 4 {
-		g := Geofence{}
-		g.SetBounds(pl.Bounds)
-		db = db.Where("latitude BETWEEN ? AND ? AND longitude BETWEEN ? AND ?",
-			pl.Bounds[0], pl.Bounds[1], pl.Bounds[2], pl.Bounds[3])
+	if err := s.DB.Scopes(applyFilter(pl)).Order("timestamp DESC").First(&loc).Error; err != nil {
+		if err == gorm.RecordNotFound {
+			s.Reply(msg, MsgNotFound)
+			return
+		}
+		s.ReplyInternalError(msg, err)
+		return
+	}
+	if loc.Address == "" {
 		loc.Address = pl.Address
 	}
 
-	if err := db.Order("timestamp DESC").First(&loc).Error; err != nil {
-		if err == gorm.RecordNotFound {
-			return MsgNotFound
-		}
-		return proto.InternalError(err)
-	}
-
-	reply := proto.Message{Action: "location/found"}
-	if err := reply.EncodePayload(loc); err != nil {
-		s.Log.Errorln(err)
-		return proto.InternalError(err)
-	}
-	return reply
+	s.Reply(msg, proto.CreateMessage("location/found", loc))
 }
 
-func (s *Service) handleLocationLast(msg proto.Message) {
-	var pl locationLastMessage
+type listPayload struct {
+	Count     int         `json:"count"`
+	Locations []*Location `json:"locations"`
+}
+
+func (pl listPayload) Text() string {
+	return fmt.Sprintf("Found %d locations.", pl.Count)
+}
+
+func (s *Service) handleLocationList(msg proto.Message) {
+	var pl LocationFilter
 	if err := msg.DecodePayload(&pl); err != nil {
 		s.ReplyBadRequest(msg, err)
 		return
 	}
-	s.Log.Debugln("[location] last loc request:", pl)
+	s.Log.Debugln("[location] list loc request:", pl)
 
-	if reply := s.queryLocationLast(pl); reply.Action != "" {
-		reply = msg.Reply(reply)
-		s.Publish(reply)
+	if pl.Address != "" {
+		geo, err := Geocode(pl.Address)
+		if err != nil {
+			s.ReplyInternalError(msg, err)
+			return
+		}
+		if len(geo) == 0 {
+			s.Reply(msg, MsgNotFound)
+			return
+		}
+		first := geo[0]
+		pl.Address = first.Pretty()
+		pl.Bounds = first.BoundingBox
 	}
+
+	var locs []*Location
+	if err := s.DB.Scopes(applyFilter(pl)).Order("timestamp ASC").Limit(300).Find(&locs).Error; err != nil {
+		if err == gorm.RecordNotFound {
+			s.Reply(msg, MsgNotFound)
+			return
+		}
+		s.ReplyInternalError(msg, err)
+		return
+	}
+
+	s.Reply(msg, proto.CreateMessage("location/listed", &listPayload{
+		len(locs),
+		locs,
+	}))
 }
 
 func (s *Service) handleGeofenceCreate(msg proto.Message) {
