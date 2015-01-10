@@ -223,11 +223,20 @@ func (c *brokerConn) unsubscribe(topic string) {
 }
 
 func (c *brokerConn) publish(msg Message) {
-	if msg.IsAction("proto/sub") {
+	switch {
+	case msg.IsAction("proto/sub"):
 		var sub subscription
 		if err := msg.DecodePayload(&sub); err == nil {
 			topic := getTopic(sub.Action, sub.Device)
 			c.subscribe(topic)
+		}
+	case msg.IsAction("proto/subs"):
+		var subs []subscription
+		if err := msg.DecodePayload(&subs); err == nil {
+			for _, sub := range subs {
+				topic := getTopic(sub.Action, sub.Device)
+				c.subscribe(topic)
+			}
 		}
 	}
 
