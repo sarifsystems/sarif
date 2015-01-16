@@ -11,7 +11,6 @@ import (
 	"path"
 
 	"github.com/jinzhu/gorm"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type DatabaseConfig struct {
