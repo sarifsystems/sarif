@@ -134,11 +134,22 @@ mainApp.controller('DailyCtrl', function($scope, $location, $routeParams, stark)
 		var latlngs = [];
 		var last = undefined;
 		var dist = 0;
+		var clusterCount = 0;
+		var clusters = [];
 		angular.forEach(msg.p.locations, function(loc) {
 			latlngs.push([loc.latitude, loc.longitude]);
 			var p = L.latLng(loc.latitude, loc.longitude);
 			if (last) {
-				dist += p.distanceTo(last);
+				var d = p.distanceTo(last);
+				dist += d;
+				if (d < 500) {
+					clusterCount++;
+					if (clusterCount == 2) {
+						clusters.push([loc.latitude, loc.longitude]);
+					}
+				} else {
+					clusterCount = 0;
+				}
 			}
 			last = p;
 		});
@@ -153,6 +164,9 @@ mainApp.controller('DailyCtrl', function($scope, $location, $routeParams, stark)
 		var maplayer = new L.TileLayer(mapUrl, {attribution: '', subdomains: mapSubdomains});
 		maplayer.addTo(map);
 		L.polyline(latlngs).addTo(map);
+		angular.forEach(clusters, function(cluster) {
+			L.marker(cluster).addTo(map);
+		});
 		map.fitBounds(latlngs);
 	});
 
