@@ -6,7 +6,9 @@
 package location
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -68,6 +70,9 @@ func (s *Service) Enable() error {
 		return err
 	}
 	if err := s.Subscribe("location/fence/create", "", s.handleGeofenceCreate); err != nil {
+		return err
+	}
+	if err := s.Subscribe("location/import", "", s.handleLocationImport); err != nil {
 		return err
 	}
 	return nil
@@ -302,4 +307,101 @@ func (s *Service) handleGeofenceCreate(msg proto.Message) {
 	}
 	reply.Text = "Geofence '" + g.Name + "' created."
 	s.Publish(reply)
+}
+
+type importPayload struct {
+	CSV       string      `json:"csv,omitempty"`
+	Locations []*Location `json:"locations,omitempty"`
+}
+
+type importedPayload struct {
+	StartTime   time.Time `json:"start_time,omitempty"`
+	EndTime     time.Time `json:"end_time,omitempty"`
+	NumImported int       `json:"num_imported`
+	NumIgnored  int       `json:"num_ignored`
+	NumExisting int       `json:"num_existing`
+	NumTotal    int       `json:"num_total`
+}
+
+func (p importedPayload) Text() string {
+	return fmt.Sprintf("Imported %d of %d locations.", p.NumImported, p.NumTotal)
+}
+
+func (s *Service) handleLocationImport(msg proto.Message) {
+	p := importPayload{}
+	if err := msg.DecodePayload(&p); err != nil {
+		s.ReplyBadRequest(msg, err)
+		return
+	}
+
+	if len(p.CSV) > 0 {
+		locs, err := ReadCSV(strings.NewReader(p.CSV))
+		if err != nil {
+			s.ReplyBadRequest(msg, err)
+			return
+		}
+		p.Locations = append(p.Locations, locs...)
+	}
+	if len(p.Locations) == 0 {
+		s.ReplyBadRequest(msg, errors.New("No location data found!"))
+		return
+	}
+
+	var minTime, maxTime time.Time
+	for i, loc := range p.Locations {
+		if loc.Timestamp.IsZero() {
+			s.ReplyBadRequest(msg, errors.New(fmt.Sprintf("Location %d has no timestamp.", i)))
+			return
+		}
+		if minTime.IsZero() || loc.Timestamp.Before(minTime) {
+			minTime = loc.Timestamp
+		}
+		if maxTime.IsZero() || loc.Timestamp.After(maxTime) {
+			maxTime = loc.Timestamp
+		}
+	}
+
+	f := LocationFilter{
+		After:  minTime.Add(-time.Minute),
+		Before: maxTime.Add(time.Minute),
+	}
+	var existing []*Location
+	if err := s.DB.Scopes(applyFilter(f)).Order("timestamp ASC").Find(&existing).Error; err != nil {
+		if err != gorm.RecordNotFound {
+			s.ReplyInternalError(msg, err)
+			return
+		}
+	}
+
+	missing := make([]*Location, 0, len(p.Locations))
+NEXT_LOC:
+	for _, loc := range p.Locations {
+		for _, ex := range existing {
+			d := ex.Timestamp.Sub(loc.Timestamp)
+			if d > -time.Minute && d < time.Minute {
+				continue NEXT_LOC
+			}
+		}
+		missing = append(missing, loc)
+	}
+
+	// TODO: batch insert when GORM supports it
+	tx := s.DB.Begin()
+	for _, loc := range missing {
+		if err := tx.Save(loc).Error; err != nil {
+			tx.Rollback()
+			s.ReplyInternalError(msg, err)
+			return
+		}
+	}
+	tx.Commit()
+
+	s.Reply(msg, proto.CreateMessage("location/imported", &importedPayload{
+		StartTime:   minTime,
+		EndTime:     maxTime,
+		NumImported: len(missing),
+		NumIgnored:  len(p.Locations) - len(missing),
+		NumExisting: len(existing),
+		NumTotal:    len(p.Locations),
+	}))
 }
