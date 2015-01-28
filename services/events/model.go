@@ -30,7 +30,7 @@ type Event struct {
 	Status      string                 `json:"status,omitempty"`
 	Source      string                 `json:"source,omitempty"`
 	Text        string                 `json:"-"`
-	Meta        map[string]interface{} `json:"meta,omitempty" sql:"-"`
+	Meta        map[string]interface{} `json:"meta,omitempty" sql:"-" gorm:"column:meow"`
 	MetaRaw     []byte                 `json:"-" gorm:"column:meta"`
 }
 

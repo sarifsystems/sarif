@@ -94,8 +94,10 @@ func TestBrokerBridge(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	one.Publish(Subscribe("ping", "one"))
-	two.Publish(Subscribe("ping", "two"))
-	two.Publish(Subscribe("ping", ""))
+	two.Publish(CreateMessage("proto/subs", []subscription{
+		{"ping", "two", nil},
+		{"ping", "", nil},
+	}))
 	time.Sleep(10 * time.Millisecond)
 
 	for i, test := range tests {
