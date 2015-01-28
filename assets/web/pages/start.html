@@ -1,0 +1,62 @@
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-md-3">
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					Last Coffee
+				</div>
+				<div class="panel-body" ng-model="lastCoffee">
+					{{lastCoffee.timestamp | timeago}}
+				</div>
+			</div>
+
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					Last Location
+				</div>
+				<div class="panel-body" ng-model="lastLocation">
+					{{lastLocation.timestamp | timeago}}<br>
+					{{lastLocation.latitude}}, {{lastLocation.longitude}}
+				</div>
+			</div>
+		</div>
+
+		<div class="col-md-6">
+			<div class="panel panel-default" ng-controller="ChatCtrl">
+				<div class="panel-body">
+					<form ng-submit="publish()">
+						<div class="input-group">
+							<input ng-model="message" type="text" class="form-control" placeholder="Talk to me ...">
+							<div class="input-group-btn">
+								<input type="submit" class="btn btn-primary">
+								<span class="glyphicon glyphicon-comment"></span>
+								Send
+								</input>
+							</div>
+						</div>
+					</form>
+				</div>
+				<table class="table">
+					<tr ng-repeat="chat in responses" ng-class="chat.isSelf ? 'text-info' : ''">
+						<td class="col-md-1 text-muted small"><small>{{chat.time | date:'HH:mm'}}</small></td>
+						<td class="col-md-1">
+							<span class="glyphicon" ng-class="chat.isSelf ? 'glyphicon-arrow-right' : 'glyphicon-arrow-left'"></span>
+						</td>
+						<td>
+							<span ng-bind-html="chat.text | linky:'_blank'"></span>
+							<pre ng-if="chat.showSource">{{chat.msg | json}}</pre>
+						</td>
+						<td class="text-right">
+							<a href="/#/daily/{{chat.msg.p.timestamp | date:'yyyy-MM-dd'}}" class="btn btn-default btn-xs" ng-if="chat.msg.p.timestamp" tooltip="Daily overview for {{chat.msg.p.timestamp | date:'fullDate'}}" tooltip-append-to-body="true" tooltip-placement="bottom">
+								<i class="glyphicon glyphicon-calendar"></i>
+							</a>
+							<button class="btn btn-default btn-xs" ng-click="chat.showSource = !chat.showSource">
+								<span class="glyphicon glyphicon-cog"></span>
+							</button>
+						</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+	</div>
+</div>

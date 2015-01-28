@@ -4,16 +4,20 @@
 		<title>stark</title>
 		<meta charset="utf-8" />
 		<link rel="stylesheet" href="/css/bootstrap.min.css" type="text/css" media="all" />
+		<link rel="stylesheet" href="/css/vendor/leaflet.css" type="text/css" media="all" />
 		<link rel="stylesheet" href="/css/master.css" type="text/css" media="all" />
 		<script src="/js/vendor/angular.min.js" type="text/javascript" charset="utf-8"></script>
+		<script src="/js/vendor/angular-route.min.js" type="text/javascript" charset="utf-8"></script>
+		<script src="/js/vendor/angular-sanitize.min.js" type="text/javascript" charset="utf-8"></script>
 		<script src="/js/vendor/ui-bootstrap.min.js" type="text/javascript" charset="utf-8"></script>
 		<script src="/js/vendor/d3.v3.min.js" type="text/javascript" charset="utf-8"></script>
+		<script src="/js/vendor/leaflet.min.js" type="text/javascript" charset="utf-8"></script>
 		<script src="/js/stark.js" type="text/javascript" charset="utf-8"></script>
 		<script src="/js/timeago.js" type="text/javascript" charset="utf-8"></script>
 		<script src="/js/app.js" type="text/javascript" charset="utf-8"></script>
 	</head>
-	<body>
-		<div class="navbar navbar-default navbar-fixed-top" role="navigation" ng-controller="ChatCtrl">
+	<body ng-controller="MainCtrl">
+		<div class="navbar navbar-default" role="navigation">
 			<div class="container-fluid">
 				<div class="navbar-header">
 					<button type="button" class="navbar-toggle collapsed" ng-init="isCollapsed = true" ng-click="isCollapsed = !isCollapsed">
@@ -26,104 +30,58 @@
 				</div>
 				<div class="navbar-collapse" ng-class="{collapse: isCollapsed}">
 					<ul class="nav navbar-nav">
-						<li class="active"><a href="#">Home</a></li>
-						<li><a href="#about">About</a></li>
+						<li ng-class="{active:isActive('/')}"><a href="/">Home</a></li>
+						<li ng-class="{active:isActive('/daily')}">
+							<a href="/#/daily">Daily</a>
+						</li>
+						<li ng-class="{active:isActive('/about')}"><a href="/#/about">About</a></li>
 					</ul>
-					<form class="navbar-form" ng-submit="publish()">
-						<div class="input-group">
-							<div class="dropdown" dropdown is-open="dropdownOpen">
-								<input ng-model="message" type="text" class="form-control"
-									ng-keyup="$event.keyCode == 13 && publish()"
-									ng-click="openDropdown(); $event.stopPropagation()" placeholder="Talk to me ...">
-								<div class="input-group-btn">
-									<button type="submit" class="btn btn-primary">
-										<span class="glyphicon glyphicon-comment"></span>
-									</button>
+
+					<div ng-controller="ChatCtrl">
+						<form ng-controller="ChatCtrl" class="navbar-form" ng-submit="publish()">
+							<div class="input-group">
+								<div class="dropdown" dropdown is-open="dropdownOpen">
+									<input ng-model="message" type="text" class="form-control"
+										ng-keyup="$event.keyCode == 13 && publish()"
+										ng-click="openDropdown(); $event.stopPropagation()" placeholder="Talk to me ...">
+									<div class="input-group-btn">
+										<button type="submit" class="btn btn-primary">
+											<span class="glyphicon glyphicon-comment"></span>
+										</button>
+									</div>
+									<div class="dropdown-menu chat-panel" ng-click="$event.stopPropagation()">
+										<table class="table">
+											<tr ng-repeat="chat in responses" ng-class="chat.isSelf ? 'text-info' : ''">
+												<td class="col-md-1 text-muted small"><small>{{chat.time | date:'HH:mm'}}</small></td>
+												<td class="col-md-1">
+													<span class="glyphicon" ng-class="chat.isSelf ? 'glyphicon-arrow-right' : 'glyphicon-arrow-left'"></span>
+												</td>
+												<td>
+													<span ng-bind-html="chat.text | linky:'_blank'"></span>
+													<pre ng-if="chat.showSource">{{chat.msg | json}}</pre>
+												</td>
+												<td class="text-right">
+													<a href="/#/daily/{{chat.msg.p.timestamp | date:'yyyy-MM-dd'}}" class="btn btn-default btn-xs" ng-if="chat.msg.p.timestamp" tooltip="Daily overview for {{chat.msg.p.timestamp | date:'fullDate'}}" tooltip-append-to-body="true" tooltip-placement="bottom">
+														<i class="glyphicon glyphicon-calendar"></i>
+													</a>
+													<button class="btn btn-default btn-xs" ng-click="chat.showSource = !chat.showSource">
+														<span class="glyphicon glyphicon-cog"></span>
+													</button>
+												</td>
+											</tr>
+										</table>
+										<div class="pull-right">
+											<button class="btn btn-default btn-sm" ng-click="clearHistory()"><i class="glyphicon glyphicon-trash"></i> Clear</button>
+										</div>
+									</div>
 								</div>
-								<div class="dropdown-menu chat-panel" ng-click="$event.stopPropagation()">
-									<table class="table">
-										<tr ng-repeat="chat in responses" ng-class="chat.isSelf ? 'text-info' : ''">
-											<td class="col-md-1 text-muted small"><small>{{chat.time | date:'HH:mm'}}</small></td>
-											<td class="col-md-1">
-												<span class="glyphicon" ng-class="chat.isSelf ? 'glyphicon-arrow-right' : 'glyphicon-arrow-left'"></span>
-											</td>
-											<td>
-												{{chat.text}}
-												<pre ng-if="chat.showSource">{{chat.msg | json}}</pre>
-											</td>
-											<td class="text-right">
-												<button class="btn btn-default btn-xs" ng-click="chat.showSource = !chat.showSource">
-													<span class="glyphicon glyphicon-cog"></span>
-												</button>
-											</td>
-										</tr>
-									</table>
-								</div>
-							</div>
-						</form>
+							</form>
+						</div>
 					</div>
 				</div><!--/.nav-collapse -->
 			</div>
 		</div>
 
-		<div class="container-fluid" ng-controller="DashboardCtrl">
-			<div class="row">
-				<div class="col-md-3">
-					<div class="panel panel-default">
-						<div class="panel-heading">
-							Last Coffee
-						</div>
-						<div class="panel-body" ng-model="lastCoffee">
-							{{lastCoffee.timestamp | timeago}}
-						</div>
-					</div>
-
-					<div class="panel panel-default">
-						<div class="panel-heading">
-							Last Location
-						</div>
-						<div class="panel-body" ng-model="lastLocation">
-							{{lastLocation.timestamp | timeago}}<br>
-							{{lastLocation.latitude}}, {{lastLocation.longitude}}
-						</div>
-					</div>
-				</div>
-
-				<div class="col-md-6">
-					<div class="panel panel-default" ng-controller="ChatCtrl">
-						<div class="panel-body">
-							<form ng-submit="publish()">
-								<div class="input-group">
-									<input ng-model="message" type="text" class="form-control" placeholder="Talk to me ...">
-									<div class="input-group-btn">
-										<input type="submit" class="btn btn-primary">
-										<span class="glyphicon glyphicon-comment"></span>
-										Send
-										</input>
-									</div>
-								</div>
-							</form>
-						</div>
-						<table class="table">
-							<tr ng-repeat="chat in responses" ng-class="chat.isSelf ? 'text-info' : ''">
-								<td class="col-md-1 text-muted small"><small>{{chat.time | date:'HH:mm'}}</small></td>
-								<td class="col-md-1">
-									<span class="glyphicon" ng-class="chat.isSelf ? 'glyphicon-arrow-right' : 'glyphicon-arrow-left'"></span>
-								</td>
-								<td>
-									{{chat.text}}
-									<pre ng-if="chat.showSource">{{chat.msg | json}}</pre>
-								</td>
-								<td class="text-right">
-									<button class="btn btn-default btn-xs" ng-click="chat.showSource = !chat.showSource">
-										<span class="glyphicon glyphicon-cog"></span>
-									</button>
-								</td>
-							</tr>
-						</table>
-					</div>
-				</div>
-			</div>
-		</div>
+		<div id="main" ng-view></div>
 	</body>
 </html>

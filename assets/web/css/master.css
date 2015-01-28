@@ -1,9 +1,8 @@
-body {
-	padding-top: 100px;
-}
-
 .chat-panel {
 	width: 500px;
+}
+
+.chat-panel table {
 	max-height: 1000%;
 	overflow-y: auto;
 }

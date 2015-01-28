@@ -64,6 +64,9 @@ func (s *Service) Enable() error {
 	if err := s.Subscribe("location/last", "", s.handleLocationLast); err != nil {
 		return err
 	}
+	if err := s.Subscribe("location/list", "", s.handleLocationList); err != nil {
+		return err
+	}
 	if err := s.Subscribe("location/fence/create", "", s.handleGeofenceCreate); err != nil {
 		return err
 	}
