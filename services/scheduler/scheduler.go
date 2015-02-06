@@ -6,10 +6,9 @@
 package scheduler
 
 import (
-	"database/sql"
 	"time"
 
-	"github.com/xconstruct/stark/core"
+	"github.com/jinzhu/gorm"
 	"github.com/xconstruct/stark/pkg/util"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
@@ -22,14 +21,14 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	DB     *core.DB
+	DB     *gorm.DB
 	Log    proto.Logger
 	Client *proto.Client
 }
 
 type Scheduler struct {
 	timer *time.Timer
-	DB    Database
+	DB    *gorm.DB
 	Log   proto.Logger
 	*proto.Client
 	nextTask Task
@@ -37,15 +36,21 @@ type Scheduler struct {
 
 func NewService(deps *Dependencies) *Scheduler {
 	return &Scheduler{
-		DB:     &sqlDatabase{deps.DB.Driver(), deps.DB.DB},
+		DB:     deps.DB,
 		Log:    deps.Log,
 		Client: deps.Client,
 	}
 }
 
 func (s *Scheduler) Enable() error {
-	if err := s.DB.Setup(); err != nil {
+	createIndizes := !s.DB.HasTable(&Task{})
+	if err := s.DB.AutoMigrate(&Task{}).Error; err != nil {
 		return err
+	}
+	if createIndizes {
+		if err := s.DB.Model(&Task{}).AddIndex("time", "time").Error; err != nil {
+			return err
+		}
 	}
 	if err := s.Subscribe("schedule", "", s.handle); err != nil {
 		return err
@@ -107,7 +112,7 @@ func (s *Scheduler) handle(msg proto.Message) {
 	}
 	s.Log.Infoln("[scheduler] new task:", t)
 
-	if err := s.DB.StoreTask(t.Task); err != nil {
+	if err := s.DB.Save(&t.Task).Error; err != nil {
 		s.Log.Errorln("[scheduler] could not store task:", err)
 		s.ReplyInternalError(msg, err)
 		return
@@ -124,6 +129,11 @@ func (s *Scheduler) handle(msg proto.Message) {
 	s.recalculateTimer()
 }
 
+func (s *Scheduler) GetNextTask() (t Task, err error) {
+	err = s.DB.Where("finished = ?", false).Order("time ASC").Limit(1).First(&t).Error
+	return
+}
+
 func (s *Scheduler) recalculateTimer() {
 	if s.timer != nil {
 		s.timer.Stop()
@@ -131,9 +141,9 @@ func (s *Scheduler) recalculateTimer() {
 	}
 
 	var err error
-	s.nextTask, err = s.DB.GetNextTask()
+	s.nextTask, err = s.GetNextTask()
 	if err != nil {
-		if err != sql.ErrNoRows {
+		if err != gorm.RecordNotFound {
 			s.Log.Errorln("[scheduler] recalculate:", err)
 		}
 		return
@@ -151,10 +161,10 @@ func (s *Scheduler) recalculateTimer() {
 
 func (s *Scheduler) taskFinished() {
 	t := s.nextTask
-	t.FinishedOn = time.Now()
+	t.Finished = true
 	s.Log.Infoln("[scheduler] task finished:", t)
 
-	if err := s.DB.StoreTask(t); err != nil {
+	if err := s.DB.Save(&t).Error; err != nil {
 		s.Log.Errorln("[scheduler] could not store finished task: ", err)
 	}
 	s.Publish(s.nextTask.Reply)

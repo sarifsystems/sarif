@@ -31,6 +31,7 @@ import (
 	"github.com/xconstruct/stark/services/xmpp"
 
 	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
 )
 
 type Config struct {
