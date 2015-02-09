@@ -1,0 +1,35 @@
+<div class="container-fluid chat-fullscreen">
+	<table class="table">
+		<tr ng-repeat="chat in responses" ng-class="chat.isSelf ? 'text-info' : ''">
+			<td class="col-md-1 text-muted small"><small>{{chat.time | date:'HH:mm'}}</small></td>
+			<td class="col-md-1">
+				<span class="glyphicon" ng-class="chat.isSelf ? 'glyphicon-arrow-right' : 'glyphicon-arrow-left'"></span>
+			</td>
+			<td>
+				<span ng-bind-html="chat.text | linky:'_blank'"></span>
+				<pre ng-if="chat.showSource">{{chat.msg | json}}</pre>
+			</td>
+			<td class="text-right">
+				<a href="/#/daily/{{chat.msg.p.timestamp | date:'yyyy-MM-dd'}}" class="btn btn-default btn-xs" ng-if="chat.msg.p.timestamp" tooltip="Daily overview for {{chat.msg.p.timestamp | date:'fullDate'}}" tooltip-append-to-body="true" tooltip-placement="bottom">
+					<i class="glyphicon glyphicon-calendar"></i>
+				</a>
+				<button class="btn btn-default btn-xs" ng-click="chat.showSource = !chat.showSource">
+					<span class="glyphicon glyphicon-cog"></span>
+				</button>
+			</td>
+		</tr>
+	</table>
+	<div class="chat-inputbar">
+		<form ng-submit="publish()">
+			<div class="input-group">
+				<input ng-model="message" type="text" class="form-control" placeholder="Talk to me ...">
+				<div class="input-group-btn">
+					<input type="submit" class="btn btn-primary">
+					<span class="glyphicon glyphicon-comment"></span>
+					Send
+					</input>
+				</div>
+			</div>
+		</form>
+	</div>
+</div>

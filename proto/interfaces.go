@@ -18,3 +18,29 @@ type Service interface {
 	Handle(msg Message)
 	RegisterPublisher(p Publisher)
 }
+
+func TransmitTo(r, w Conn) error {
+	for {
+		msg, err := r.Read()
+		if err != nil {
+			return err
+		}
+		if err := w.Write(msg); err != nil {
+			return err
+		}
+	}
+}
+
+func Transmit(a, b Conn) error {
+	defer a.Close()
+	defer b.Close()
+
+	errs := make(chan error, 2)
+	go func() {
+		errs <- TransmitTo(a, b)
+	}()
+	go func() {
+		errs <- TransmitTo(b, a)
+	}()
+	return <-errs
+}

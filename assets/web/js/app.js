@@ -31,6 +31,10 @@ mainApp.config(function($routeProvider, $locationProvider) {
 			templateUrl: 'pages/start.html',
 			controller: 'StartCtrl'
 		})
+		.when('/chat', {
+			templateUrl: 'pages/chat.html',
+			controller: 'ChatCtrl'
+		})
 		.when('/daily/:date?', {
 			templateUrl: 'pages/daily.html',
 			controller: 'DailyCtrl'
