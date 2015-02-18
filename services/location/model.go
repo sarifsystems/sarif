@@ -7,6 +7,7 @@ package location
 
 import (
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -49,4 +50,22 @@ func (l Location) String() string {
 		return l.Address + " on " + ts
 	}
 	return fmt.Sprintf("%.4f, %.4f on %s", l.Latitude, l.Longitude, ts)
+}
+
+func haversine(theta float64) float64 {
+	return .5 * (1 - math.Cos(theta))
+}
+
+func degToRad(deg float64) float64 {
+	return deg * math.Pi / 180
+}
+
+const rEarth = 6372800 // m
+
+func HaversineDistance(p1, p2 Location) float64 {
+	lat1, lng1 := degToRad(p1.Latitude), degToRad(p1.Longitude)
+	lat2, lng2 := degToRad(p2.Latitude), degToRad(p2.Longitude)
+
+	return 2 * rEarth * math.Asin(math.Sqrt(haversine(lat2-lat1)+
+		math.Cos(lat1)*math.Cos(lat2)*haversine(lng2-lng1)))
 }

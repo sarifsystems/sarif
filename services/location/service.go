@@ -32,6 +32,8 @@ type Service struct {
 	DB  *gorm.DB
 	Log proto.Logger
 	*proto.Client
+
+	Clusters *ClusterGenerator
 }
 
 func NewService(deps *Dependencies) *Service {
@@ -39,6 +41,8 @@ func NewService(deps *Dependencies) *Service {
 		DB:     deps.DB,
 		Log:    deps.Log,
 		Client: deps.Client,
+
+		Clusters: NewClusterGenerator(),
 	}
 }
 
@@ -58,7 +62,6 @@ func (s *Service) Enable() error {
 			return err
 		}
 	}
-	s.DB.LogMode(true)
 
 	if err := s.Subscribe("location/update", "", s.handleLocationUpdate); err != nil {
 		return err
@@ -144,6 +147,15 @@ func (s *Service) handleLocationUpdate(msg proto.Message) {
 
 	if err := s.DB.Save(&loc).Error; err != nil {
 		s.ReplyInternalError(msg, err)
+	}
+
+	if changed := s.Clusters.Advance(loc); changed {
+		if c := s.Clusters.Current(); c.Status == ConfirmedCluster {
+			s.Publish(proto.CreateMessage("location/cluster/enter", c))
+		} else {
+			s.Publish(proto.CreateMessage("location/cluster/leave", s.Clusters.LastCompleted()))
+			s.Clusters.ClearCompleted()
+		}
 	}
 
 	if last.Id != 0 {
