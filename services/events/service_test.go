@@ -107,5 +107,32 @@ func TestService(t *testing.T) {
 				}
 			})
 		})
+
+		st.It("should record other messages", func() {
+			st.When(proto.CreateMessage("event/record", map[string]interface{}{
+				"action": "some/value/changed",
+			}))
+			st.ExpectAction("event/recording")
+
+			st.When(proto.Message{
+				Action: "some/value/changed",
+				Text:   "some value has changed",
+			})
+
+			st.When(proto.CreateMessage("event/last", map[string]interface{}{
+				"action": "some/value/changed",
+			}))
+
+			st.Expect(func(msg proto.Message) {
+				if msg.Action != "event/found" {
+					t.Error("did not find event")
+				}
+				got := Event{}
+				msg.DecodePayload(&got)
+				if got.Text != "some value has changed" {
+					t.Error("did not find text:", got.Text)
+				}
+			})
+		})
 	})
 }

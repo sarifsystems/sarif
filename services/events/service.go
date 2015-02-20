@@ -6,11 +6,13 @@
 package events
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -21,24 +23,32 @@ var Module = &services.Module{
 	NewInstance: NewService,
 }
 
+type Config struct {
+	RecordedActions map[string]bool `json:"recorded_actions"`
+}
+
 type Dependencies struct {
 	DB     *gorm.DB
+	Config *core.Config
 	Log    proto.Logger
 	Client *proto.Client
 }
 
 type Service struct {
+	cfg *core.Config
 	DB  *gorm.DB
 	Log proto.Logger
 	*proto.Client
 }
 
 func NewService(deps *Dependencies) *Service {
-	return &Service{
+	s := &Service{
+		cfg:    deps.Config,
 		DB:     deps.DB,
 		Log:    deps.Log,
 		Client: deps.Client,
 	}
+	return s
 }
 
 func (s *Service) Enable() error {
@@ -66,8 +76,18 @@ func (s *Service) Enable() error {
 	if err := s.Subscribe("event/sum/duration", "", s.handleEventSumDuration); err != nil {
 		return err
 	}
-	if err := s.Subscribe("location/fence", "", s.handleLocationFence); err != nil {
+	if err := s.Subscribe("event/record", "", s.handleEventRecord); err != nil {
 		return err
+	}
+
+	var cfg Config
+	s.cfg.Get("events", &cfg)
+	for action, enabled := range cfg.RecordedActions {
+		if enabled {
+			if err := s.Subscribe(action, "", s.handleRecordMessage); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -277,4 +297,51 @@ func (s *Service) handleEventSumDuration(msg proto.Message) {
 	}
 
 	s.Reply(msg, proto.CreateMessage("events/summarized/duration", &sumDurationPayload{d, filter.Event}))
+}
+
+func (s *Service) handleRecordMessage(msg proto.Message) {
+	var e Event
+	e.Action = msg.Action
+	e.Text = msg.Text
+	e.Timestamp = time.Now()
+	if err := msg.DecodePayload(&e.Meta); err != nil {
+		s.Log.Errorf("[events] internal error: %v, %v", msg, err)
+		return
+	}
+
+	s.Log.Infoln("[events] new event:", e)
+	if err := s.DB.Save(&e).Error; err != nil {
+		s.Log.Errorf("[events] internal error: %v, %v", msg, err)
+		return
+	}
+}
+
+type recordPayload struct {
+	Action string `json:"action"`
+}
+
+func (s *Service) handleEventRecord(msg proto.Message) {
+	var p recordPayload
+	if err := msg.DecodePayload(&p); err != nil {
+		s.ReplyBadRequest(msg, err)
+		return
+	}
+	if p.Action == "" {
+		s.ReplyBadRequest(msg, errors.New("No action specified"))
+		return
+	}
+
+	var cfg Config
+	s.cfg.Get("events", &cfg)
+	if cfg.RecordedActions == nil {
+		cfg.RecordedActions = make(map[string]bool)
+	}
+	if enabled := cfg.RecordedActions[p.Action]; !enabled {
+		cfg.RecordedActions[p.Action] = true
+		s.cfg.Set("events", cfg)
+		s.Subscribe(p.Action, "", s.handleRecordMessage)
+	}
+
+	s.Log.Infoln("[events] recording action:", p.Action)
+	s.Reply(msg, proto.CreateMessage("event/recording", p))
 }
