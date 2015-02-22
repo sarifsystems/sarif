@@ -162,7 +162,7 @@ func (c *Client) resolveRequest(id string, msg Message) bool {
 		return false
 	}
 
-	if msg.Id != "" {
+	if msg.Action != "" {
 		ch <- msg
 	} else {
 		delete(c.requests, id)

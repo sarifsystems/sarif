@@ -21,6 +21,7 @@ import (
 	"github.com/xconstruct/stark/services/know"
 	"github.com/xconstruct/stark/services/lastfm"
 	"github.com/xconstruct/stark/services/location"
+	"github.com/xconstruct/stark/services/luascripts"
 	"github.com/xconstruct/stark/services/mood"
 	"github.com/xconstruct/stark/services/natural"
 	"github.com/xconstruct/stark/services/router"
@@ -52,6 +53,7 @@ func main() {
 	app.RegisterModule(know.Module)
 	app.RegisterModule(lastfm.Module)
 	app.RegisterModule(location.Module)
+	app.RegisterModule(luascripts.Module)
 	app.RegisterModule(mood.Module)
 	app.RegisterModule(natural.Module)
 	app.RegisterModule(router.Module)
