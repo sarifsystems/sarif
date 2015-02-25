@@ -39,28 +39,23 @@ func NewService(deps *Dependencies) *Service {
 }
 
 func (s *Service) Enable() error {
-	if err := s.Subscribe("", "commands", s.handleUnknown); err != nil {
-		return err
-	}
-	if err := s.Subscribe("cmd/qr", "", s.handleQR); err != nil {
-		return err
-	}
-	if err := s.Subscribe("cmd/increment", "", s.handleCounter); err != nil {
-		return err
-	}
-	if err := s.Subscribe("cmd/decrement", "", s.handleCounter); err != nil {
-		return err
-	}
-	if err := s.Subscribe("cmd/count", "", s.handleCounter); err != nil {
-		return err
-	}
-	if err := s.Subscribe("cmd/ask", "", s.handleAsk); err != nil {
-		return err
-	}
-	if err := s.Subscribe("question/answer", "self", s.handleQuestionAnswer); err != nil {
-		return err
-	}
+	s.Subscribe("", "commands", s.handleUnknown)
+	s.Subscribe("cmd/qr", "", s.handleQR)
+	s.Subscribe("cmd/increment", "", s.handleCounter)
+	s.Subscribe("cmd/decrement", "", s.handleCounter)
+	s.Subscribe("cmd/count", "", s.handleCounter)
+	s.Subscribe("cmd/ask", "", s.handleAsk)
+
+	s.Subscribe("cmd/date", "", s.handleDate)
+	s.Subscribe("cmd/unix", "", s.handleUnix)
 	return nil
+}
+
+func (s *Service) ReplyText(orig proto.Message, text string) error {
+	return s.Reply(orig, proto.Message{
+		Action: "ack/" + orig.Action,
+		Text:   text,
+	})
 }
 
 func (s *Service) handleQR(msg proto.Message) {

@@ -45,7 +45,7 @@ func (g *Geofence) SetBounds(b []float64) {
 }
 
 func (l Location) String() string {
-	ts := l.Timestamp.Format(time.RFC1123)
+	ts := l.Timestamp.Format(time.RFC3339)
 	if l.Address != "" {
 		return l.Address + " on " + ts
 	}
