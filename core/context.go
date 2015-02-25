@@ -24,7 +24,8 @@ func InjectTest(container interface{}) proto.Conn {
 		return DefaultLog
 	})
 	inj.Factory(func() *proto.Client {
-		c := proto.NewClient("testclient-"+proto.GenerateId(), a)
+		c := proto.NewClient("testclient-" + proto.GenerateId())
+		c.Connect(a)
 		c.SetLogger(DefaultLog)
 		return c
 	})

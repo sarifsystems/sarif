@@ -31,13 +31,32 @@ func getTopic(action, device string) string {
 	return strings.TrimLeft(t, "/")
 }
 
-func ActionParents(action string) []string {
-	parts := strings.Split(action, "/")
-	pre := ""
-	for i, part := range parts {
-		full := pre + part
-		parts[i] = full
-		pre = full + "/"
+func fromTopic(topic string) (string, string) {
+	action, device := "", ""
+	foundDev, foundAction := false, false
+	for _, p := range topicParts(topic) {
+		if p == "dev" && !foundDev {
+			foundDev = true
+			continue
+		}
+		if p == "action" && !foundAction {
+			foundAction = true
+			continue
+		}
+		if foundAction {
+			action += "/" + p
+		} else {
+			device += "/" + p
+		}
 	}
-	return parts
+	action = strings.TrimLeft(action, "/")
+	device = strings.TrimLeft(device, "/")
+	return action, device
+}
+
+func topicParts(action string) []string {
+	if action == "" {
+		return []string{}
+	}
+	return strings.Split(action, "/")
 }

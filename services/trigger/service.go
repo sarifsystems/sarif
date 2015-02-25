@@ -7,6 +7,7 @@ package trigger
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/jinzhu/gorm"
 	"github.com/xconstruct/stark/pkg/template"
@@ -89,11 +90,22 @@ func (s *Service) getRuleActions() ([]string, error) {
 	return actions, s.DB.Error
 }
 
+func actionParents(action string) []string {
+	parts := strings.Split(action, "/")
+	pre := ""
+	for i, part := range parts {
+		full := pre + part
+		parts[i] = full
+		pre = full + "/"
+	}
+	return parts
+}
+
 func (s *Service) handleTrigger(msg proto.Message) {
 	// Find all rules that are triggered by this action.
 	var rules []*RuleEntity
 	db := s.DB
-	for _, a := range proto.ActionParents(msg.Action) {
+	for _, a := range actionParents(msg.Action) {
 		db = db.Or("action = ?", a)
 	}
 	if err := db.Find(&rules).Error; err != nil {

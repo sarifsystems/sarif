@@ -143,7 +143,8 @@ func parseAuthorizationHeader(h string) string {
 func (s *Server) getApiClientByName(name string) *proto.Client {
 	client, ok := s.apiClients[name]
 	if !ok {
-		client = proto.NewClient(name, s.Broker.NewLocalConn())
+		client = proto.NewClient(name)
+		client.Connect(s.Broker.NewLocalConn())
 		s.apiClients[name] = client
 	}
 	return client

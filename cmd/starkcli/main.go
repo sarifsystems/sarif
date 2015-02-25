@@ -42,11 +42,11 @@ func main() {
 	app := core.NewApp("stark", "client")
 	app.Init()
 	defer app.Close()
-	conn := app.Dial()
 
 	// Connect to network.
 	name := "starkcli-" + proto.GenerateId()
-	client := proto.NewClient(name, conn)
+	client := proto.NewClient(name)
+	client.Connect(app.Dial())
 
 	// Subscribe to all replies and print them to stdout
 	client.Subscribe("", "self", func(msg proto.Message) {

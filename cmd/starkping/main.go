@@ -25,16 +25,14 @@ func main() {
 	}
 	fmt.Println("connecting to", addr)
 
-	// Dial into the stark network.
-	conn, err := proto.Dial(&proto.NetConfig{
+	// Setup our client.
+	client := proto.NewClient("starkping")
+	err := client.Dial(&proto.NetConfig{
 		Address: addr,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Setup our client.
-	client := proto.NewClient("starkping", conn)
 	pings := make(map[string]time.Time)
 
 	// Subscribe to all acknowledgements to our pings

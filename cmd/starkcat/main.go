@@ -51,11 +51,11 @@ func main() {
 	app := core.NewApp("stark", "client")
 	app.Init()
 	defer app.Close()
-	conn := app.Dial()
 
 	// Connect to network.
 	name := "starkcat-" + proto.GenerateId()
-	client := proto.NewClient(name, conn)
+	client := proto.NewClient(name)
+	client.Connect(app.Dial())
 
 	received := make(chan bool, 10)
 

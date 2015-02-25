@@ -41,6 +41,12 @@ func (s *testService) NewLocalConn() Conn {
 }
 
 func (s *testService) Publish(msg Message) {
+	if msg.Version == "" {
+		msg.Version = VERSION
+	}
+	if msg.Source == "" {
+		msg.Source = s.Name
+	}
 	if err := s.Conn.Write(msg); err != nil {
 		s.T.Fatal(err)
 	}
@@ -54,22 +60,28 @@ func (s *testService) Fired() bool {
 	return len(s.Received) > 0
 }
 
-func TestActionParents(t *testing.T) {
-	a := ActionParents("some/action/with/sub")
-	t.Log(a)
-	if len(a) != 4 {
-		t.Fatal("expected 4 actions, not ", len(a))
+func TestFromTopic(t *testing.T) {
+	a, d := "with/action", "my/device"
+	a2, d2 := fromTopic(getTopic(a, d))
+	if a2 != a || d2 != d {
+		t.Errorf("expected %s|%s, got %s|%s", a, d, a2, d2)
 	}
-	if a[0] != "some" {
-		t.Error("expected some, not", a[0])
+
+	a, d = "with/action", ""
+	a2, d2 = fromTopic(getTopic(a, d))
+	if a2 != a || d2 != d {
+		t.Errorf("expected %s|%s, got %s|%s", a, d, a2, d2)
 	}
-	if a[1] != "some/action" {
-		t.Error("expected some/action, not", a[1])
+
+	a, d = "", "my/device"
+	a2, d2 = fromTopic(getTopic(a, d))
+	if a2 != a || d2 != d {
+		t.Errorf("expected %s|%s, got %s|%s", a, d, a2, d2)
 	}
-	if a[2] != "some/action/with" {
-		t.Error("expected some/action/with, not", a[2])
-	}
-	if a[3] != "some/action/with/sub" {
-		t.Error("expected some/action/with/sub, not", a[3])
+
+	a, d = "", ""
+	a2, d2 = fromTopic(getTopic(a, d))
+	if a2 != a || d2 != d {
+		t.Errorf("expected %s|%s, got %s|%s", a, d, a2, d2)
 	}
 }

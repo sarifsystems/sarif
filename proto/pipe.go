@@ -12,6 +12,7 @@ var (
 )
 
 type pipeConn struct {
+	name     string
 	other    *pipeConn
 	messages chan Message
 }
@@ -23,6 +24,10 @@ func NewPipe() (a, b Conn) {
 	bc.messages = make(chan Message, 10)
 	ac.other = bc
 	bc.other = ac
+
+	id := GenerateId()
+	ac.name = "Pipe-" + id + "-a"
+	bc.name = "Pipe-" + id + "-b"
 	return ac, bc
 }
 
@@ -51,4 +56,8 @@ func (t *pipeConn) Close() error {
 	t.other = nil
 	close(t.messages)
 	return o.Close()
+}
+
+func (t *pipeConn) String() string {
+	return t.name
 }

@@ -111,9 +111,9 @@ func (c *Client) listen() {
 }
 
 func (c *Client) newConversation(remote string) *conversation {
-	ep := c.Broker.NewLocalConn()
 	user := xmpp.RemoveResourceFromJid(remote)
-	client := proto.NewClient("xmpp/"+user, ep)
+	client := proto.NewClient("xmpp/" + user)
+	client.Connect(c.Broker.NewLocalConn())
 	cv := &conversation{
 		Remote: remote,
 		Proto:  client,

@@ -5,11 +5,11 @@
 
 package proto
 
-import "strings"
+import "io"
 
 // Broker dispatches messages to connections based on their subscriptions.
 type Broker struct {
-	conns    map[*brokerConn]struct{}
+	subs     *subTree
 	dups     []string
 	dupIndex int
 	Log      Logger
@@ -19,7 +19,7 @@ type Broker struct {
 // NewBroker returns a new broker that dispatches messages.
 func NewBroker() *Broker {
 	return &Broker{
-		make(map[*brokerConn]struct{}, 0),
+		newSubtree(),
 		make([]string, 128),
 		0,
 		defaultLog,
@@ -66,30 +66,23 @@ func (b *Broker) checkDuplicate(id string) bool {
 	return false
 }
 
+func (b *Broker) newConn(c Conn) *brokerConn {
+	return &brokerConn{
+		c,
+		b,
+		make(map[string]struct{}, 0),
+		make(chan error),
+	}
+}
+
 // ListenOnConn starts listening on the connection for incoming messages and
 // sends outgoing messages based on its subscriptions. The call blocks until
 // an error is received, for example when the connection is closed.
 func (b *Broker) ListenOnConn(conn Conn) error {
-	c := &brokerConn{
-		b,
-		make(map[string]struct{}, 0),
-		make(chan error),
-		conn,
-	}
-	b.conns[c] = struct{}{}
-
-	go func() {
-		for {
-			msg, err := conn.Read()
-			if err != nil {
-				c.errs <- err
-				return
-			}
-			c.publish(msg)
-		}
-	}()
+	c := b.newConn(conn)
+	go c.ListenLoop()
 	err := <-c.errs
-	conn.Close()
+	c.Close()
 	return err
 }
 
@@ -104,27 +97,37 @@ func (b *Broker) ListenOnBridge(conn Conn) error {
 		return err
 	}
 
-	c := &brokerConn{
-		b,
-		make(map[string]struct{}, 0),
-		make(chan error),
-		conn,
-	}
-	b.conns[c] = struct{}{}
-	c.publish(sub)
-
-	go func() {
-		for {
-			msg, err := conn.Read()
-			if err != nil {
-				c.errs <- err
-				return
-			}
-			c.publish(msg)
-		}
-	}()
+	c := b.newConn(conn)
+	c.Publish(sub)
+	go c.ListenLoop()
 	err := <-c.errs
-	conn.Close()
+	c.Close()
+	return err
+}
+
+// ListenOnGateway forms a client-server-relationship between two brokers by
+// transmitting all local messages to the gateway, but receiving only subscribed
+// messages in return.
+func (b *Broker) ListenOnGateway(conn Conn) error {
+	topics := b.subs.GetTopics("", []string{})
+	if len(topics) > 0 {
+		subs := make([]subscription, len(topics))
+		for i, t := range topics {
+			subs[i].Action, subs[i].Device = fromTopic(t)
+		}
+		sub := CreateMessage("proto/subs", subs)
+		sub.Source = "broker"
+		if err := conn.Write(sub); err != nil {
+			conn.Close()
+			return err
+		}
+	}
+
+	c := b.newConn(conn)
+	c.Subscribe("")
+	go c.ListenLoop()
+	err := <-c.errs
+	c.Close()
 	return err
 }
 
@@ -158,7 +161,7 @@ func (b *Broker) Listen(cfg *NetConfig) error {
 
 // Publish publishes a message to all client connections that are subscribed
 // to it.
-func (b *Broker) Publish(msg Message) {
+func (b *Broker) publish(msg Message) {
 	if b.checkDuplicate(msg.Id) {
 		if b.trace {
 			b.Log.Debugln("[broker] ignore duplicate:", msg)
@@ -172,73 +175,101 @@ func (b *Broker) Publish(msg Message) {
 	}
 
 	topic := getTopic(msg.Action, msg.Destination)
-	topic = "/" + strings.TrimLeft(topic, "/")
-	t := ""
-	for _, part := range strings.Split(topic, "/") {
-		t += part
-		for c := range b.conns {
-			if _, ok := c.subs[t]; ok {
-				go func(c *brokerConn) {
-					if err := c.conn.Write(msg); err != nil {
-						c.errs <- err
-					}
-				}(c)
-			}
-		}
-		if t != "" {
-			t += "/"
-		}
-	}
+	b.subs.Call(topicParts(topic), func(c Writer) {
+		go c.Write(msg)
+	})
+}
+
+func (b *Broker) PrintSubtree(w io.Writer) error {
+	return b.subs.Print(w, 0)
 }
 
 type brokerConn struct {
+	Conn
 	broker *Broker
 	subs   map[string]struct{}
 	errs   chan error
-	conn   Conn
 }
 
-func (c *brokerConn) subscribe(topic string) {
-	unsubs := make([]string, 0)
-	for sub := range c.subs {
-		// Already subscribed? Nothing to do.
-		if sub == "" || strings.HasPrefix(topic+"/", sub+"/") {
+func (c *brokerConn) Write(msg Message) error {
+	if err := c.Conn.Write(msg); err != nil {
+		c.errs <- err
+		return err
+	}
+	return nil
+}
+
+func (c *brokerConn) Read() (Message, error) {
+	msg, err := c.Conn.Read()
+	if err != nil {
+		c.errs <- err
+	}
+	return msg, err
+}
+
+func (c *brokerConn) Close() error {
+	c.broker.subs.Unsubscribe(nil, c)
+	return c.Conn.Close()
+}
+
+func (c *brokerConn) ListenLoop() {
+	for {
+		msg, err := c.Conn.Read()
+		if err != nil {
 			return
 		}
-		// Already subscribed to sub topic? Unsubscribe from it.
-		if topic == "" || strings.HasPrefix(sub+"/", topic+"/") {
-			unsubs = append(unsubs, sub)
-		}
+		c.Publish(msg)
 	}
-
-	for _, sub := range unsubs {
-		c.unsubscribe(sub)
-	}
-
-	c.subs[topic] = struct{}{}
 }
 
-func (c *brokerConn) unsubscribe(topic string) {
-	delete(c.subs, topic)
+func (c *brokerConn) Subscribe(topic string) {
+	c.broker.subs.Subscribe(topicParts(topic), c)
 }
 
-func (c *brokerConn) publish(msg Message) {
+func (c *brokerConn) Unsubscribe(topic string) {
+	c.broker.subs.Unsubscribe(topicParts(topic), c)
+}
+
+func (c *brokerConn) Publish(msg Message) {
 	switch {
 	case msg.IsAction("proto/sub"):
 		var sub subscription
 		if err := msg.DecodePayload(&sub); err == nil {
 			topic := getTopic(sub.Action, sub.Device)
-			c.subscribe(topic)
+			c.Subscribe(topic)
 		}
+	case msg.IsAction("proto/unsub"):
+		var sub subscription
+		if err := msg.DecodePayload(&sub); err == nil {
+			topic := getTopic(sub.Action, sub.Device)
+			c.Unsubscribe(topic)
+		}
+		return // TODO: unsub propagation
 	case msg.IsAction("proto/subs"):
 		var subs []subscription
 		if err := msg.DecodePayload(&subs); err == nil {
 			for _, sub := range subs {
 				topic := getTopic(sub.Action, sub.Device)
-				c.subscribe(topic)
+				c.Subscribe(topic)
 			}
 		}
+	case msg.IsAction("proto/unsubs"):
+		var subs []subscription
+		if err := msg.DecodePayload(&subs); err == nil {
+			for _, sub := range subs {
+				topic := getTopic(sub.Action, sub.Device)
+				c.Unsubscribe(topic)
+			}
+		}
+		return // TODO: unsub propagation
 	}
 
-	c.broker.Publish(msg)
+	c.broker.publish(msg)
+}
+
+func (c *brokerConn) String() string {
+	if v, ok := c.Conn.(stringer); ok {
+		return v.String()
+	}
+	return ""
 }

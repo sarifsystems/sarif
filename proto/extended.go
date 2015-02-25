@@ -6,9 +6,9 @@
 package proto
 
 type subscription struct {
-	Action  string  `json:"action,omitempty"`
-	Device  string  `json:"device,omitempty"`
-	Handler Handler `json:"-"`
+	Action  string        `json:"action,omitempty"`
+	Device  string        `json:"device,omitempty"`
+	Handler func(Message) `json:"-"`
 }
 
 func (s subscription) Matches(msg Message) bool {

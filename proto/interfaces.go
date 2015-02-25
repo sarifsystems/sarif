@@ -5,21 +5,21 @@
 
 package proto
 
-type Handler func(msg Message)
-type Publisher func(msg Message) error
+type Writer interface {
+	Write(msg Message) error
+}
+
+type Reader interface {
+	Read() (Message, error)
+}
 
 type Conn interface {
-	Read() (Message, error)
-	Write(msg Message) error
+	Reader
+	Writer
 	Close() error
 }
 
-type Service interface {
-	Handle(msg Message)
-	RegisterPublisher(p Publisher)
-}
-
-func TransmitTo(r, w Conn) error {
+func TransmitTo(r Reader, w Writer) error {
 	for {
 		msg, err := r.Read()
 		if err != nil {

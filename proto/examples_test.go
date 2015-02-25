@@ -21,19 +21,17 @@ func ExampleClient() {
 	go broker.Listen(&proto.NetConfig{
 		Address: "tcp://localhost:5698",
 	})
-	time.Sleep(time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
-	// Connect to broker
-	conn, err := proto.Dial(&proto.NetConfig{
+	// Setup client and listen for "testaction"
+	client := proto.NewClient("mytestdevice")
+	err := client.Dial(&proto.NetConfig{
 		Address: "tcp://localhost:5698",
 	})
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
-	// Setup client and listen for "testaction"
-	client := proto.NewClient("mytestdevice", conn)
 	client.Subscribe("testaction", "", func(msg proto.Message) {
 		fmt.Printf("received %q from %q\n", msg.Action, msg.Source)
 

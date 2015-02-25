@@ -10,14 +10,14 @@ import (
 	"io"
 )
 
-type ByteConn struct {
+type byteConn struct {
 	conn io.ReadWriteCloser
 	enc  *json.Encoder
 	dec  *json.Decoder
 }
 
 func NewByteConn(conn io.ReadWriteCloser) Conn {
-	t := &ByteConn{
+	t := &byteConn{
 		conn,
 		json.NewEncoder(conn),
 		json.NewDecoder(conn),
@@ -25,14 +25,14 @@ func NewByteConn(conn io.ReadWriteCloser) Conn {
 	return t
 }
 
-func (t *ByteConn) Write(msg Message) error {
+func (t *byteConn) Write(msg Message) error {
 	if err := msg.IsValid(); err != nil {
 		return err
 	}
 	return t.enc.Encode(msg)
 }
 
-func (t *ByteConn) Read() (Message, error) {
+func (t *byteConn) Read() (Message, error) {
 	var msg Message
 	if err := t.dec.Decode(&msg); err != nil {
 		return msg, err
@@ -40,6 +40,6 @@ func (t *ByteConn) Read() (Message, error) {
 	return msg, msg.IsValid()
 }
 
-func (t *ByteConn) Close() error {
+func (t *byteConn) Close() error {
 	return t.conn.Close()
 }

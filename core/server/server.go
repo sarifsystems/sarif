@@ -87,8 +87,8 @@ func (s *Server) SetupInjector(inj *core.Injector, name string) {
 			return s.Broker.NewLocalConn()
 		})
 		inj.Factory(func() *proto.Client {
-			conn := s.Broker.NewLocalConn()
-			c := proto.NewClient(name, conn)
+			c := proto.NewClient(name)
+			c.Connect(s.Broker.NewLocalConn())
 			c.SetLogger(s.Log)
 			return c
 		})

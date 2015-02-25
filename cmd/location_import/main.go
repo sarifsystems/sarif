@@ -32,11 +32,10 @@ func main() {
 		log.Fatal(err)
 	}
 
-	conn := app.Dial()
 	// Connect to network.
 	name := "location_import-" + proto.GenerateId()
-	client := proto.NewClient(name, conn)
-	client.Subscribe("", "self", func(msg proto.Message) {})
+	client := proto.NewClient(name)
+	client.Connect(app.Dial())
 
 	result, ok := <-client.Request(proto.CreateMessage("location/import", map[string]string{
 		"csv": string(body),

@@ -27,7 +27,8 @@ func TestClientSingle(t *testing.T) {
 	}
 
 	tc, other := NewPipe()
-	client := NewClient("test", other)
+	client := NewClient("test")
+	client.Connect(other)
 
 	fired := false
 	client.Subscribe("ping", "one", func(msg Message) {
@@ -52,8 +53,10 @@ func TestClientSingle(t *testing.T) {
 
 func TestClientRequest(t *testing.T) {
 	aconn, bconn := NewPipe()
-	a := NewClient("a", aconn)
-	b := NewClient("b", bconn)
+	a := NewClient("a")
+	b := NewClient("b")
+	a.Connect(bconn)
+	b.Connect(aconn)
 
 	a.Subscribe("hello_a", "", func(msg Message) {
 		a.Reply(msg, Message{
