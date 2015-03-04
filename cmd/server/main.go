@@ -27,6 +27,7 @@ import (
 	"github.com/xconstruct/stark/services/router"
 	"github.com/xconstruct/stark/services/scheduler"
 	"github.com/xconstruct/stark/services/store"
+	"github.com/xconstruct/stark/services/timeseries"
 	"github.com/xconstruct/stark/services/trigger"
 	"github.com/xconstruct/stark/services/web"
 	"github.com/xconstruct/stark/services/xmpp"
@@ -59,6 +60,7 @@ func main() {
 	app.RegisterModule(router.Module)
 	app.RegisterModule(scheduler.Module)
 	app.RegisterModule(store.Module)
+	app.RegisterModule(timeseries.Module)
 	app.RegisterModule(trigger.Module)
 	app.RegisterModule(web.Module)
 	app.RegisterModule(xmpp.Module)

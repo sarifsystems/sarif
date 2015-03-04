@@ -143,7 +143,7 @@ func parseAuthorizationHeader(h string) string {
 func (s *Server) getApiClientByName(name string) *proto.Client {
 	client, ok := s.apiClients[name]
 	if !ok {
-		client = proto.NewClient(name)
+		client = proto.NewClient("web/" + name)
 		client.Connect(s.Broker.NewLocalConn())
 		s.apiClients[name] = client
 	}
@@ -151,7 +151,6 @@ func (s *Server) getApiClientByName(name string) *proto.Client {
 }
 
 func (s *Server) checkAuthentication(req *http.Request) string {
-	fmt.Println(req)
 	// Get authorization token.
 	token := ""
 	if auth := req.Header.Get("Authorization"); auth != "" {

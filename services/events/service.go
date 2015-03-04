@@ -61,24 +61,12 @@ func (s *Service) Enable() error {
 			return err
 		}
 	}
-	if err := s.Subscribe("event/new", "", s.handleEventNew); err != nil {
-		return err
-	}
-	if err := s.Subscribe("event/last", "", s.handleEventLast); err != nil {
-		return err
-	}
-	if err := s.Subscribe("event/count", "", s.handleEventCount); err != nil {
-		return err
-	}
-	if err := s.Subscribe("event/list", "", s.handleEventList); err != nil {
-		return err
-	}
-	if err := s.Subscribe("event/sum/duration", "", s.handleEventSumDuration); err != nil {
-		return err
-	}
-	if err := s.Subscribe("event/record", "", s.handleEventRecord); err != nil {
-		return err
-	}
+	s.Subscribe("event/new", "", s.handleEventNew)
+	s.Subscribe("event/last", "", s.handleEventLast)
+	s.Subscribe("event/count", "", s.handleEventCount)
+	s.Subscribe("event/list", "", s.handleEventList)
+	s.Subscribe("event/sum/duration", "", s.handleEventSumDuration)
+	s.Subscribe("event/record", "", s.handleEventRecord)
 
 	var cfg Config
 	s.cfg.Get("events", &cfg)
