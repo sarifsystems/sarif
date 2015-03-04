@@ -6,6 +6,7 @@
 package scheduler
 
 import (
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -55,6 +56,7 @@ func (s *Scheduler) Enable() error {
 	if err := s.Subscribe("schedule", "", s.handle); err != nil {
 		return err
 	}
+	go s.simpleCron()
 	s.recalculateTimer()
 	return nil
 }
@@ -169,4 +171,14 @@ func (s *Scheduler) taskFinished() {
 	}
 	s.Publish(s.nextTask.Reply)
 	s.recalculateTimer()
+}
+
+func (s *Scheduler) simpleCron() {
+	for {
+		now := time.Now()
+		nextHour := now.Add(30 * time.Minute).Round(time.Hour)
+		time.Sleep(nextHour.Sub(now))
+		action := strings.ToLower(now.Format("/cron/15h/Mon/2d/1m"))
+		s.Publish(proto.CreateMessage(action, nil))
+	}
 }
