@@ -8,6 +8,7 @@ package core
 import (
 	"log"
 
+	"github.com/xconstruct/stark/pkg/inject"
 	"github.com/xconstruct/stark/proto"
 )
 
@@ -15,7 +16,7 @@ func InjectTest(container interface{}) proto.Conn {
 	orm := OpenDatabaseInMemory()
 	a, b := proto.NewPipe()
 
-	inj := NewInjector()
+	inj := inject.NewInjector()
 	inj.Instance(orm.DB)
 	inj.Instance(orm.Database())
 	inj.Instance(proto.Conn(a))

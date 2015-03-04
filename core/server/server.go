@@ -6,18 +6,29 @@
 package server
 
 import (
+	"time"
+
 	"github.com/xconstruct/stark/core"
+	"github.com/xconstruct/stark/pkg/inject"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
 
 type Server struct {
 	*core.App
+	ServerConfig Config
+
 	Broker    *proto.Broker
-	Database  *core.DB
 	Orm       *core.Orm
 	Modules   map[string]*services.Module
 	Instances map[string]interface{}
+}
+
+type Config struct {
+	Listen         []*proto.NetConfig
+	Bridges        []*proto.NetConfig
+	Gateways       []*proto.NetConfig
+	EnabledModules []string
 }
 
 func New(appName, moduleName string) *Server {
@@ -32,10 +43,12 @@ func New(appName, moduleName string) *Server {
 	}
 }
 
-func Init(appName, moduleName string) *Server {
-	s := New(appName, moduleName)
-	s.Init()
-	return s
+func (s *Server) Init() {
+	s.App.Init()
+	s.Must(s.InitDatabase())
+	s.Must(s.InitBroker())
+	s.Must(s.InitModules())
+	s.WriteConfig()
 }
 
 func (s *Server) InitDatabase() error {
@@ -58,7 +71,6 @@ func (s *Server) InitDatabase() error {
 		db.LogMode(true)
 	}
 	s.Orm = db
-	s.Database = db.Database()
 	return nil
 }
 
@@ -72,10 +84,59 @@ func (s *Server) InitBroker() error {
 	if s.Log.GetLevel() <= core.LogLevelTrace {
 		s.Broker.TraceMessages(true)
 	}
+
+	cfg := &s.ServerConfig
+	if _, ok := s.Config.Get("server", cfg); !ok {
+		if len(cfg.Listen) == 0 {
+			cfg.Listen = append(cfg.Listen, &proto.NetConfig{
+				Address: "tcp://localhost:23100",
+			})
+			s.Config.Set("server", cfg)
+		}
+	}
+
+	// Listen on connections
+	for _, cfg := range cfg.Listen {
+		go func(cfg *proto.NetConfig) {
+			s.Log.Infoln("[server] listening on", cfg.Address)
+			s.Must(s.Broker.Listen(cfg))
+		}(cfg)
+	}
+
+	// Setup bridges
+	for _, cfg := range cfg.Bridges {
+		go func(cfg *proto.NetConfig) {
+			for {
+				s.Log.Infoln("[server] bridging to ", cfg.Address)
+				conn, err := proto.Dial(cfg)
+				if err == nil {
+					err = s.Broker.ListenOnBridge(conn)
+				}
+				s.Log.Errorln("[server] bridge error:", err)
+				time.Sleep(5 * time.Second)
+			}
+		}(cfg)
+	}
+
+	// Setup gateways
+	for _, cfg := range cfg.Bridges {
+		go func(cfg *proto.NetConfig) {
+			for {
+				s.Log.Infoln("[server] gateway to ", cfg.Address)
+				conn, err := proto.Dial(cfg)
+				if err == nil {
+					err = s.Broker.ListenOnGateway(conn)
+				}
+				s.Log.Errorln("[server] gateway error:", err)
+				time.Sleep(5 * time.Second)
+			}
+		}(cfg)
+	}
+
 	return nil
 }
 
-func (s *Server) SetupInjector(inj *core.Injector, name string) {
+func (s *Server) SetupInjector(inj *inject.Injector, name string) {
 	s.App.SetupInjector(inj, name)
 	if s.Orm != nil {
 		inj.Instance(s.Orm.DB)
@@ -96,9 +157,18 @@ func (s *Server) SetupInjector(inj *core.Injector, name string) {
 }
 
 func (s *Server) Inject(name string, container interface{}) error {
-	inj := core.NewInjector()
+	inj := inject.NewInjector()
 	s.SetupInjector(inj, name)
 	return inj.Inject(container)
+}
+
+func (s *Server) InitModules() error {
+	for _, module := range s.ServerConfig.EnabledModules {
+		if err := s.EnableModule(module); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Server) EnableModule(name string) error {
@@ -112,7 +182,7 @@ func (s *Server) EnableModule(name string) error {
 		return err
 	}
 
-	inj := core.NewInjector()
+	inj := inject.NewInjector()
 	s.SetupInjector(inj, name)
 	i, err = inj.Create(m.NewInstance)
 	if err != nil {

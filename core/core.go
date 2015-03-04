@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/xconstruct/stark/pkg/inject"
 	"github.com/xconstruct/stark/proto"
 )
 
@@ -88,7 +89,7 @@ func (app *App) Must(err error) {
 	}
 }
 
-func (app *App) SetupInjector(inj *Injector, name string) {
+func (app *App) SetupInjector(inj *inject.Injector, name string) {
 	inj.Instance(app.Config)
 	inj.Instance(app.Log)
 	inj.Factory(func() proto.Logger {
@@ -97,7 +98,7 @@ func (app *App) SetupInjector(inj *Injector, name string) {
 }
 
 func (app *App) Inject(name string, container interface{}) error {
-	inj := NewInjector()
+	inj := inject.NewInjector()
 	app.SetupInjector(inj, name)
 	return inj.Inject(container)
 }

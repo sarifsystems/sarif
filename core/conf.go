@@ -36,13 +36,13 @@ func NewConfig(file string) *Config {
 	}
 }
 
-func (cfg *Config) Get(section string, v interface{}) error {
+func (cfg *Config) Get(section string, v interface{}) (error, bool) {
 	raw, ok := cfg.sections[section]
 	if !ok {
 		cfg.Set(section, v)
-		return nil
+		return nil, false
 	}
-	return json.Unmarshal(*raw, v)
+	return json.Unmarshal(*raw, v), true
 }
 
 func (cfg *Config) Exists(section string) bool {

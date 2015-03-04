@@ -10,11 +10,8 @@
 package main
 
 import (
-	"time"
-
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/core/server"
-	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services/commands"
 	"github.com/xconstruct/stark/services/events"
 	"github.com/xconstruct/stark/services/hostscan"
@@ -36,16 +33,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type Config struct {
-	Listen         []*proto.NetConfig
-	Bridges        []*proto.NetConfig
-	EnabledModules []string
-}
-
 func main() {
-	app := server.Init("stark", "server")
-	app.InitDatabase()
-	app.InitBroker()
+	app := server.New("stark", "server")
 	defer app.Close()
 
 	app.RegisterModule(commands.Module)
@@ -66,7 +55,7 @@ func main() {
 	app.RegisterModule(xmpp.Module)
 
 	// Default configuration
-	cfg := Config{
+	app.ServerConfig = server.Config{
 		EnabledModules: []string{
 			"commands",
 			"events",
@@ -80,44 +69,7 @@ func main() {
 			"web",
 		},
 	}
-	// Load configuration from file
-	app.Config.Get("server", &cfg)
 
-	if len(cfg.Listen) == 0 {
-		cfg.Listen = append(cfg.Listen, &proto.NetConfig{
-			Address: "tcp://localhost:23100",
-		})
-		app.Config.Set("server", &cfg)
-	}
-
-	// Listen on connections
-	for _, cfg := range cfg.Listen {
-		go func(cfg *proto.NetConfig) {
-			app.Log.Infoln("[server] listening on", cfg.Address)
-			app.Must(app.Broker.Listen(cfg))
-		}(cfg)
-	}
-
-	// Setup bridges
-	for _, cfg := range cfg.Bridges {
-		go func(cfg *proto.NetConfig) {
-			for {
-				app.Log.Infoln("[server] bridging to ", cfg.Address)
-				conn, err := proto.Dial(cfg)
-				if err == nil {
-					err = app.Broker.ListenOnBridge(conn)
-				}
-				app.Log.Errorln("[server] bridge error:", err)
-				time.Sleep(5 * time.Second)
-			}
-		}(cfg)
-	}
-
-	// Enable each module listed in the config
-	for _, module := range cfg.EnabledModules {
-		app.Must(app.EnableModule(module))
-	}
-
-	app.WriteConfig()
+	app.Init()
 	core.WaitUntilInterrupt()
 }
