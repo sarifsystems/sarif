@@ -3,24 +3,26 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-// A simple commandline client that publishes messages and listens for replies.
-// For use in bash scripts or similar. See usage below or via "starkcat -h".
 package main
 
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 )
 
-const Usage = `Usage: starkcat [OPTION]... [ACTION]...
+var (
+	waitNum = flag.Int("n", -1, "cat: wait for X replies before exiting (-1 for indefinitely)")
+	timeout = flag.Duration("t", 1*time.Second, "cat: wait for X duration before exiting (-1s for indefinitely)")
+)
+
+const usageCat = `Usage: tars [OPTION}... cat [ACTION]...
 Publish and subscribe to messages in the stark network.
 Accepts JSON-encoded messages on stdin and prints replies on stdout.
 
@@ -30,40 +32,20 @@ optionally in the format "action:device" (e.g. "ping", "ping:self",
 "ping:mydevice123").
 
     Example: Publish a message and wait 2 seconds for replies
-        echo '{"action":"ping"}' | starkcat
+        echo '{"action":"ping"}' | tars cat
 
     Example: Listen for the next global ping message
-        starkcat -n 1 -t -1s ping
-
-Options:
-
+        tars -n 1 -t -1s cat ping
 `
 
-var (
-	waitNum = flag.Int("n", -1, "wait for X replies before exiting (-1 for indefinitely)")
-	timeout = flag.Duration("t", 2*time.Second, "wait for X duration before exiting (-1s for indefinitely)")
-)
-
-func main() {
-	flag.Parse()
-
-	// Setup app and read config.
-	app := core.NewApp("stark", "client")
-	app.Init()
-	defer app.Close()
-
-	// Connect to network.
-	name := "starkcat-" + proto.GenerateId()
-	client := proto.NewClient(name)
-	client.Connect(app.Dial())
-
+func (app *App) Cat() {
 	received := make(chan bool, 10)
 
 	// Handle replies: print them as readable JSON.
 	handle := func(msg proto.Message) {
 		raw, err := json.MarshalIndent(msg, "", "    ")
 		app.Must(err)
-		fmt.Println(string(raw))
+		log.Println(string(raw))
 		*waitNum -= 1
 		if *waitNum == 0 {
 			received <- true
@@ -71,15 +53,18 @@ func main() {
 	}
 
 	// Subscribe to all topics we're interested in.
-	if flag.NArg() == 0 {
-		client.Subscribe("", "self", handle)
+	if flag.NArg() <= 1 {
+		app.Client.Subscribe("", "self", handle)
 	}
-	for _, action := range flag.Args() {
+	for i, action := range flag.Args() {
+		if i == 0 {
+			continue
+		}
 		parts := strings.Split(action, ":")
 		if len(parts) > 1 {
-			client.Subscribe(parts[0], parts[1], handle)
+			app.Client.Subscribe(parts[0], parts[1], handle)
 		} else {
-			client.Subscribe(parts[0], "", handle)
+			app.Client.Subscribe(parts[0], "", handle)
 		}
 	}
 
@@ -94,7 +79,7 @@ func main() {
 				}
 				app.Must(err)
 			}
-			app.Must(client.Publish(msg))
+			app.Must(app.Client.Publish(msg))
 		}
 	}()
 
@@ -114,10 +99,10 @@ OUTER:
 	for {
 		select {
 		case <-received:
-			app.Log.Infoln("All messages received, exiting ...")
+			app.Log.Debugln("All messages received, exiting ...")
 			break OUTER
 		case <-timer:
-			app.Log.Infof("Timeout, exiting ...")
+			app.Log.Debugln("Timeout, exiting ...")
 			break OUTER
 		}
 	}

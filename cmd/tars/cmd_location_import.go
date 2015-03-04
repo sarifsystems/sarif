@@ -7,37 +7,20 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
-	"os"
 
-	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 )
 
-func main() {
-	flag.Parse()
-	app := core.NewApp("stark", "client")
-	app.Init()
-
-	if flag.NArg() == 0 {
-		fmt.Println("expected csv file to import as argument")
-		os.Exit(1)
-	}
-
+func (app *App) LocationImport() {
 	fname := flag.Arg(0)
 	body, err := ioutil.ReadFile(fname)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Connect to network.
-	name := "location_import-" + proto.GenerateId()
-	client := proto.NewClient(name)
-	client.Connect(app.Dial())
-
-	result, ok := <-client.Request(proto.CreateMessage("location/import", map[string]string{
+	result, ok := <-app.Client.Request(proto.CreateMessage("location/import", map[string]string{
 		"csv": string(body),
 	}))
 	if !ok {
@@ -46,5 +29,5 @@ func main() {
 	if result.IsAction("err") {
 		log.Fatal(result.Text)
 	}
-	fmt.Println(result.Text)
+	log.Println(result.Text)
 }
