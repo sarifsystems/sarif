@@ -23,7 +23,7 @@ func main() {
 	flag.Parse()
 
 	app := New()
-	app.Main()
+	app.Run()
 }
 
 type App struct {
@@ -57,7 +57,8 @@ func New() *App {
 	return app
 }
 
-func (app *App) Main() {
+func (app *App) Run() {
+	defer app.Close()
 	cmd := "interactive"
 	if flag.NArg() > 0 {
 		cmd = flag.Arg(0)

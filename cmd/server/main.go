@@ -10,7 +10,6 @@
 package main
 
 import (
-	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/core/server"
 	"github.com/xconstruct/stark/services/commands"
 	"github.com/xconstruct/stark/services/events"
@@ -34,28 +33,28 @@ import (
 )
 
 func main() {
-	app := server.New("stark", "server")
-	defer app.Close()
+	srv := server.New("stark", "server")
+	defer srv.Close()
 
-	app.RegisterModule(commands.Module)
-	app.RegisterModule(events.Module)
-	app.RegisterModule(hostscan.Module)
-	app.RegisterModule(know.Module)
-	app.RegisterModule(lastfm.Module)
-	app.RegisterModule(location.Module)
-	app.RegisterModule(luascripts.Module)
-	app.RegisterModule(mood.Module)
-	app.RegisterModule(natural.Module)
-	app.RegisterModule(router.Module)
-	app.RegisterModule(scheduler.Module)
-	app.RegisterModule(store.Module)
-	app.RegisterModule(timeseries.Module)
-	app.RegisterModule(trigger.Module)
-	app.RegisterModule(web.Module)
-	app.RegisterModule(xmpp.Module)
+	srv.RegisterModule(commands.Module)
+	srv.RegisterModule(events.Module)
+	srv.RegisterModule(hostscan.Module)
+	srv.RegisterModule(know.Module)
+	srv.RegisterModule(lastfm.Module)
+	srv.RegisterModule(location.Module)
+	srv.RegisterModule(luascripts.Module)
+	srv.RegisterModule(mood.Module)
+	srv.RegisterModule(natural.Module)
+	srv.RegisterModule(router.Module)
+	srv.RegisterModule(scheduler.Module)
+	srv.RegisterModule(store.Module)
+	srv.RegisterModule(timeseries.Module)
+	srv.RegisterModule(trigger.Module)
+	srv.RegisterModule(web.Module)
+	srv.RegisterModule(xmpp.Module)
 
 	// Default configuration
-	app.ServerConfig = server.Config{
+	srv.ServerConfig = server.Config{
 		EnabledModules: []string{
 			"commands",
 			"events",
@@ -65,11 +64,11 @@ func main() {
 			"natural",
 			"scheduler",
 			"store",
+			"timeseries",
 			"trigger",
 			"web",
 		},
 	}
 
-	app.Init()
-	core.WaitUntilInterrupt()
+	srv.Run()
 }

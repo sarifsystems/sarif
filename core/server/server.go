@@ -51,6 +51,20 @@ func (s *Server) Init() {
 	s.WriteConfig()
 }
 
+func (s *Server) Close() {
+	for _, module := range s.ServerConfig.EnabledModules {
+		s.DisableModule(module)
+	}
+
+	s.App.Close()
+}
+
+func (s *Server) Run() {
+	s.Init()
+	core.WaitUntilInterrupt()
+	defer s.Close()
+}
+
 func (s *Server) InitDatabase() error {
 	if s.Orm != nil {
 		return nil
