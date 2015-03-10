@@ -22,8 +22,9 @@ import (
 	"github.com/xconstruct/stark/services/natural"
 	"github.com/xconstruct/stark/services/router"
 	"github.com/xconstruct/stark/services/scheduler"
+	"github.com/xconstruct/stark/services/statenet"
+	"github.com/xconstruct/stark/services/states"
 	"github.com/xconstruct/stark/services/store"
-	"github.com/xconstruct/stark/services/timeseries"
 	"github.com/xconstruct/stark/services/trigger"
 	"github.com/xconstruct/stark/services/web"
 	"github.com/xconstruct/stark/services/xmpp"
@@ -47,8 +48,9 @@ func main() {
 	srv.RegisterModule(natural.Module)
 	srv.RegisterModule(router.Module)
 	srv.RegisterModule(scheduler.Module)
+	srv.RegisterModule(states.Module)
+	srv.RegisterModule(statenet.Module)
 	srv.RegisterModule(store.Module)
-	srv.RegisterModule(timeseries.Module)
 	srv.RegisterModule(trigger.Module)
 	srv.RegisterModule(web.Module)
 	srv.RegisterModule(xmpp.Module)
@@ -63,8 +65,8 @@ func main() {
 			"mood",
 			"natural",
 			"scheduler",
+			"states",
 			"store",
-			"timeseries",
 			"trigger",
 			"web",
 		},
