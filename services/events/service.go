@@ -8,6 +8,8 @@ package events
 import (
 	"errors"
 	"fmt"
+	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -57,7 +59,10 @@ func (s *Service) Enable() error {
 		return err
 	}
 	if createIndizes {
-		if err := s.DB.Model(&Event{}).AddIndex("timestamp", "timestamp", "subject", "verb", "verb", "object", "status").Error; err != nil {
+		if err := s.DB.Model(&Event{}).AddIndex("timestamp", "timestamp", "action").Error; err != nil {
+			return err
+		}
+		if err := s.DB.Model(&Event{}).AddIndex("action", "action", "timestamp").Error; err != nil {
 			return err
 		}
 	}
@@ -67,12 +72,13 @@ func (s *Service) Enable() error {
 	s.Subscribe("event/list", "", s.handleEventList)
 	s.Subscribe("event/sum/duration", "", s.handleEventSumDuration)
 	s.Subscribe("event/record", "", s.handleEventRecord)
+	s.Subscribe("event/aggregate", "", s.handleEventAggregate)
 
 	var cfg Config
 	s.cfg.Get("events", &cfg)
 	for action, enabled := range cfg.RecordedActions {
 		if enabled {
-			if err := s.Subscribe(action, "", s.handleRecordMessage); err != nil {
+			if err := s.Subscribe(action, "", s.handleEventNew); err != nil {
 				return err
 			}
 		}
@@ -80,48 +86,27 @@ func (s *Service) Enable() error {
 	return nil
 }
 
-func (s *Service) Disable() error { return nil }
-
 var MessageEventNotFound = proto.Message{
 	Action: "event/notfound",
 	Text:   "No event found.",
 }
 
-func fixEvent(e *Event) {
-	if e.Subject == "i" || e.Subject == "I" {
-		e.Subject = "user"
-	}
-}
-
-func (s *Service) handleEventNew(msg proto.Message) {
-	var e Event
-	if err := msg.DecodePayload(&e); err != nil {
-		s.ReplyBadRequest(msg, err)
-		return
-	}
-	fixEvent(&e)
-	if e.Text == "" {
-		e.Text = msg.Text
-	}
-	if e.Timestamp.IsZero() {
-		e.Timestamp = time.Now()
+func parseDataFromAction(action string) (s string, v float64, ok bool) {
+	v = 1
+	action = strings.TrimLeft(strings.TrimPrefix(action, "timeseries/record"), "/")
+	if action == "" {
+		return "", v, false
 	}
 
-	s.Log.Infoln("[events] new event:", e)
-
-	if err := s.DB.Save(&e).Error; err != nil {
-		s.ReplyInternalError(msg, err)
-		return
+	parts := strings.Split(action, "/")
+	if len(parts) == 1 {
+		return parts[0], v, true
 	}
-
-	reply := proto.Message{Action: "event/created"}
-	if err := reply.EncodePayload(e); err != nil {
-		s.ReplyInternalError(msg, err)
-		return
+	var err error
+	if v, err = strconv.ParseFloat(parts[len(parts)-1], 64); err == nil {
+		parts = parts[0 : len(parts)-1]
 	}
-	reply.Text = "New event: " + e.String()
-
-	s.Reply(msg, reply)
+	return strings.Join(parts, "/"), v, true
 }
 
 type EventFilter struct {
@@ -132,6 +117,10 @@ type EventFilter struct {
 
 func applyFilter(f EventFilter) func(*gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
+		if f.Event.Action != "" {
+			db = db.Where("(action = ? OR action LIKE ?)", f.Event.Action, f.Event.Action+"/%")
+			f.Event.Action = ""
+		}
 		db = db.Where(&f.Event)
 		if !f.After.IsZero() {
 			db = db.Where("timestamp > ?", f.After)
@@ -149,7 +138,6 @@ func (s *Service) handleEventLast(msg proto.Message) {
 		s.ReplyBadRequest(msg, err)
 		return
 	}
-	fixEvent(&filter.Event)
 
 	s.Log.Infoln("[events] get last by filter:", filter)
 	var last Event
@@ -173,13 +161,25 @@ func (s *Service) handleEventLast(msg proto.Message) {
 	s.Reply(msg, reply)
 }
 
-type countPayload struct {
-	Count  int   `json:"count"`
-	Filter Event `json:"filter"`
+type aggPayload struct {
+	Type   string      `json:"type,omitempty"`
+	Filter EventFilter `json:"filter,omitempty"`
+	Events []*Event    `json:"events,omitempty"`
+	Value  float64     `json:"value"`
 }
 
-func (pl countPayload) Text() string {
-	return fmt.Sprintf("Found %d events.", pl.Count)
+func (p aggPayload) Text() string {
+	switch p.Type {
+	case "count":
+		return fmt.Sprintf("Found %g events.", p.Value)
+	case "list":
+		s := fmt.Sprintf("Found %g events.\n", p.Value)
+		for _, e := range p.Events {
+			s += "- " + e.String() + "\n"
+		}
+		return strings.TrimRight(s, "\n")
+	}
+	return fmt.Sprintf("%s(%s) = %g", p.Type, p.Filter.Action, p.Value)
 }
 
 func (s *Service) handleEventCount(msg proto.Message) {
@@ -188,7 +188,6 @@ func (s *Service) handleEventCount(msg proto.Message) {
 		s.ReplyBadRequest(msg, err)
 		return
 	}
-	fixEvent(&filter.Event)
 
 	s.Log.Infoln("[events] get count by filter:", filter)
 	count := 0
@@ -198,20 +197,11 @@ func (s *Service) handleEventCount(msg proto.Message) {
 	}
 	s.Log.Infoln("[events] count", count)
 
-	s.Reply(msg, proto.CreateMessage("events/counted", &countPayload{count, filter.Event}))
-}
-
-type listPayload struct {
-	countPayload
-	Events []*Event `json:"events"`
-}
-
-func (pl listPayload) Text() string {
-	s := pl.countPayload.Text() + "\n"
-	for _, e := range pl.Events {
-		s += "- " + e.String() + "\n"
-	}
-	return strings.TrimRight(s, "\n")
+	s.Reply(msg, proto.CreateMessage("events/counted", &aggPayload{
+		Type:   "count",
+		Filter: filter,
+		Value:  float64(count),
+	}))
 }
 
 func (s *Service) handleEventList(msg proto.Message) {
@@ -220,7 +210,6 @@ func (s *Service) handleEventList(msg proto.Message) {
 		s.ReplyBadRequest(msg, err)
 		return
 	}
-	fixEvent(&filter.Event)
 
 	s.Log.Infoln("[events] list by filter:", filter)
 	var events []*Event
@@ -230,19 +219,17 @@ func (s *Service) handleEventList(msg proto.Message) {
 	}
 	s.Log.Infoln("[events] found", len(events))
 
-	s.Reply(msg, proto.CreateMessage("events/listed", &listPayload{
-		countPayload{len(events), filter.Event},
-		events,
+	s.Reply(msg, proto.CreateMessage("events/listed", &aggPayload{
+		Type:   "list",
+		Filter: filter,
+		Events: events,
+		Value:  float64(len(events)),
 	}))
 }
 
 type sumDurationPayload struct {
-	Duration time.Duration
-	Filter   Event
-}
-
-func (pl sumDurationPayload) Text() string {
-	return fmt.Sprintf("The total duration is %s.", pl.Duration)
+	Durations map[string]float64 `json:"durations,omitempty"`
+	Filter    Event              `json:"filter,omitempty"`
 }
 
 func (s *Service) handleEventSumDuration(msg proto.Message) {
@@ -251,7 +238,6 @@ func (s *Service) handleEventSumDuration(msg proto.Message) {
 		s.ReplyBadRequest(msg, err)
 		return
 	}
-	fixEvent(&filter.Event)
 
 	s.Log.Infoln("[events] get sum by filter:", filter)
 	var events []*Event
@@ -264,34 +250,48 @@ func (s *Service) handleEventSumDuration(msg proto.Message) {
 		filter.Before = time.Now()
 	}
 
-	var d time.Duration
+	d := make(map[string]float64)
+	fmt.Println(events)
 	if len(events) > 0 {
 		start := filter.After
+		last := "unknown"
 		for _, e := range events {
-			switch e.Status {
-			case StatusStarted:
-				start = e.Timestamp
-			case StatusEnded:
+			action := e.Action
+			if action == "" {
+				action = "unknown"
+			}
+			if last != action {
 				if !start.IsZero() {
-					d += e.Timestamp.Sub(start)
-					start = time.Time{}
+					d[last] += e.Timestamp.Sub(start).Seconds()
 				}
+				last = action
+				start = e.Timestamp
 			}
 		}
 
 		if !start.IsZero() {
-			d += filter.Before.Sub(start)
+			d[last] += filter.Before.Sub(start).Seconds()
 		}
 	}
 
 	s.Reply(msg, proto.CreateMessage("events/summarized/duration", &sumDurationPayload{d, filter.Event}))
 }
 
-func (s *Service) handleRecordMessage(msg proto.Message) {
+func (s *Service) handleEventNew(msg proto.Message) {
+	isTargeted := msg.IsAction("event/new")
+
 	var e Event
-	e.Action = msg.Action
+	e.Action = strings.TrimPrefix(msg.Action, "event/new/")
 	e.Text = msg.Text
 	e.Timestamp = time.Now()
+	if s, v, ok := parseDataFromAction(e.Action); ok {
+		e.Action, e.Value = s, v
+	}
+	if err := msg.DecodePayload(&e); err != nil && isTargeted {
+		s.ReplyBadRequest(msg, err)
+		return
+	}
+
 	if err := msg.DecodePayload(&e.Meta); err != nil {
 		s.Log.Errorf("[events] internal error: %v, %v", msg, err)
 		return
@@ -301,6 +301,16 @@ func (s *Service) handleRecordMessage(msg proto.Message) {
 	if err := s.DB.Save(&e).Error; err != nil {
 		s.Log.Errorf("[events] internal error: %v, %v", msg, err)
 		return
+	}
+
+	if isTargeted {
+		reply := proto.Message{Action: "event/created"}
+		if err := reply.EncodePayload(e); err != nil {
+			s.ReplyInternalError(msg, err)
+			return
+		}
+		reply.Text = "New event: " + e.String()
+		s.Reply(msg, reply)
 	}
 }
 
@@ -327,9 +337,57 @@ func (s *Service) handleEventRecord(msg proto.Message) {
 	if enabled := cfg.RecordedActions[p.Action]; !enabled {
 		cfg.RecordedActions[p.Action] = true
 		s.cfg.Set("events", cfg)
-		s.Subscribe(p.Action, "", s.handleRecordMessage)
+		s.Subscribe(p.Action, "", s.handleEventNew)
 	}
 
 	s.Log.Infoln("[events] recording action:", p.Action)
 	s.Reply(msg, proto.CreateMessage("event/recording", p))
+}
+
+func (s *Service) handleEventAggregate(msg proto.Message) {
+	var filter EventFilter
+	if err := msg.DecodePayload(&filter); err != nil {
+		s.ReplyBadRequest(msg, err)
+		return
+	}
+
+	var events []*Event
+	if err := s.DB.Scopes(applyFilter(filter)).Order("timestamp asc").Find(&events).Error; err != nil {
+		s.ReplyInternalError(msg, err)
+		return
+	}
+
+	var v float64
+	typ := strings.TrimPrefix(msg.Action, "event/aggregate/")
+	switch typ {
+	case "sum":
+		for _, e := range events {
+			v += e.Value
+		}
+	case "min":
+		if len(events) > 0 {
+			v = events[0].Value
+			for _, e := range events {
+				v = math.Min(v, e.Value)
+			}
+		}
+	case "max":
+		if len(events) > 0 {
+			v = events[0].Value
+			for _, e := range events {
+				v = math.Max(v, e.Value)
+			}
+		}
+	case "avg":
+		for _, e := range events {
+			v += e.Value
+		}
+		v /= float64(len(events))
+	}
+
+	s.Reply(msg, proto.CreateMessage("event/aggregated/"+typ, &aggPayload{
+		Type:   typ,
+		Filter: filter,
+		Value:  v,
+	}))
 }

@@ -7,6 +7,7 @@ package events
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -21,18 +22,12 @@ type Event struct {
 	Id int64 `json:"-"`
 
 	Timestamp time.Time              `json:"timestamp,omitempty"`
+	Value     float64                `json:"value"`
 	Action    string                 `json:"action,omitempty"`
 	Source    string                 `json:"source,omitempty"`
 	Text      string                 `json:"text,omitempty"`
 	Meta      map[string]interface{} `json:"meta,omitempty" sql:"-" gorm:"column:meow"`
 	MetaRaw   []byte                 `json:"-" gorm:"column:meta"`
-
-	Subject     string `json:"subject,omitempty"`
-	SubjectType string `json:"subject_type,omitempty"`
-	Verb        string `json:"verb,omitempty"`
-	Object      string `json:"object,omitempty"`
-	ObjectType  string `json:"object_type,omitempty"`
-	Status      string `json:"status,omitempty"`
 }
 
 func (e *Event) BeforeSave() (err error) {
@@ -52,10 +47,7 @@ func (e *Event) AfterFind() (err error) {
 
 func (e Event) String() string {
 	if e.Text == "" {
-		e.Text = e.Subject + " " + e.Verb + " " + e.Object
-	}
-	if e.Text == "" {
-		e.Text = e.Action
+		e.Text = fmt.Sprintf("%s is %g", e.Action, e.Value)
 	}
 	return e.Timestamp.Format(time.RFC3339) + " - " + e.Text
 }

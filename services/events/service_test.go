@@ -31,10 +31,8 @@ func TestService(t *testing.T) {
 
 		st.It("should store a new event", func() {
 			st.When(proto.CreateMessage("event/new", map[string]interface{}{
-				"subject": "user",
-				"verb":    "drink",
-				"object":  "coffee",
-				"text":    "User drinks coffee.",
+				"action": "user/drink/coffee",
+				"text":   "User drinks coffee.",
 			}))
 
 			st.ExpectAction("event/created")
@@ -42,7 +40,7 @@ func TestService(t *testing.T) {
 
 		st.It("should return last event", func() {
 			st.When(proto.CreateMessage("event/last", map[string]interface{}{
-				"verb": "drink",
+				"action": "user/drink/coffee",
 			}))
 
 			st.Expect(func(msg proto.Message) {
@@ -51,7 +49,7 @@ func TestService(t *testing.T) {
 				}
 				got := Event{}
 				msg.DecodePayload(&got)
-				if got.Object != "coffee" {
+				if got.Text != "User drinks coffee." {
 					t.Error("did not find coffee")
 				}
 			})
@@ -60,50 +58,49 @@ func TestService(t *testing.T) {
 		st.It("should count events in a timeframe", func() {
 			// Create test events
 			st.When(proto.CreateMessage("event/new", map[string]interface{}{
-				"subject":   "user",
-				"verb":      "sleep",
-				"status":    "started",
+				"action":    "user/sleep/start",
 				"timestamp": time.Now().Add(-100 * time.Minute),
 			}))
 			st.ExpectAction("event/created")
 			st.When(proto.CreateMessage("event/new", map[string]interface{}{
-				"subject":   "user",
-				"verb":      "sleep",
-				"status":    "ended",
+				"action":    "user/sleep/end",
 				"timestamp": time.Now().Add(-10 * time.Minute),
 			}))
 			st.ExpectAction("event/created")
 			st.When(proto.CreateMessage("event/new", map[string]interface{}{
-				"subject":   "user",
-				"verb":      "sleep",
-				"status":    "started",
+				"action":    "user/sleep/start",
 				"timestamp": time.Now().AddDate(0, 0, -5),
 			}))
 			st.ExpectAction("event/created")
 
 			// Count events
 			st.When(proto.CreateMessage("event/count", map[string]interface{}{
-				"verb":  "sleep",
-				"after": time.Now().AddDate(0, 0, -3),
+				"action": "user/sleep",
+				"after":  time.Now().AddDate(0, 0, -3),
 			}))
 			st.Expect(func(msg proto.Message) {
-				count := countPayload{}
+				count := aggPayload{}
 				msg.DecodePayload(&count)
-				if count.Count != 2 {
-					t.Error("Wrong count: ", count.Count)
+				if count.Value != 2 {
+					t.Error("Wrong count: ", count.Value)
 				}
 			})
 
 			// Summarize total duration
 			st.When(proto.CreateMessage("event/sum/duration", map[string]interface{}{
-				"verb":  "sleep",
-				"after": time.Now().AddDate(0, 0, -3),
+				"action": "user/sleep",
+				"after":  time.Now().AddDate(0, 0, -3),
 			}))
 			st.Expect(func(msg proto.Message) {
 				dur := sumDurationPayload{}
 				msg.DecodePayload(&dur)
-				if dur.Duration < 89*time.Minute || dur.Duration > 91*time.Minute {
-					t.Error("Wrong duration: ", dur.Duration)
+				d, ok := dur.Durations["user/sleep/start"]
+				if !ok {
+					t.Log(dur)
+					t.Fatal("expected duration for 'start'")
+				}
+				if d < 89*time.Minute || d > 91*time.Minute {
+					t.Error("Wrong duration: ", d)
 				}
 			})
 		})
