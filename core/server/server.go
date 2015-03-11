@@ -133,7 +133,7 @@ func (s *Server) InitBroker() error {
 	}
 
 	// Setup gateways
-	for _, cfg := range cfg.Bridges {
+	for _, cfg := range cfg.Gateways {
 		go func(cfg *proto.NetConfig) {
 			for {
 				s.Log.Infoln("[server] gateway to ", cfg.Address)

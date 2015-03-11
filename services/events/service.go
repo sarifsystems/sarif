@@ -293,8 +293,7 @@ func (s *Service) handleEventNew(msg proto.Message) {
 	}
 
 	if err := msg.DecodePayload(&e.Meta); err != nil {
-		s.Log.Errorf("[events] internal error: %v, %v", msg, err)
-		return
+		s.Log.Warnln("[events] meta decode error: %v, %v", msg, err)
 	}
 
 	s.Log.Infoln("[events] new event:", e)

@@ -5,9 +5,10 @@ local ExpSampling = {}
 ExpSampling.Times = {
 	{9, 10},
 
-	{11, 14},
-	{15, 18},
-	{19, 22},
+	{11, 13},
+	{14, 16},
+	{17, 19},
+	{20, 22},
 
 	{23, 0},
 }
@@ -32,7 +33,13 @@ function ExpSampling:askSimple(msg, question, reply_action)
 end
 
 function ExpSampling:startAsking(msg)
-	self:askSimple(msg, "How happy do you feel?", "xp/happiness")
+	local facts = stark.request{action = "cmd/catfacts"}
+	if facts then
+		facts = "\nHere's a cat fact: " .. facts.text
+	end
+	stark.reply(msg, {action = "xp/done", text = "Thanks!" .. (facts or " ")})
+
+	--self:askSimple(msg, "How happy do you feel?", "xp/happiness")
 end
 
 function ExpSampling:recordHappiness(msg)
@@ -42,10 +49,15 @@ function ExpSampling:recordHappiness(msg)
 end
 
 function ExpSampling:recordRelaxation(msg)
-	self:askSimple(msg, "What are you doing?", "xp/activity")
+	self:askSimple(msg, "How motivated are you?", "xp/motivation")
 
 	stark.publish{action = "mood/relaxation/" .. msg.text}
+end
 
+function ExpSampling:recordMotivation(msg)
+	self:askSimple(msg, "What are you doing?", "xp/activity")
+
+	stark.publish{action = "mood/motivation/" .. msg.text}
 end
 
 function ExpSampling:recordActivity(msg)
@@ -74,6 +86,7 @@ stark.subscribe("xp/start",  "", function(msg) ExpSampling:startAsking() end)
 stark.subscribe("xp/ask", "", function(msg) ExpSampling:startAsking(msg) end)
 stark.subscribe("xp/happiness", "", function(msg) ExpSampling:recordHappiness(msg) end)
 stark.subscribe("xp/relaxation",  "", function(msg) ExpSampling:recordRelaxation(msg) end)
+stark.subscribe("xp/motivation",  "", function(msg) ExpSampling:recordMotivation(msg) end)
 stark.subscribe("xp/activity",  "", function(msg) ExpSampling:recordActivity(msg) end)
 
 stark.subscribe("cron/5h",  "", function(msg) ExpSampling:scheduleToday() end)

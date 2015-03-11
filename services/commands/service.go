@@ -6,8 +6,10 @@
 package commands
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/xconstruct/stark/pkg/schema"
@@ -46,6 +48,7 @@ func (s *Service) Enable() error {
 	s.Subscribe("cmd/decrement", "", s.handleCounter)
 	s.Subscribe("cmd/count", "", s.handleCounter)
 	s.Subscribe("cmd/ask", "", s.handleAsk)
+	s.Subscribe("cmd/catfacts", "", s.handleCatFacts)
 
 	s.Subscribe("cmd/date", "", s.handleDate)
 	s.Subscribe("cmd/unix", "", s.handleUnix)
@@ -184,4 +187,32 @@ func (s *Service) handleQuestionAnswer(msg proto.Message) {
 		Action: "err/question/unknown",
 		Text:   "I can't remember asking you a question.",
 	})
+}
+
+type CatFactsResponse struct {
+	Facts   []string `json:"facts"`
+	Success bool     `json:"success,string"`
+}
+
+func (r CatFactsResponse) String() string {
+	if len(r.Facts) > 0 {
+		return r.Facts[0]
+	}
+	return ""
+}
+
+func (s *Service) handleCatFacts(msg proto.Message) {
+	resp, err := http.Get("http://catfacts-api.appspot.com/api/facts")
+	if err != nil {
+		s.ReplyInternalError(msg, err)
+		return
+	}
+
+	var r CatFactsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+		s.ReplyInternalError(msg, err)
+		return
+	}
+
+	s.Reply(msg, proto.CreateMessage("catfacts", &r))
 }
