@@ -40,6 +40,7 @@ func NewService(deps *Dependencies) *Service {
 
 func (s *Service) Enable() error {
 	s.Subscribe("", "commands", s.handleUnknown)
+	s.Subscribe("question/answer", "commands", s.handleQuestionAnswer)
 	s.Subscribe("cmd/qr", "", s.handleQR)
 	s.Subscribe("cmd/increment", "", s.handleCounter)
 	s.Subscribe("cmd/decrement", "", s.handleCounter)
