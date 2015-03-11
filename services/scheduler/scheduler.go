@@ -6,6 +6,7 @@
 package scheduler
 
 import (
+	"math/rand"
 	"strings"
 	"time"
 
@@ -44,6 +45,7 @@ func NewService(deps *Dependencies) *Scheduler {
 }
 
 func (s *Scheduler) Enable() error {
+	rand.Seed(time.Now().UnixNano())
 	createIndizes := !s.DB.HasTable(&Task{})
 	if err := s.DB.AutoMigrate(&Task{}).Error; err != nil {
 		return err
@@ -62,9 +64,21 @@ func (s *Scheduler) Enable() error {
 }
 
 type ScheduleMessage struct {
-	Time     string `json:"time,omitempty"`
-	Duration string `json:"duration,omitempty"`
+	RandomBefore string `json:"random_before,omitempty"`
+	RandomAfter  string `json:"random_after,omitempty"`
+	Time         string `json:"time,omitempty"`
+	Duration     string `json:"duration,omitempty"`
 	Task
+}
+
+func futureTime(t time.Time) time.Time {
+	if t.IsZero() {
+		return t
+	}
+	if d := time.Now().Sub(t); d > 5*time.Minute && d < 24*time.Hour {
+		return t.Add(24 * time.Hour)
+	}
+	return t
 }
 
 func (s *Scheduler) handle(msg proto.Message) {
@@ -79,15 +93,20 @@ func (s *Scheduler) handle(msg proto.Message) {
 		return
 	}
 
+	now := time.Now()
+	t.Task.Time = now
 	if t.Time != "" {
-		now := time.Now()
-		t.Task.Time = util.ParseTime(t.Time, now)
-		if d := now.Sub(t.Task.Time); d > 0 && d < 24*time.Hour {
-			t.Task.Time = t.Task.Time.Add(24 * time.Hour)
-		}
+		t.Task.Time = futureTime(util.ParseTime(t.Time, now))
 	}
-	if t.Task.Time.IsZero() {
-		t.Task.Time = time.Now()
+	if t.RandomAfter != "" && t.RandomBefore != "" {
+		after := futureTime(util.ParseTime(t.RandomAfter, t.Task.Time))
+		before := futureTime(util.ParseTime(t.RandomBefore, t.Task.Time))
+		if before.Before(after) {
+			after, before = before, after
+		}
+		maxDur := int64(before.Sub(after))
+		ranDur := time.Duration(rand.Int63n(maxDur))
+		t.Task.Time = after.Add(ranDur)
 	}
 	if t.Duration != "" {
 		dur, err := util.ParseDuration(t.Duration)
