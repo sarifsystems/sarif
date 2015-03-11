@@ -7,6 +7,7 @@ package util
 
 import (
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -19,35 +20,30 @@ func FuzzyTime(t time.Time) string {
 	return t.Format("02 Jan 2006 at 15:04")
 }
 
-var timeFormats = []string{
+var datetimeFormats = []string{
 	time.RFC3339,
 	time.RFC1123,
+}
 
-	"2006-01-02T15:04:05Z07:00",
-	"2006-01-02 15:04",
+var dateFormats = []string{
 	"2006-01-02",
 
-	"02.01.2006 on 15:04:05",
-	"02.01.2006 on 15:04",
-	"02.01.2006 15:04:05",
-	"02.01.2006 15:04",
-	"02.01.06 on 15:04:05",
-	"02.01.06 on 15:04",
-	"02.01.06 15:04:05",
-	"02.01.06 15:04",
 	"02.01.2006",
 	"02.01.06",
 	"02.01.",
+	"2.1.2006",
+	"2.1.06",
+	"2.1.",
 
-	"2006/01/02 on 3:04:05 PM",
-	"2006/01/02 on 3:04 PM",
-	"2006/01/02 3:04:05 PM",
-	"2006/01/02 3:04 PM",
-	"01/02 on 3:04:05 PM",
-	"01/02 on 3:04 PM",
-	"01/02 3:04:05 PM",
-	"01/02 3:04 PM",
+	"01/02/2006",
+	"01/02/06",
+	"01/02",
+	"1/2/2006",
+	"1/2/06",
+	"1/2",
+}
 
+var timeFormats = []string{
 	"15:04:05",
 	"15:04",
 	"3:04:05 PM",
@@ -55,32 +51,42 @@ var timeFormats = []string{
 	"3 PM",
 }
 
-func ParseTime(str string, rel time.Time) time.Time {
-	var t time.Time
-	for _, f := range timeFormats {
-		var err error
-		t, err = time.ParseInLocation(f, str, rel.Location())
+func tryAll(str string, rel time.Time, formats []string) (time.Time, bool) {
+	for _, f := range formats {
+		t, err := time.ParseInLocation(f, str, rel.Location())
 		if err == nil {
-			break
+			return t, true
 		}
+	}
+	return rel, false
+}
+
+func ParseTime(str string, rel time.Time) time.Time {
+	if t, ok := tryAll(str, rel, datetimeFormats); ok {
+		return t
 	}
 
-	if !t.IsZero() {
-		if t.Year() == 0 {
-			y, mo, d := rel.Date()
-			if t.YearDay() != 1 {
-				_, mo, d = t.Date()
-			}
-			h, m, s := t.Clock()
-			t = time.Date(y, mo, d, h, m, s, 0, rel.Location())
-		}
-		if h, m, s := t.Clock(); h == 0 && m == 0 && s == 0 {
-			y, mo, d := t.Date()
-			h, m, s := rel.Clock()
-			t = time.Date(y, mo, d, h, m, s, 0, rel.Location())
-		}
+	var dt, tt time.Time
+	var dok, tok bool
+	if strings.Index(str, " ") > -1 {
+		parts := strings.SplitN(str, " ", 2)
+		dt, dok = tryAll(parts[0], rel, dateFormats)
+		tt, tok = tryAll(parts[1], rel, timeFormats)
 	}
-	return t
+	if !dok || !tok {
+		dt, dok = tryAll(str, rel, dateFormats)
+		tt, tok = tryAll(str, rel, timeFormats)
+	}
+	if !dok && !tok {
+		return time.Time{}
+	}
+
+	y, mo, d := dt.Date()
+	if y == 0 {
+		y, _, _ = rel.Date()
+	}
+	h, m, s := tt.Clock()
+	return time.Date(y, mo, d, h, m, s, 0, rel.Location())
 }
 
 func leadingInt(s string) (x int64, rem string, err error) {
