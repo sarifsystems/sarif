@@ -33,13 +33,7 @@ function ExpSampling:askSimple(msg, question, reply_action)
 end
 
 function ExpSampling:startAsking(msg)
-	local facts = stark.request{action = "cmd/catfacts"}
-	if facts then
-		facts = "\nHere's a cat fact: " .. facts.text
-	end
-	stark.reply(msg, {action = "xp/done", text = "Thanks!" .. (facts or " ")})
-
-	--self:askSimple(msg, "How happy do you feel?", "xp/happiness")
+	self:askSimple(msg, "How happy do you feel?", "xp/happiness")
 end
 
 function ExpSampling:recordHappiness(msg)
@@ -61,7 +55,12 @@ function ExpSampling:recordMotivation(msg)
 end
 
 function ExpSampling:recordActivity(msg)
-	stark.reply(msg, {action = "xp/done", text = "Thanks!"})
+	local facts = stark.request{action = "cmd/catfacts"}
+	if facts then
+		facts = "\nHere's a cat fact: " .. facts.text
+	end
+	stark.reply(msg, {action = "xp/done", text = "Thanks!" .. (facts or " ")})
+
 
 	stark.publish{action = "activity", text = msg.text}
 end
