@@ -88,4 +88,4 @@ stark.subscribe("xp/relaxation",  "", function(msg) ExpSampling:recordRelaxation
 stark.subscribe("xp/motivation",  "", function(msg) ExpSampling:recordMotivation(msg) end)
 stark.subscribe("xp/activity",  "", function(msg) ExpSampling:recordActivity(msg) end)
 
-stark.subscribe("cron/5h",  "", function(msg) ExpSampling:scheduleToday() end)
+stark.subscribe("cron/05h",  "", function(msg) ExpSampling:scheduleToday() end)

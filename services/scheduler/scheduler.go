@@ -197,7 +197,7 @@ func (s *Scheduler) simpleCron() {
 		now := time.Now()
 		nextHour := now.Add(30 * time.Minute).Round(time.Hour)
 		time.Sleep(nextHour.Sub(now))
-		action := strings.ToLower(time.Now().Add(5 * time.Minute).Format("/cron/15h/Mon/2d/1m"))
+		action := strings.ToLower(time.Now().Add(5 * time.Minute).Format("cron/15h/Mon/2d/1m"))
 		s.Publish(proto.CreateMessage(action, nil))
 	}
 }
