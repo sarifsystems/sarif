@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
@@ -27,7 +28,7 @@ type Config struct {
 }
 
 type Dependencies struct {
-	DB     *core.DB
+	DB     *gorm.DB
 	Config *core.Config
 	Log    proto.Logger
 	Client *proto.Client
@@ -44,7 +45,7 @@ type Service struct {
 func NewService(deps *Dependencies) *Service {
 	s := &Service{
 		Config{},
-		&sqlDatabase{deps.DB.Driver(), deps.DB.DB},
+		&sqlDatabase{deps.DB},
 		deps.Log,
 		deps.Client,
 		sync.WaitGroup{},
@@ -98,6 +99,9 @@ func (s *Service) ImportAll() error {
 		tracks := make([]Track, len(result.Tracks))
 		for i, track := range result.Tracks {
 			if track.NowPlaying {
+				continue
+			}
+			if track.Name == "" {
 				continue
 			}
 			tracks[i].Artist = track.Artist

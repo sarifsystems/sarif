@@ -6,10 +6,10 @@
 package lastfm
 
 import (
-	"database/sql"
 	"sort"
-	"strings"
 	"time"
+
+	"github.com/jinzhu/gorm"
 )
 
 type Track struct {
@@ -17,32 +17,11 @@ type Track struct {
 	Artist string
 	Album  string
 	Title  string
-	Time   time.Time
+	Time   time.Time `sql:"index"`
 }
 
-var schema = []string{
-	`CREATE TABLE IF NOT EXISTS lastfm_tracks (
-		id INT(10) NOT NULL AUTO_INCREMENT,
-		time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		artist VARCHAR(100) NOT NULL,
-		album VARCHAR(100) NOT NULL,
-		title VARCHAR(100) NOT NULL,
-		PRIMARY KEY (id),
-		INDEX time (time),
-		INDEX artist_album_title (artist, album, title)
-	) ENGINE=InnoDB DEFAULT CHARSET=utf8;`,
-}
-
-var schemaSqlite3 = []string{
-	`CREATE TABLE IF NOT EXISTS lastfm_tracks (
-		id INTEGER PRIMARY KEY,
-		time TIMESTAMP NOT NULL,
-		artist VARCHAR(100) NOT NULL,
-		album VARCHAR(100) NOT NULL,
-		title VARCHAR(100) NOT NULL
-	)`,
-	`CREATE INDEX IF NOT EXISTS time ON lastfm_tracks (time)`,
-	`CREATE INDEX IF NOT EXISTS artist_album_title ON lastfm_tracks (artist, album, title)`,
+func (Track) TableName() string {
+	return "lastfm_tracks"
 }
 
 type Database interface {
@@ -53,22 +32,18 @@ type Database interface {
 }
 
 type sqlDatabase struct {
-	Driver string
-	Db     *sql.DB
+	DB *gorm.DB
 }
 
 func (d *sqlDatabase) Setup() error {
-	var err error
-	s := schema
-	if d.Driver == "sqlite3" {
-		s = schemaSqlite3
+	createIndizes := d.DB.HasTable(&Track{})
+	if err := d.DB.AutoMigrate(&Track{}).Error; err != nil {
+		return err
 	}
-	for _, q := range s {
-		if _, err = d.Db.Exec(q); err != nil {
-			return err
-		}
+	if createIndizes {
+		return d.DB.Model(&Track{}).AddIndex("album_artist_title", "album", "artist", "title").Error
 	}
-	return err
+	return nil
 }
 
 type ByDate []Track
@@ -78,52 +53,20 @@ func (a ByDate) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByDate) Less(i, j int) bool { return a[i].Time.Before(a[j].Time) }
 
 func (d *sqlDatabase) StoreTracks(ts []Track) error {
-	stmt, err := d.Db.Prepare(`INSERT INTO lastfm_tracks (time, artist, album, title) VALUES (?, ?, ?, ?)`)
-	if err != nil {
-		return err
-	}
 	sort.Sort(ByDate(ts))
+	tx := d.DB.Begin()
 	for _, t := range ts {
-		if t.Title == "" {
-			continue
-		}
-		if _, err := stmt.Exec(t.Time, t.Artist, t.Album, t.Title); err != nil {
+		if err := tx.Save(&t).Error; err != nil {
+			tx.Rollback()
 			return err
 		}
 	}
+	tx.Commit()
 	return nil
 }
 
 func (d *sqlDatabase) GetLastTrack(filter Track) (Track, error) {
-	cond := make([]string, 0)
-	vars := make([]interface{}, 0)
-
-	if filter.Artist != "" {
-		cond = append(cond, "artist = ?")
-		vars = append(vars, filter.Artist)
-	}
-	if filter.Album != "" {
-		cond = append(cond, "album = ?")
-		vars = append(vars, filter.Album)
-	}
-	if filter.Title != "" {
-		cond = append(cond, "title = ?")
-		vars = append(vars, filter.Title)
-	}
-
-	conditions := strings.Join(cond, " AND ")
-	if conditions == "" {
-		conditions = "1"
-	}
-
-	row := d.Db.QueryRow(`
-		SELECT id, time, artist, album, title
-		FROM lastfm_tracks
-		WHERE `+conditions+`
-		ORDER BY time DESC
-		LIMIT 1`, vars...)
-
 	var t Track
-	err := row.Scan(&t.Id, &t.Time, &t.Artist, &t.Album, &t.Title)
+	err := d.DB.Where(&filter).Order("time DESC").First(&t).Error
 	return t, err
 }

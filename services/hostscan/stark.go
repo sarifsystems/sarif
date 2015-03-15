@@ -8,7 +8,7 @@ package hostscan
 import (
 	"time"
 
-	"github.com/xconstruct/stark/core"
+	"github.com/jinzhu/gorm"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -20,7 +20,7 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	DB     *core.DB
+	DB     *gorm.DB
 	Log    proto.Logger
 	Client *proto.Client
 }
@@ -32,16 +32,17 @@ type Service struct {
 }
 
 func NewService(deps *Dependencies) *Service {
-	SetupSchema(deps.DB.Driver(), deps.DB.DB)
-
 	return &Service{
-		New(deps.DB.DB),
+		New(deps.DB),
 		deps.Log,
 		deps.Client,
 	}
 }
 
 func (s *Service) Enable() error {
+	if err := s.scan.Setup(); err != nil {
+		return err
+	}
 	time.AfterFunc(5*time.Minute, s.scheduledUpdate)
 	if err := s.Subscribe("devices/force_update", "", s.HandleForceUpdate); err != nil {
 		return err

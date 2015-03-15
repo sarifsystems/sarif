@@ -66,6 +66,15 @@ func (c *Client) Connect(conn Conn) error {
 	return nil
 }
 
+func (c *Client) Disconnect() error {
+	if c.conn == nil {
+		return nil
+	}
+	err := c.conn.Close()
+	c.conn = nil
+	return err
+}
+
 func (c *Client) listen(conn Conn) error {
 	for {
 		msg, err := c.conn.Read()

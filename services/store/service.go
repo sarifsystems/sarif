@@ -10,7 +10,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/xconstruct/stark/core"
+	"github.com/jinzhu/gorm"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -22,7 +22,7 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	DB     *core.DB
+	DB     *gorm.DB
 	Log    proto.Logger
 	Client *proto.Client
 }
@@ -35,7 +35,7 @@ type Service struct {
 
 func NewService(deps *Dependencies) *Service {
 	return &Service{
-		Store:  &sqlStore{deps.DB.Driver(), deps.DB.DB},
+		Store:  &sqlStore{deps.DB},
 		Log:    deps.Log,
 		Client: deps.Client,
 	}

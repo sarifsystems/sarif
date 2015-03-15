@@ -12,8 +12,8 @@ import (
 )
 
 func TestStore(t *testing.T) {
-	ctx, _ := core.NewTestContext()
-	store := &sqlStore{ctx.Database.Driver(), ctx.Database.DB}
+	store := &sqlStore{}
+	core.InjectTest(store)
 	if err := store.Setup(); err != nil {
 		t.Fatal(err)
 	}
