@@ -5,10 +5,13 @@
 
 package lastfm
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func TestApiRecentTracks(t *testing.T) {
-	api := NewApi()
+	api := NewApi("")
 
 	tracks, err := api.UserGetRecentTracks("xconstruct", 1, 0)
 	if err != nil {
@@ -18,7 +21,7 @@ func TestApiRecentTracks(t *testing.T) {
 	if tracks.Page != 1 {
 		t.Error("expected page 1, not", tracks.Page)
 	}
-	if len(tracks.Tracks) != 50 {
+	if len(tracks.Tracks) != 49 {
 		t.Error("expected 50 tracks, not ", len(tracks.Tracks))
 	}
 
@@ -44,4 +47,25 @@ func TestApiRecentTracks(t *testing.T) {
 		t.Error(err)
 	}
 	t.Log("date:", first.Date, "parsed:", d)
+}
+
+func TestApiTags(t *testing.T) {
+	key := os.Getenv("LASTFM_API_KEY")
+	if key == "" {
+		t.Skip("No LASTFM_API_KEY specified.")
+	}
+	api := NewApi(key)
+
+	r, err := api.ArtistGetTopTags("Subway to Sally")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	genre, broad := FindGenre(r.TopTags.Tags)
+	if v := "folk metal"; genre != v {
+		t.Errorf("expected genre %s, got %s", v, genre)
+	}
+	if v := "metal"; broad != v {
+		t.Errorf("expected broad genre %s, got %s", v, broad)
+	}
 }

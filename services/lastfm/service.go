@@ -6,8 +6,9 @@
 package lastfm
 
 import (
-	"database/sql"
 	"errors"
+	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -24,7 +25,8 @@ var Module = &services.Module{
 }
 
 type Config struct {
-	User string
+	User   string
+	ApiKey string
 }
 
 type Dependencies struct {
@@ -36,27 +38,37 @@ type Dependencies struct {
 
 type Service struct {
 	cfg Config
-	DB  Database
+	DB  *gorm.DB
 	Log proto.Logger
 	*proto.Client
-	importing sync.WaitGroup
+
+	importing  sync.WaitGroup
+	refreshing bool
 }
 
 func NewService(deps *Dependencies) *Service {
 	s := &Service{
 		Config{},
-		&sqlDatabase{deps.DB},
+		deps.DB,
 		deps.Log,
 		deps.Client,
+
 		sync.WaitGroup{},
+		false,
 	}
 	deps.Config.Get("lastfm", &s.cfg)
 	return s
 }
 
 func (s *Service) Enable() error {
-	if err := s.DB.Setup(); err != nil {
+	createIndizes := !s.DB.HasTable(&Track{})
+	if err := s.DB.AutoMigrate(&Track{}, &Artist{}).Error; err != nil {
 		return err
+	}
+	if createIndizes {
+		if err := s.DB.Model(&Track{}).AddIndex("album_artist_title", "album", "artist", "title").Error; err != nil {
+			return err
+		}
 	}
 
 	if s.cfg.User != "" {
@@ -68,6 +80,10 @@ func (s *Service) Enable() error {
 			}
 		}()
 	}
+
+	s.Subscribe("lastfm/force_import", "", func(proto.Message) { s.ImportAll() })
+	s.Subscribe("lastfm/tag", "", s.handleTag)
+	s.Subscribe("cmd/genre", "", s.handleTag)
 	return nil
 }
 
@@ -79,9 +95,10 @@ func (s *Service) ImportAll() error {
 	if s.cfg.User == "" {
 		return errors.New("No user specified in config!")
 	}
-	api := NewApi()
-	last, err := s.DB.GetLastTrack(Track{})
-	if err != nil && err != sql.ErrNoRows {
+	api := NewApi(s.cfg.ApiKey)
+	var last Track
+	err := s.DB.Order("time DESC").First(&last).Error
+	if err != nil && err != gorm.RecordNotFound {
 		return err
 	}
 
@@ -92,7 +109,7 @@ func (s *Service) ImportAll() error {
 			return err
 		}
 		if len(result.Tracks) == 0 {
-			return nil
+			break
 		}
 		s.Log.Infof("[lastfm] import page %d/%d", result.Page, result.TotalPages)
 
@@ -113,14 +130,110 @@ func (s *Service) ImportAll() error {
 			}
 		}
 
-		if err := s.DB.StoreTracks(tracks); err != nil {
+		if err := s.storeTracks(tracks); err != nil {
 			return err
 		}
 		page = result.Page - 1
 		if page == 0 {
-			return nil
+			break
 		}
 	}
 
+	go s.RefreshArtistInfo()
+
 	return nil
+}
+
+func (s *Service) storeTracks(ts []Track) error {
+	sort.Sort(ByDate(ts))
+	tx := s.DB.Begin()
+	for _, t := range ts {
+		if err := tx.Save(&t).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	tx.Commit()
+	return nil
+}
+
+func (s *Service) RefreshArtistInfo() {
+	if s.refreshing || s.cfg.ApiKey == "" {
+		return
+	}
+	defer func() {
+		s.refreshing = false
+	}()
+	s.refreshing = true
+
+	api := NewApi(s.cfg.ApiKey)
+	for {
+		var name string
+		err := s.DB.Raw(`
+			SELECT t.artist FROM lastfm_tracks t
+			LEFT JOIN lastfm_artists a ON a.name = t.artist 
+			WHERE a.name IS NULL
+			ORDER BY t.time DESC
+			LIMIT 1
+		`).Row().Scan(&name)
+		if err != nil {
+			if err != gorm.RecordNotFound {
+				s.Log.Errorln("[lastfm] refresh artist err:", err)
+			}
+			return
+		}
+		if name == "" {
+			return
+		}
+
+		tags, err := api.ArtistGetTopTags(name)
+		if err != nil {
+			s.Log.Errorln("[lastfm] refresh artist api err:", name, err)
+			return
+		}
+		genre, broad := FindGenre(tags.TopTags.Tags)
+		artist := &Artist{
+			Name:       name,
+			Genre:      genre,
+			BroadGenre: broad,
+		}
+		if err = s.DB.Save(artist).Error; err != nil {
+			s.Log.Errorln("[lastfm] refresh artist save err:", err)
+			return
+		}
+	}
+}
+
+type tagPayload struct {
+	Artist     string   `json:"artist"`
+	Genre      string   `json:"genre"`
+	BroadGenre string   `json:"broad_genre"`
+	Tags       []string `json:"tags"`
+}
+
+func (p tagPayload) Text() string {
+	return fmt.Sprintf("%s is genre %s, %s.", p.Artist, p.Genre, p.BroadGenre)
+}
+
+func (s *Service) handleTag(msg proto.Message) {
+	var p tagPayload
+	p.Artist = msg.Text
+	if err := msg.DecodePayload(&p); err != nil {
+		s.ReplyBadRequest(msg, err)
+		return
+	}
+
+	api := NewApi(s.cfg.ApiKey)
+	tags, err := api.ArtistGetTopTags(p.Artist)
+	if err != nil {
+		s.ReplyInternalError(msg, err)
+		return
+	}
+
+	p.Artist = tags.TopTags.Attr.Artist
+	p.Genre, p.BroadGenre = FindGenre(tags.TopTags.Tags)
+	for _, t := range tags.TopTags.Tags {
+		p.Tags = append(p.Tags, t.Name)
+	}
+	s.Reply(msg, proto.CreateMessage("lastfm/tagged", p))
 }

@@ -6,7 +6,6 @@
 package lastfm
 
 import (
-	"sort"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -24,26 +23,19 @@ func (Track) TableName() string {
 	return "lastfm_tracks"
 }
 
-type Database interface {
-	Setup() error
+type Artist struct {
+	Id         int64
+	Name       string `sql:"index"`
+	Genre      string
+	BroadGenre string
+}
 
-	StoreTracks(ts []Track) error
-	GetLastTrack(filter Track) (Track, error)
+func (Artist) TableName() string {
+	return "lastfm_artists"
 }
 
 type sqlDatabase struct {
 	DB *gorm.DB
-}
-
-func (d *sqlDatabase) Setup() error {
-	createIndizes := d.DB.HasTable(&Track{})
-	if err := d.DB.AutoMigrate(&Track{}).Error; err != nil {
-		return err
-	}
-	if createIndizes {
-		return d.DB.Model(&Track{}).AddIndex("album_artist_title", "album", "artist", "title").Error
-	}
-	return nil
 }
 
 type ByDate []Track
@@ -51,22 +43,3 @@ type ByDate []Track
 func (a ByDate) Len() int           { return len(a) }
 func (a ByDate) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByDate) Less(i, j int) bool { return a[i].Time.Before(a[j].Time) }
-
-func (d *sqlDatabase) StoreTracks(ts []Track) error {
-	sort.Sort(ByDate(ts))
-	tx := d.DB.Begin()
-	for _, t := range ts {
-		if err := tx.Save(&t).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
-	tx.Commit()
-	return nil
-}
-
-func (d *sqlDatabase) GetLastTrack(filter Track) (Track, error) {
-	var t Track
-	err := d.DB.Where(&filter).Order("time DESC").First(&t).Error
-	return t, err
-}
