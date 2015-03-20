@@ -15,7 +15,6 @@ import (
 
 func main() {
 	srv := server.New("stark", "kipp")
-	defer srv.Close()
 
 	srv.RegisterModule(dbus.Module)
 	srv.RegisterModule(mpd.Module)

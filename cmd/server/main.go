@@ -18,6 +18,7 @@ import (
 	"github.com/xconstruct/stark/services/lastfm"
 	"github.com/xconstruct/stark/services/location"
 	"github.com/xconstruct/stark/services/luascripts"
+	"github.com/xconstruct/stark/services/meals"
 	"github.com/xconstruct/stark/services/mood"
 	"github.com/xconstruct/stark/services/natural"
 	"github.com/xconstruct/stark/services/router"
@@ -35,7 +36,6 @@ import (
 
 func main() {
 	srv := server.New("stark", "server")
-	defer srv.Close()
 
 	srv.RegisterModule(commands.Module)
 	srv.RegisterModule(events.Module)
@@ -44,6 +44,7 @@ func main() {
 	srv.RegisterModule(lastfm.Module)
 	srv.RegisterModule(location.Module)
 	srv.RegisterModule(luascripts.Module)
+	srv.RegisterModule(meals.Module)
 	srv.RegisterModule(mood.Module)
 	srv.RegisterModule(natural.Module)
 	srv.RegisterModule(router.Module)
@@ -62,6 +63,7 @@ func main() {
 			"events",
 			"know",
 			"location",
+			"meals",
 			"mood",
 			"natural",
 			"scheduler",

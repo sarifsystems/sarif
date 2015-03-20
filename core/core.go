@@ -58,17 +58,16 @@ func (app *App) Init() {
 	app.WriteConfig()
 }
 
-func (app *App) initConfig() error {
-	path := *configPath
-	if path == "" {
-		path = GetDefaultDir(app.AppName) + "/" + app.ModuleName + ".json"
+func (app *App) initConfig() (err error) {
+	if *configPath == "" {
+		app.Config, err = FindConfig(app.AppName, app.ModuleName)
+	} else {
+		app.Config, err = OpenConfig(*configPath, true)
 	}
-	cfg, err := OpenConfig(path, true)
 	if err != nil {
 		return err
 	}
-	app.Log.Debugf("[core] reading config from '%s'", cfg.Path())
-	app.Config = cfg
+	app.Log.Debugf("[core] reading config from '%s'", app.Config.Path())
 	return nil
 }
 

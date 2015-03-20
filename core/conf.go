@@ -95,6 +95,10 @@ func (cfg *Config) Path() string {
 	return cfg.path
 }
 
+func (cfg *Config) Dir() string {
+	return path.Dir(cfg.path)
+}
+
 func OpenConfig(file string, create bool) (*Config, error) {
 	cfg := NewConfig(file)
 	f, err := os.Open(file)
@@ -114,7 +118,26 @@ func OpenConfig(file string, create bool) (*Config, error) {
 	return cfg, err
 }
 
-func GetDefaultDir(name string) string {
+func FindConfig(app, module string) (*Config, error) {
+	cfg, err := OpenConfig("./"+module+".json", false)
+	if err == nil || !os.IsNotExist(err) {
+		return cfg, err
+	}
+
+	cfg, err = OpenConfig(getDefaultUserDir(app)+"/"+module+".json", false)
+	if err == nil || !os.IsNotExist(err) {
+		return cfg, err
+	}
+
+	cfg, err = OpenConfig("/etc/"+app+"/"+module+".json", false)
+	if err == nil || !os.IsNotExist(err) {
+		return cfg, err
+	}
+
+	return OpenConfig(getDefaultUserDir(app)+"/"+module+".json", true)
+}
+
+func getDefaultUserDir(name string) string {
 	path := os.Getenv("XDG_CONFIG_HOME")
 	if path != "" {
 		return path + "/" + name

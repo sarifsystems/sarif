@@ -72,7 +72,7 @@ func (s *Server) InitDatabase() error {
 
 	cfg := core.DatabaseConfig{
 		Driver: "sqlite3",
-		Source: core.GetDefaultDir(s.AppName) + "/" + s.ModuleName + ".db",
+		Source: s.Config.Dir() + "/" + s.ModuleName + ".db",
 	}
 
 	s.Config.Get("database", &cfg)
@@ -219,8 +219,11 @@ func (s *Server) DisableModule(name string) error {
 	s.Instances[name] = nil
 	s.Log.Infof("[core] module '%s' disabled", name)
 	if i, ok := i.(disabler); ok {
-		return i.Disable()
+		if err := i.Disable(); err != nil {
+			return err
+		}
 	}
+	delete(s.Instances, name)
 	return nil
 }
 
