@@ -49,5 +49,5 @@ func (e Event) String() string {
 	if e.Text == "" {
 		e.Text = fmt.Sprintf("%s is %g", e.Action, e.Value)
 	}
-	return e.Timestamp.Format(time.RFC3339) + " - " + e.Text
+	return e.Timestamp.Local().Format(time.RFC3339) + " - " + e.Text
 }

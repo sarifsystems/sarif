@@ -36,13 +36,13 @@ func (t Task) String() string {
 	if t.Reply.Action == "schedule/finished" {
 		return fmt.Sprintf("Reminder for '%s' on %s set.",
 			text,
-			t.Time.Format(time.RFC3339),
+			t.Time.Local().Format(time.RFC3339),
 		)
 	}
 
 	return fmt.Sprintf("Schedule task '%s' on %s.",
 		text,
-		t.Time.Format(time.RFC3339),
+		t.Time.Local().Format(time.RFC3339),
 	)
 }
 
