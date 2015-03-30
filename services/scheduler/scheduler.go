@@ -8,6 +8,7 @@ package scheduler
 import (
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -29,10 +30,12 @@ type Dependencies struct {
 }
 
 type Scheduler struct {
-	timer *time.Timer
-	DB    *gorm.DB
-	Log   proto.Logger
+	DB  *gorm.DB
+	Log proto.Logger
 	*proto.Client
+
+	mutex    sync.Mutex
+	timer    *time.Timer
 	nextTask Task
 }
 
@@ -59,7 +62,7 @@ func (s *Scheduler) Enable() error {
 		return err
 	}
 	go s.simpleCron()
-	s.recalculateTimer()
+	go s.recalculateTimer()
 	return nil
 }
 
@@ -147,7 +150,7 @@ func (s *Scheduler) handle(msg proto.Message) {
 	}
 
 	s.Reply(msg, reply)
-	s.recalculateTimer()
+	go s.recalculateTimer()
 }
 
 func (s *Scheduler) GetNextTask() (t Task, err error) {
@@ -156,6 +159,8 @@ func (s *Scheduler) GetNextTask() (t Task, err error) {
 }
 
 func (s *Scheduler) recalculateTimer() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if s.timer != nil {
 		s.timer.Stop()
 		s.timer = nil
@@ -174,7 +179,6 @@ func (s *Scheduler) recalculateTimer() {
 	s.Log.Debugln("[scheduler] next task in", dur)
 	if dur < 0 {
 		s.taskFinished()
-		s.recalculateTimer()
 		return
 	}
 	s.timer = time.AfterFunc(dur, s.taskFinished)
@@ -189,7 +193,7 @@ func (s *Scheduler) taskFinished() {
 		s.Log.Errorln("[scheduler] could not store finished task: ", err)
 	}
 	s.Publish(s.nextTask.Reply)
-	s.recalculateTimer()
+	go s.recalculateTimer()
 }
 
 func (s *Scheduler) simpleCron() {
