@@ -109,12 +109,9 @@ func Dial(cfg *NetConfig) (Conn, error) {
 	if ka == 0 {
 		ka = DefaultKeepalive
 	}
-	go func() {
-		for _ = range time.Tick(ka) {
-			conn.Write([]byte(" "))
-		}
-	}()
-	return NewByteConn(conn), nil
+	nc := newNetConn(conn)
+	go nc.KeepaliveLoop(ka)
+	return nc, nil
 }
 
 type NetListener struct {
@@ -152,5 +149,5 @@ func (l *NetListener) Accept() (Conn, error) {
 	if conn, err = l.Listener.Accept(); err != nil {
 		return nil, err
 	}
-	return NewByteConn(conn), nil
+	return newNetConn(conn), nil
 }

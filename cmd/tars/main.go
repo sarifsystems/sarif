@@ -46,6 +46,9 @@ func New() *App {
 	}
 	app.Init()
 	app.Must(app.Client.Connect(app.Dial()))
+	app.Client.OnConnectionLost(func(err error) {
+		app.Log.Fatalln("connection lost:", err)
+	})
 
 	app.Commands = []Command{
 		{"help", app.Help, ""},

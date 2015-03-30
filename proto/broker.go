@@ -216,6 +216,7 @@ func (c *brokerConn) ListenLoop() {
 	for {
 		msg, err := c.Conn.Read()
 		if err != nil {
+			c.errs <- err
 			return
 		}
 		c.Publish(msg)
