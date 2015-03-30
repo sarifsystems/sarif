@@ -8,9 +8,9 @@ package main
 import (
 	"net/http"
 
-	"github.com/miketheprogrammer/go-thrust"
 	"github.com/miketheprogrammer/go-thrust/lib/commands"
 	"github.com/miketheprogrammer/go-thrust/lib/connection"
+	"github.com/miketheprogrammer/go-thrust/thrust"
 	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 	"golang.org/x/net/websocket"

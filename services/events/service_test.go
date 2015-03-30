@@ -99,7 +99,7 @@ func TestService(t *testing.T) {
 					t.Log(dur)
 					t.Fatal("expected duration for 'start'")
 				}
-				if d < 89*time.Minute || d > 91*time.Minute {
+				if d < 89*60 || d > 91*60 {
 					t.Error("Wrong duration: ", d)
 				}
 			})

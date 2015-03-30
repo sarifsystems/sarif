@@ -53,7 +53,8 @@
 					<ul>
 						<li ng-repeat="event in lastEvents">
 							{{event.timestamp | date:'mediumTime'}} - 
-							{{event.subject}} {{event.status}} {{event.verb}} {{event.object}}
+							{{event.action}}
+							{{event.text}}
 						</li>
 					</ul>
 				</div>
