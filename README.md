@@ -4,49 +4,72 @@ stark
 [![API Documentation](http://img.shields.io/badge/api-GoDoc-blue.svg?style=flat-square)](http://godoc.org/github.com/xconstruct/stark)
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](http://opensource.org/licenses/MIT)
 
-Stark is a simple communication protocol to perform tasks across devices for the user.
-This is the reference implementation and spec, written in Go.
+Stark is a simple network of microservices to perform tasks across devices for the user.
+Combined with APIs and user-tracking, it serves as a personal assistant.
+This is the message spec and reference implementation, written in Go.
 
-Since it is currently in a prototype stage to develop the protocol, it has a limited set of features out of
-the box and there may be a lot of breaking changes. No installation guide
-is currently provided since it is nowhere near usable state, but if you are interested,
-you can take a look at the "cmd" folder to get started.
+Since it is currently in a prototype stage, it has a limited set of features out of
+the box and there may be a lot of breaking changes. There is currently no documentation.
+Here be dragons. That said, the core functionality is there.
 
 ## In Detail ##
 
 Stark aspires to be a personal helper that has access to a range of different
-tools to aid in automating everyday life, an "intranet of apps".
+tools to aid in automating everyday life, an "intranet of apps".  For example,
+your phone tracks your location and when stark notices that you are coming home,
+it boots your desktop pc for you and starts the music. Or reacts to chat
+commands, or displays notifications on your watch.
 
-* You search for an address on your desktop pc and want to navigate to it on your phone.
-* You want to control the music in your room while lying in the bed with your tablet.
-* Your phone notifies your router that you are coming home and boots your desktop pc for you.
-
-Stark does not know how to do any of these things. But there may be an existing app or
-cloud service that already knows this, but has an obscure API. Instead of writing
-a commandline client to interact with it, you could connect it to stark and make
-it part of your personal message bus. Another part in your growing army of tools,
-accessible from any device connected with stark.
+A microservice could be anything, e.g. a location publisher on your phone,
+a database server, a media player control, a webservice, a voice assistant / chatbot,
+or your personal context-aware artifical intelligence robot overlord.
 
 Stark provides:
 
-* A network of interconnected services based on the [MQTT](http://mqtt.org) protocol
-* Support across multiple protocols and devices
-* A natural user interface 
-* A very simple and extendable message format based on JSON (see [SPEC.md](SPEC.md))
+* A very simple message format based on JSON (see [SPEC.md](SPEC.md))
+* A network of extensible, interconnected services across devices
+* A natural user interface.
+* A data platform for quantified self tracking and context-awareness
+* Hopefully in the future something that can be called an AI
+
+## Getting Started
+
+	$ go install github.com/xconstruct/stark/cmd/starkd
+	$ go install github.com/xconstruct/stark/cmd/tars
+
+	$ starkd -v
+	$ tars
+	> .ping
+	> remind me in 10 seconds that this thing works
+	> .full
+	> !catfacts
+
+And take a look at `cmd/examples/starkping`.
+
+## Design Goals ##
+
+**Interface-agnostic**: Stark should work "everywhere" and degrade gracefully. If
+you are on your phone, it should react to text messages. If you use your computer,
+it should display a dashboard, system notifications and rich controls. If you are
+at the commandline, stark should provide scripting and easy data access. If you are at
+home, a voice assistant could listen for commands. All these can be implemented as
+separate services.
+
+**Simple:** Adding services should be as easy and future-proof as possible.
+Your service should not depend on a big stark library, a specific programming
+language or a complicated message format. That is why a stark message is a simple
+JSON object sent over TCP/TLS. Ideally, you could connect your application to
+the stark network in under 100 lines of code, from scratch without any libraries.
+
+**Modular**: There should be no overarching core service that handles everything,
+all services should be exchangeable and stand on equal footing. For example,
+it should be possible to remove the NLP service that understands your text commands
+and replace it with your own voice-controlled robot. Hey, you could even take
+the message specification and write your own server.
 
 Inspired by:
 
-* Android Intents
-* If This Then That (IFTTT)
+* Google Now / Siri / Cortana
 * The Internet of Things
-* JARVIS
-
-## Future Use Case Example ##
-
-1. You want to push a link from your desktop pc to your smartphone. You open a
-   launcher on your desktop that connects to the stark network and enter: `push http://google.com to sgs2`
-2. The launcher transmits your natural command to your desktop server.
-4. The "natural" service on your desktop recognizes that you want to perform a `push`
-   task with the link to a device named "sgs2".
-5. The desktop server connects to the smartphone and transmits the `push` task.
-6. The smartphone receives the `push` task and the notification services displays a notification with the link.
+* If This Then That
+* JARVIS, TARS, GERTY, Samaritan and Skynet
