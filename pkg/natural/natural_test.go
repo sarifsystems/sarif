@@ -68,3 +68,14 @@ func TestParseSimple(t *testing.T) {
 		}
 	}
 }
+
+func TestFormatMessage(t *testing.T) {
+	msg := proto.Message{
+		Text: "Hello, the time is 2015-03-14T18:48:10+02:00.",
+	}
+	FormatMessage(&msg)
+	exp := "Hello, the time is Sat, 14 Mar 15 at 18:48."
+	if msg.Text != exp {
+		t.Error("Unexpected format: ", msg.Text)
+	}
+}

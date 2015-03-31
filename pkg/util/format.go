@@ -12,12 +12,17 @@ import (
 )
 
 func FuzzyTime(t time.Time) string {
-	ny, nm, nd := time.Now().Date()
+	n := time.Now()
+	ny, nm, nd := n.Date()
 	ty, tm, td := t.Date()
 	if ty == ny && tm == nm && td == nd {
 		return t.Format("15:04:05")
 	}
-	return t.Format("02 Jan 2006 at 15:04")
+	if d := n.YearDay() - t.YearDay(); d > -8 && d < 8 {
+		return t.Format("02 Jan 06 at 15:04")
+	}
+
+	return t.Format("Mon, 02 Jan 06 at 15:04")
 }
 
 var datetimeFormats = []string{

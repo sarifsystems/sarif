@@ -154,6 +154,7 @@ func (s *Service) forwardToClient(cv *Conversation, msg proto.Message) {
 	// Forward response to client.
 	msg.Id = proto.GenerateId()
 	msg.Destination = cv.Device
+	natural.FormatMessage(&msg)
 	s.Publish(msg)
 }
 

@@ -123,7 +123,7 @@ func (s *Scheduler) handle(msg proto.Message) {
 	if t.Task.Reply.Action == "" {
 		text := msg.Text
 		if text == "" {
-			text = "Reminder from " + util.FuzzyTime(time.Now()) + " finished."
+			text = "Reminder from " + time.Now().Format(time.RFC3339) + " finished."
 		}
 		t.Task.Reply = proto.Message{
 			Action:      "schedule/finished",

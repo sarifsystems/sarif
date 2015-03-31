@@ -8,8 +8,11 @@ package natural
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
+	"time"
 
+	"github.com/xconstruct/stark/pkg/util"
 	"github.com/xconstruct/stark/proto"
 )
 
@@ -81,4 +84,25 @@ func FormatSimple(msg proto.Message) string {
 	}
 
 	return fmt.Sprintf("%s from %s.", msg.Action, msg.Source)
+}
+
+var (
+	reTimeIso = regexp.MustCompile(`(\d{4}-\d{2}-\d{2}T\d{2}\:\d{2}\:\d{2}[+-]\d{2}\:\d{2})`)
+)
+
+func formatTime(s string) string {
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return s
+	}
+
+	return util.FuzzyTime(t)
+}
+
+func FormatMessage(msg *proto.Message) {
+	if msg.Text == "" {
+		return
+	}
+
+	msg.Text = reTimeIso.ReplaceAllStringFunc(msg.Text, formatTime)
 }
