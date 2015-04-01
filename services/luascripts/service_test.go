@@ -47,8 +47,9 @@ func TestService(t *testing.T) {
 			st.When(proto.Message{
 				Action: "lua/do",
 				Text: `
-				subscribe("my/repeat", "", function(msg)
-					publish({
+				local stark = require "stark"
+				stark.subscribe("my/repeat", "", function(msg)
+					stark.publish({
 						action = "my/repeated",
 						text = msg.text .. msg.text,
 					})
@@ -75,12 +76,13 @@ func TestService(t *testing.T) {
 			st.When(proto.Message{
 				Action: "lua/do",
 				Text: `
-				subscribe("", "self", function() end)
-				local rep = request{
+				local stark = require "stark"
+				stark.subscribe("", "self", function() end)
+				local rep = stark.request{
 					action = "my/request",
 					text = "hello from inside",
 				}
-				publish{
+				stark.publish{
 					action = "got",
 					text = rep.action .. ": " .. rep.text,
 				}
