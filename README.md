@@ -1,8 +1,9 @@
 stark
 =====
 
-[![API Documentation](http://img.shields.io/badge/api-GoDoc-blue.svg?style=flat-square)](http://godoc.org/github.com/xconstruct/stark)
-[![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](http://opensource.org/licenses/MIT)
+[![Build](https://img.shields.io/travis/xconstruct/stark.svg?style=flat-square)](https://travis-ci.org/xconstruct/stark)
+[![API Documentation](https://img.shields.io/badge/api-GoDoc-blue.svg?style=flat-square)](https://godoc.org/github.com/xconstruct/stark)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](http://opensource.org/licenses/MIT)
 
 Stark is a simple network of microservices to perform tasks across devices for the user.
 Combined with APIs and user-tracking, it serves as a personal assistant.
