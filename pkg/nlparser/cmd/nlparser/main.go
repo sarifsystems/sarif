@@ -13,6 +13,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/xconstruct/stark/pkg/mlearning"
 	"github.com/xconstruct/stark/pkg/nlparser"
 )
 
@@ -43,16 +44,16 @@ func train() {
 	sentences := make([]nlparser.Sentence, 0)
 	train := bufio.NewScanner(f)
 	words := make([]string, 0)
-	tags := make([]nlparser.Class, 0)
+	tags := make([]string, 0)
 	for train.Scan() {
 		if train.Text() == "" {
 			sentences = append(sentences, nlparser.Sentence{words, tags})
 			words = make([]string, 0)
-			tags = make([]nlparser.Class, 0)
+			tags = make([]string, 0)
 		} else {
 			parts := strings.Split(train.Text(), " ")
 			words = append(words, parts[0])
-			tags = append(tags, nlparser.Class(parts[1]))
+			tags = append(tags, parts[1])
 		}
 	}
 	f.Close()
@@ -68,7 +69,7 @@ func train() {
 		log.Fatal(err)
 	}
 	enc := gob.NewEncoder(fm)
-	if err := enc.Encode(p.GetModel()); err != nil {
+	if err := enc.Encode(p.Perceptron.Model); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -81,11 +82,11 @@ func test() {
 		log.Fatal(err)
 	}
 	dec := gob.NewDecoder(fm)
-	model := &nlparser.Model{}
+	model := &mlearning.Model{}
 	if err := dec.Decode(model); err != nil {
 		log.Fatal(err)
 	}
-	p.SetModel(model)
+	p.Perceptron.Model = model
 
 	fpath := os.Args[2]
 	f, err := os.Open(fpath)
@@ -96,16 +97,16 @@ func test() {
 	sentences := make([]nlparser.Sentence, 0)
 	train := bufio.NewScanner(f)
 	words := make([]string, 0)
-	tags := make([]nlparser.Class, 0)
+	tags := make([]string, 0)
 	for train.Scan() {
 		if train.Text() == "" {
 			sentences = append(sentences, nlparser.Sentence{words, tags})
 			words = make([]string, 0)
-			tags = make([]nlparser.Class, 0)
+			tags = make([]string, 0)
 		} else {
 			parts := strings.Split(train.Text(), " ")
 			words = append(words, parts[0])
-			tags = append(tags, nlparser.Class(parts[1]))
+			tags = append(tags, parts[1])
 		}
 	}
 	f.Close()

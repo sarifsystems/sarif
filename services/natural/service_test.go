@@ -16,6 +16,9 @@ func TestParse(t *testing.T) {
 	deps := &Dependencies{}
 	core.InjectTest(deps)
 	srv := NewService(deps)
+	if err := srv.Enable(); err != nil {
+		t.Fatal(err)
+	}
 
 	parsed, ok := srv.parseNatural(proto.Message{
 		Action: "natural/parse",
@@ -36,7 +39,7 @@ func TestParse(t *testing.T) {
 	if got.Address != "Berlin" {
 		t.Error("wrong address: ", got.Address)
 	}
-	if parsed.Text != "When did I last visit Berlin" {
+	if parsed.Text != "When did I last visit Berlin?" {
 		t.Error("wrong text: ", parsed.Text)
 	}
 }

@@ -5,36 +5,36 @@
 
 package natural
 
-import (
-	"encoding/json"
-	"fmt"
-	"testing"
+import "testing"
 
-	"github.com/xconstruct/stark/proto"
-)
+var testData = map[string]string{
+	"record that i did it":                        "event/new",
+	"Remind me at 15:17 to do something useful":   "schedule",
+	"remind me that it is happening in 5 minutes": "schedule",
+	"search google for strange things":            "knowledge/query",
+	"calculate sin(x)":                            "cmd/calc",
+
+	"Record that I started to play music":               "event/new",
+	"When did I last visit Big City?":                   "location/last",
+	"Remind me in 6 hours to make coffee":               "schedule",
+	"Remind me at 17:15":                                "schedule",
+	"Create a geofence named Work at Baker Street 221b": "location/fence/create",
+	"Create a geofence at Street 13a, Berlin":           "location/fence/create",
+	"What is the birth day of Tuomas Holopainen?":       "knowledge/query",
+}
 
 func TestLearningParser(t *testing.T) {
 	p := NewLearningParser()
+	TrainDefaults(p)
 
-	p.LearnMessage(proto.CreateMessage("location/last", map[string]string{
-		"address": "Berlin, Germany",
-	}))
-	p.LearnMessage(proto.CreateMessage("location/fence/create", map[string]string{
-		"address": "Munich, Germany",
-	}))
-	p.LearnMessage(proto.CreateMessage("cmd/increment", map[string]string{
-		"text": "coffees consumed",
-	}))
-	p.LearnMessage(proto.CreateMessage("schedule/duration", map[string]string{
-		"duration": "5 hours 20 minutes",
-	}))
-
-	p.LearnSentence("remind me in [duration] to [text]")
-	p.LearnSentence("increment [text]")
-	p.LearnSentence("create a geofence named [name]")
-	p.LearnSentence("create a geofence named [name] at [address]")
-
-	msg, _ := p.Parse("create a geofence named test at somewhere")
-	j, _ := json.Marshal(msg)
-	fmt.Println(string(j))
+	for sentence, exp := range testData {
+		msg, w := p.Parse(sentence)
+		if w < 2 {
+			t.Log(msg, w)
+			t.Error("No message found for", sentence)
+		} else if msg.Action != exp {
+			t.Log(msg, w)
+			t.Errorf("expected %s, got %s", exp, msg.Action)
+		}
+	}
 }

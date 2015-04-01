@@ -6,10 +6,13 @@
 package natural
 
 import (
+	"compress/gzip"
 	"encoding/json"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/pkg/natural"
 	"github.com/xconstruct/stark/pkg/schema"
 	"github.com/xconstruct/stark/proto"
@@ -23,6 +26,7 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
+	Config *core.Config
 	Log    proto.Logger
 	Client *proto.Client
 }
@@ -31,20 +35,27 @@ type Conversation struct {
 	Device      string
 	LastTime    time.Time
 	LastMessage proto.Message
+
+	LastUserText    string
+	LastUserMessage proto.Message
 }
 
 type Service struct {
-	Log proto.Logger
+	Config *core.Config
+	Log    proto.Logger
 	*proto.Client
 
+	parser        *natural.LearningParser
 	conversations map[string]*Conversation
 }
 
 func NewService(deps *Dependencies) *Service {
 	return &Service{
+		deps.Config,
 		deps.Log,
 		deps.Client,
 
+		natural.NewLearningParser(),
 		make(map[string]*Conversation),
 	}
 }
@@ -59,7 +70,67 @@ func (s *Service) Enable() error {
 	if err := s.Subscribe("", "user", s.handleUserMessage); err != nil {
 		return err
 	}
+
+	if err := s.loadModel(); err != nil {
+		return err
+	}
+	go func() {
+		time.Sleep(1 * time.Minute)
+		if err := s.saveModel(); err != nil {
+			s.Log.Errorln("[natural] error saving model:", err)
+			return
+		}
+		c := time.Tick(time.Hour)
+		for n := range c {
+			if err := s.saveModel(); err != nil {
+				s.Log.Errorln("[natural] error saving model:", err, n)
+			}
+		}
+	}()
 	return nil
+}
+
+func (s *Service) loadModel() error {
+	path := s.Config.Dir() + "/" + "natural.json.gz"
+	f, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			s.Log.Debugln("[natural] loading default model")
+			natural.TrainDefaults(s.parser)
+			return nil
+		}
+		return err
+	}
+	defer f.Close()
+	s.Log.Debugln("[natural] loading model from", path)
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		return err
+	}
+	dec := json.NewDecoder(gz)
+
+	model := &natural.Model{}
+	if err := dec.Decode(model); err != nil {
+		return err
+	}
+	return s.parser.LoadModel(model)
+}
+
+func (s *Service) saveModel() error {
+	path := s.Config.Dir() + "/" + "natural.json.gz"
+	s.Log.Debugln("[natural] saving model to", path)
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	gz := gzip.NewWriter(f)
+	model := s.parser.Model()
+	if err := json.NewEncoder(gz).Encode(model); err != nil {
+		return err
+	}
+	return gz.Close()
 }
 
 func (s *Service) Disable() error {
@@ -88,15 +159,16 @@ func (s *Service) parseNatural(msg proto.Message) (proto.Message, bool) {
 		return proto.Message{}, false
 	}
 
-	parsed, ok := natural.ParseRegular(msg.Text)
-	if !ok {
-		parsed, ok = natural.ParseSimple(msg.Text)
+	if parsed, ok := natural.ParseSimple(msg.Text); ok {
+		return parsed, ok
 	}
-	if !ok {
-		return parsed, false
-	}
+	parsed, w := s.parser.Parse(msg.Text)
+	s.Log.Debugf(`[natural] parsed "%s" as action "%s" (%g)`, msg.Text, parsed.Action, w)
 
-	return parsed, true
+	if parsed.Text == "" {
+		parsed.Text = msg.Text
+	}
+	return parsed, w > 2
 }
 
 func (s *Service) getConversation(device string) *Conversation {
@@ -196,6 +268,8 @@ func (s *Service) handleNatural(msg proto.Message) {
 		s.Publish(msg.Reply(reply))
 		return
 	}
+	cv.LastUserText = msg.Text
+	cv.LastUserMessage = parsed
 	parsed.CorrId = msg.Id
 	s.publishForClient(cv, parsed)
 }
