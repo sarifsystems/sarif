@@ -11,9 +11,8 @@ import (
 )
 
 func main() {
-	app := server.Init("stark", "server")
-	app.InitDatabase()
-	app.InitBroker()
+	app := server.New("stark", "server")
+	app.Init()
 	defer app.Close()
 
 	deps := &lastfm.Dependencies{}
