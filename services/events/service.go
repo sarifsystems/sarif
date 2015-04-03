@@ -59,10 +59,10 @@ func (s *Service) Enable() error {
 		return err
 	}
 	if createIndizes {
-		if err := s.DB.Model(&Event{}).AddIndex("timestamp", "timestamp", "action").Error; err != nil {
+		if err := s.DB.Model(&Event{}).AddIndex("events_time", "time", "action").Error; err != nil {
 			return err
 		}
-		if err := s.DB.Model(&Event{}).AddIndex("action", "action", "timestamp").Error; err != nil {
+		if err := s.DB.Model(&Event{}).AddIndex("events_action", "action", "time").Error; err != nil {
 			return err
 		}
 	}
@@ -133,10 +133,10 @@ func applyFilter(f EventFilter) func(*gorm.DB) *gorm.DB {
 		}
 		db = db.Where(&f.Event)
 		if !f.After.IsZero() {
-			db = db.Where("timestamp > ?", f.After)
+			db = db.Where("time > ?", f.After)
 		}
 		if !f.Before.IsZero() {
-			db = db.Where("timestamp < ?", f.Before)
+			db = db.Where("time < ?", f.Before)
 		}
 		return db
 	}
@@ -151,7 +151,7 @@ func (s *Service) handleEventLast(msg proto.Message) {
 
 	s.Log.Infoln("[events] get last by filter:", filter)
 	var last Event
-	if err := s.DB.Scopes(applyFilter(filter)).Order("timestamp desc").First(&last).Error; err != nil {
+	if err := s.DB.Scopes(applyFilter(filter)).Order("time desc").First(&last).Error; err != nil {
 		if err == gorm.RecordNotFound {
 			s.Reply(msg, MessageEventNotFound)
 			return
@@ -223,7 +223,7 @@ func (s *Service) handleEventList(msg proto.Message) {
 
 	s.Log.Infoln("[events] list by filter:", filter)
 	var events []*Event
-	if err := s.DB.Scopes(applyFilter(filter)).Order("timestamp asc").Find(&events).Error; err != nil {
+	if err := s.DB.Scopes(applyFilter(filter)).Order("time asc").Find(&events).Error; err != nil {
 		s.ReplyInternalError(msg, err)
 		return
 	}
@@ -251,7 +251,7 @@ func (s *Service) handleEventSumDuration(msg proto.Message) {
 
 	s.Log.Infoln("[events] get sum by filter:", filter)
 	var events []*Event
-	if err := s.DB.Scopes(applyFilter(filter)).Order("timestamp asc").Find(&events).Error; err != nil {
+	if err := s.DB.Scopes(applyFilter(filter)).Order("time asc").Find(&events).Error; err != nil {
 		s.ReplyInternalError(msg, err)
 		return
 	}
@@ -361,7 +361,7 @@ func (s *Service) handleEventAggregate(msg proto.Message) {
 	}
 
 	var events []*Event
-	if err := s.DB.Scopes(applyFilter(filter)).Order("timestamp asc").Find(&events).Error; err != nil {
+	if err := s.DB.Scopes(applyFilter(filter)).Order("time asc").Find(&events).Error; err != nil {
 		s.ReplyInternalError(msg, err)
 		return
 	}

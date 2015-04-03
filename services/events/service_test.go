@@ -58,18 +58,18 @@ func TestService(t *testing.T) {
 		st.It("should count events in a timeframe", func() {
 			// Create test events
 			st.When(proto.CreateMessage("event/new", map[string]interface{}{
-				"action":    "user/sleep/start",
-				"timestamp": time.Now().Add(-100 * time.Minute),
+				"action": "user/sleep/start",
+				"time":   time.Now().Add(-100 * time.Minute),
 			}))
 			st.ExpectAction("event/created")
 			st.When(proto.CreateMessage("event/new", map[string]interface{}{
-				"action":    "user/sleep/end",
-				"timestamp": time.Now().Add(-10 * time.Minute),
+				"action": "user/sleep/end",
+				"time":   time.Now().Add(-10 * time.Minute),
 			}))
 			st.ExpectAction("event/created")
 			st.When(proto.CreateMessage("event/new", map[string]interface{}{
-				"action":    "user/sleep/start",
-				"timestamp": time.Now().AddDate(0, 0, -5),
+				"action": "user/sleep/start",
+				"time":   time.Now().AddDate(0, 0, -5),
 			}))
 			st.ExpectAction("event/created")
 
