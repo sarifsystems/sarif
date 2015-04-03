@@ -6,28 +6,22 @@
 package hostscan
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os/exec"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/jinzhu/gorm"
 )
 
 var re_nmap_hosts = regexp.MustCompile(`Host: ([\d\.]+) \(([\w\.\-]*)\)`)
 
 type Host struct {
-	Id     int64     `json:"-"`
 	Ip     string    `json:"ip"`
-	Name   string    `json:"name,omitempty" sql:"index"`
-	Time   time.Time `json:"time" sql:"index"`
+	Name   string    `json:"name,omitempty"`
+	Time   time.Time `json:"time"`
 	Status string    `json:"status"`
-}
-
-func (Host) TableName() string {
-	return "hostscan"
 }
 
 func (h Host) String() string {
@@ -35,20 +29,19 @@ func (h Host) String() string {
 	if n == "" {
 		n = h.Ip
 	}
-	return fmt.Sprintf("%s is %s since %s.", n, h.Status, h.Time)
+	return fmt.Sprintf("%s is %s since %s.", n, h.Status, h.Time.Format(time.RFC3339))
 }
 
 type HostScan struct {
-	db              *gorm.DB
 	MinDownInterval time.Duration
+	status          map[string]Host
 }
 
-func New(db *gorm.DB) *HostScan {
-	return &HostScan{db, 9 * time.Minute}
-}
-
-func (h *HostScan) Setup() error {
-	return h.db.AutoMigrate(&Host{}).Error
+func New() *HostScan {
+	return &HostScan{
+		9 * time.Minute,
+		make(map[string]Host),
+	}
 }
 
 func (h *HostScan) FindLocalNetwork() (string, error) {
@@ -90,87 +83,50 @@ func (h *HostScan) ScanCurrentHosts() ([]Host, error) {
 	return hosts, nil
 }
 
-func (h *HostScan) InsertHosts(hosts []Host) error {
-	tx := h.db.Begin()
-	for _, h := range hosts {
-		if err := tx.Save(&h).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
-	tx.Commit()
-	return nil
-}
-
 func (h *HostScan) Update() ([]Host, error) {
 	curr, err := h.ScanCurrentHosts()
-	if err != nil {
-		return nil, err
-	}
-	last, err := h.LastStatusAll()
 	if err != nil {
 		return nil, err
 	}
 
 	now := time.Now()
 	changed := make([]Host, 0)
-	for _, host := range last {
-		if now.Sub(host.Time) < h.MinDownInterval {
-			continue
-		}
-		if host.Status == "up" && !HostInSlice(host, curr) {
-			host.Status = "down"
-			host.Time = time.Now()
-			changed = append(changed, host)
-		}
-	}
 	for _, host := range curr {
-		if !HostInSlice(host, last) {
-			host.Status = "up"
-			host.Time = time.Now()
+		last, ok := h.status[host.Ip]
+		if !ok || last.Status == "down" {
 			changed = append(changed, host)
 		}
+		h.status[host.Ip] = host
 	}
-
-	if err := h.InsertHosts(changed); err != nil {
-		return changed, err
+	for _, last := range h.status {
+		if last.Status == "up" && now.Sub(last.Time) > h.MinDownInterval {
+			last.Status = "down"
+			last.Time = now.Add(-h.MinDownInterval / 2)
+			h.status[last.Ip] = last
+			changed = append(changed, last)
+		}
 	}
 
 	return changed, nil
 }
 
 func (h *HostScan) LastStatus(name string) (Host, error) {
-	var host Host
-	host.Name = name
-	err := h.db.Where(host).Order("time DESC").First(&host).Error
-	return host, err
+	for _, host := range h.status {
+		if host.Ip == name || host.Name == name || host.Name == name+".lan" {
+			return host, nil
+		}
+	}
+	return Host{}, errors.New("Host " + name + " not found")
 }
 
 func (h *HostScan) LastStatusAll() ([]Host, error) {
 	after := time.Now().AddDate(0, -1, 0)
-	ids := make([]int64, 0)
-	rows, err := h.db.Model(Host{}).Select("MAX(id)").Where("time > ?", after).Group("ip").Rows()
-	if err != nil {
-		return nil, err
-	}
-	for rows.Next() {
-		var id int64
-		rows.Scan(&id)
-		ids = append(ids, id)
-	}
-	hosts := make([]Host, 0)
-	if len(ids) == 0 {
-		return hosts, nil
-	}
-	err = h.db.Where("id IN (?)", ids).Find(&hosts).Error
-	return hosts, err
-}
 
-func HostInSlice(host Host, hosts []Host) bool {
-	for _, curr := range hosts {
-		if curr.Ip == host.Ip && curr.Name == host.Name && curr.Status == "up" {
-			return true
+	hosts := make([]Host, 0)
+	for _, host := range h.status {
+		if host.Time.After(after) {
+			hosts = append(hosts, host)
 		}
 	}
-	return false
+	return hosts, nil
 }

@@ -8,7 +8,6 @@ package hostscan
 import (
 	"time"
 
-	"github.com/jinzhu/gorm"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -20,7 +19,6 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	DB     *gorm.DB
 	Log    proto.Logger
 	Client *proto.Client
 }
@@ -33,17 +31,15 @@ type Service struct {
 
 func NewService(deps *Dependencies) *Service {
 	return &Service{
-		New(deps.DB),
+		New(),
 		deps.Log,
 		deps.Client,
 	}
 }
 
 func (s *Service) Enable() error {
-	if err := s.scan.Setup(); err != nil {
-		return err
-	}
 	time.AfterFunc(5*time.Minute, s.scheduledUpdate)
+	s.scan.MinDownInterval = 7 * time.Minute
 	if err := s.Subscribe("devices/force_update", "", s.HandleForceUpdate); err != nil {
 		return err
 	}
