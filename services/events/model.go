@@ -21,18 +21,18 @@ const (
 type Event struct {
 	Id int64 `json:"-"`
 
-	Timestamp time.Time              `json:"timestamp,omitempty"`
-	Value     float64                `json:"value"`
-	Action    string                 `json:"action,omitempty"`
-	Source    string                 `json:"source,omitempty"`
-	Text      string                 `json:"text,omitempty"`
-	Meta      map[string]interface{} `json:"meta,omitempty" sql:"-" gorm:"column:meow"`
-	MetaRaw   []byte                 `json:"-" gorm:"column:meta"`
+	Time    time.Time              `json:"time,omitempty"`
+	Value   float64                `json:"value"`
+	Action  string                 `json:"action,omitempty"`
+	Source  string                 `json:"source,omitempty"`
+	Text    string                 `json:"text,omitempty"`
+	Meta    map[string]interface{} `json:"meta,omitempty" sql:"-" gorm:"column:meow"`
+	MetaRaw []byte                 `json:"-" gorm:"column:meta"`
 }
 
 func (e *Event) BeforeSave() (err error) {
-	if e.Timestamp.IsZero() {
-		e.Timestamp = time.Now()
+	if e.Time.IsZero() {
+		e.Time = time.Now()
 	}
 	e.MetaRaw, err = json.Marshal(e.Meta)
 	return
@@ -49,5 +49,5 @@ func (e Event) String() string {
 	if e.Text == "" {
 		e.Text = fmt.Sprintf("%s is %g", e.Action, e.Value)
 	}
-	return e.Timestamp.Local().Format(time.RFC3339) + " - " + e.Text
+	return e.Time.Local().Format(time.RFC3339) + " - " + e.Text
 }

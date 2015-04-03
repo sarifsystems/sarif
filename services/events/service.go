@@ -75,6 +75,16 @@ func (s *Service) Enable() error {
 	s.Subscribe("event/aggregate", "", s.handleEventAggregate)
 
 	var cfg Config
+	if !s.cfg.Exists("events") {
+		cfg.RecordedActions = map[string]bool{
+			"devices/changed":        true,
+			"location/cluster/enter": true,
+			"location/cluster/leave": true,
+			"location/fence/enter":   true,
+			"location/fence/leave":   true,
+			"mood":                   true,
+		}
+	}
 	s.cfg.Get("events", &cfg)
 	for action, enabled := range cfg.RecordedActions {
 		if enabled {
@@ -262,10 +272,10 @@ func (s *Service) handleEventSumDuration(msg proto.Message) {
 			}
 			if last != action {
 				if !start.IsZero() {
-					d[last] += e.Timestamp.Sub(start).Seconds()
+					d[last] += e.Time.Sub(start).Seconds()
 				}
 				last = action
-				start = e.Timestamp
+				start = e.Time
 			}
 		}
 
@@ -283,7 +293,7 @@ func (s *Service) handleEventNew(msg proto.Message) {
 	var e Event
 	e.Action = strings.TrimPrefix(msg.Action, "event/new/")
 	e.Text = msg.Text
-	e.Timestamp = time.Now()
+	e.Time = time.Now()
 	if s, v, ok := parseDataFromAction(e.Action); ok {
 		e.Action, e.Value = s, v
 	}
