@@ -18,10 +18,11 @@ import (
 var re_nmap_hosts = regexp.MustCompile(`Host: ([\d\.]+) \(([\w\.\-]*)\)`)
 
 type Host struct {
-	Ip     string    `json:"ip"`
-	Name   string    `json:"name,omitempty"`
-	Time   time.Time `json:"time"`
-	Status string    `json:"status"`
+	Ip        string    `json:"ip"`
+	Name      string    `json:"name,omitempty"`
+	Time      time.Time `json:"time"`
+	UpdatedAt time.Time `json:"-"`
+	Status    string    `json:"status"`
 }
 
 func (h Host) String() string {
@@ -78,6 +79,7 @@ func (h *HostScan) ScanCurrentHosts() ([]Host, error) {
 		hosts[i].Name = match[2]
 		hosts[i].Status = "up"
 		hosts[i].Time = now
+		hosts[i].UpdatedAt = now
 	}
 
 	return hosts, nil
@@ -94,14 +96,18 @@ func (h *HostScan) Update() ([]Host, error) {
 	for _, host := range curr {
 		last, ok := h.status[host.Ip]
 		if !ok || last.Status == "down" {
+			h.status[host.Ip] = host
 			changed = append(changed, host)
+		} else {
+			last.UpdatedAt = now
+			h.status[host.Ip] = last
 		}
-		h.status[host.Ip] = host
 	}
 	for _, last := range h.status {
-		if last.Status == "up" && now.Sub(last.Time) > h.MinDownInterval {
+		if last.Status == "up" && now.Sub(last.UpdatedAt) > h.MinDownInterval {
 			last.Status = "down"
 			last.Time = now.Add(-h.MinDownInterval / 2)
+			last.UpdatedAt = now
 			h.status[last.Ip] = last
 			changed = append(changed, last)
 		}
