@@ -137,6 +137,31 @@ func FindConfig(app, module string) (*Config, error) {
 	return OpenConfig(getDefaultUserDir(app)+"/"+module+".json", true)
 }
 
+type Section struct {
+	config *Config
+	name   string
+}
+
+func (c *Config) Section(name string) *Section {
+	return &Section{c, name}
+}
+
+func (s *Section) Get(v interface{}) (error, bool) {
+	return s.config.Get(s.name, v)
+}
+
+func (s *Section) Set(v interface{}) error {
+	return s.config.Set(s.name, v)
+}
+
+func (s *Section) Exists() bool {
+	return s.config.Exists(s.name)
+}
+
+func (s *Section) Dir() string {
+	return s.config.Dir()
+}
+
 func getDefaultUserDir(name string) string {
 	path := os.Getenv("XDG_CONFIG_HOME")
 	if path != "" {

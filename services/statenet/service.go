@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/pkg/petrinet"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
@@ -32,13 +31,13 @@ type Config struct {
 }
 
 type Dependencies struct {
-	Config *core.Config
+	Config services.Config
 	Log    proto.Logger
 	Client *proto.Client
 }
 
 type Service struct {
-	cfg *core.Config
+	cfg services.Config
 	Log proto.Logger
 	*proto.Client
 
@@ -72,7 +71,7 @@ func isInternal(name string) bool {
 
 func (s *Service) Enable() error {
 	var cfg Config
-	s.cfg.Get("statenet", &cfg)
+	s.cfg.Get(&cfg)
 
 	for _, t := range cfg.Transitions {
 		s.Net.AddTransition(t.In, t.Out).Name = t.Name

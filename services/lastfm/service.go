@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
-	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -31,7 +30,7 @@ type Config struct {
 
 type Dependencies struct {
 	DB     *gorm.DB
-	Config *core.Config
+	Config services.Config
 	Log    proto.Logger
 	Client *proto.Client
 }
@@ -56,7 +55,7 @@ func NewService(deps *Dependencies) *Service {
 		sync.WaitGroup{},
 		false,
 	}
-	deps.Config.Get("lastfm", &s.cfg)
+	deps.Config.Get(&s.cfg)
 	return s
 }
 

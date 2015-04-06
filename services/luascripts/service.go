@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/pkg/luareflect"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
@@ -28,7 +27,7 @@ type Config struct {
 }
 
 type Dependencies struct {
-	Config *core.Config
+	Config services.Config
 	Log    proto.Logger
 	Client *proto.Client
 }
@@ -49,7 +48,7 @@ func NewService(deps *Dependencies) *Service {
 		Client: deps.Client,
 		Lua:    nil,
 	}
-	deps.Config.Get("luascripts", &s.cfg)
+	deps.Config.Get(&s.cfg)
 	return s
 }
 

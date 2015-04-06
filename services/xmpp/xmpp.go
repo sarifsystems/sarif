@@ -11,7 +11,6 @@ import (
 
 	"github.com/agl/xmpp"
 
-	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/pkg/natural"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
@@ -24,7 +23,7 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	Config *core.Config
+	Config services.Config
 	Log    proto.Logger
 	Broker *proto.Broker
 }
@@ -56,7 +55,7 @@ func New(deps *Dependencies) *Client {
 		Broker:        deps.Broker,
 		conversations: make(map[string]*conversation, 0),
 	}
-	deps.Config.Get("xmpp", &c.cfg)
+	deps.Config.Get(&c.cfg)
 	return c
 }
 

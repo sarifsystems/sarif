@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
-	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -31,13 +30,13 @@ type Config struct {
 
 type Dependencies struct {
 	DB     *gorm.DB
-	Config *core.Config
+	Config services.Config
 	Log    proto.Logger
 	Client *proto.Client
 }
 
 type Service struct {
-	cfg *core.Config
+	cfg services.Config
 	DB  *gorm.DB
 	Log proto.Logger
 	*proto.Client
@@ -75,7 +74,7 @@ func (s *Service) Enable() error {
 	s.Subscribe("event/aggregate", "", s.handleEventAggregate)
 
 	var cfg Config
-	if !s.cfg.Exists("events") {
+	if !s.cfg.Exists() {
 		cfg.RecordedActions = map[string]bool{
 			"devices/changed":        true,
 			"location/cluster/enter": true,
@@ -85,7 +84,7 @@ func (s *Service) Enable() error {
 			"mood":                   true,
 		}
 	}
-	s.cfg.Get("events", &cfg)
+	s.cfg.Get(&cfg)
 	for action, enabled := range cfg.RecordedActions {
 		if enabled {
 			if err := s.Subscribe(action, "", s.handleEventNew); err != nil {
@@ -339,13 +338,13 @@ func (s *Service) handleEventRecord(msg proto.Message) {
 	}
 
 	var cfg Config
-	s.cfg.Get("events", &cfg)
+	s.cfg.Get(&cfg)
 	if cfg.RecordedActions == nil {
 		cfg.RecordedActions = make(map[string]bool)
 	}
 	if enabled := cfg.RecordedActions[p.Action]; !enabled {
 		cfg.RecordedActions[p.Action] = true
-		s.cfg.Set("events", cfg)
+		s.cfg.Set(cfg)
 		s.Subscribe(p.Action, "", s.handleEventNew)
 	}
 

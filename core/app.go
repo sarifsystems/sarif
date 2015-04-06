@@ -13,6 +13,7 @@ import (
 
 	"github.com/xconstruct/stark/pkg/inject"
 	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/services"
 )
 
 var verbose = flag.Bool("v", false, "verbose debug output")
@@ -89,8 +90,10 @@ func (app *App) Must(err error) {
 }
 
 func (app *App) SetupInjector(inj *inject.Injector, name string) {
-	inj.Instance(app.Config)
 	inj.Instance(app.Log)
+	inj.Factory(func() services.Config {
+		return app.Config.Section(name)
+	})
 	inj.Factory(func() proto.Logger {
 		return app.Log
 	})

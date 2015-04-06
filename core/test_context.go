@@ -10,6 +10,7 @@ import (
 
 	"github.com/xconstruct/stark/pkg/inject"
 	"github.com/xconstruct/stark/proto"
+	"github.com/xconstruct/stark/services"
 )
 
 func InjectTest(container interface{}) proto.Conn {
@@ -20,7 +21,9 @@ func InjectTest(container interface{}) proto.Conn {
 	inj.Instance(orm.DB)
 	inj.Instance(orm.Database())
 	inj.Instance(proto.Conn(a))
-	inj.Instance(NewConfig(""))
+	inj.Factory(func() services.Config {
+		return NewConfig("").Section("test")
+	})
 	inj.Factory(func() proto.Logger {
 		return DefaultLog
 	})

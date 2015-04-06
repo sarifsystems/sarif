@@ -16,7 +16,6 @@ import (
 
 	"code.google.com/p/go.net/websocket"
 
-	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -38,7 +37,7 @@ type Config struct {
 }
 
 type Dependencies struct {
-	Config *core.Config
+	Config services.Config
 	Log    proto.Logger
 	Broker *proto.Broker
 }
@@ -64,8 +63,9 @@ func New(deps *Dependencies) *Server {
 		ApiKeys:        nil,
 		AllowedActions: make(map[string][]string),
 	}
-	deps.Config.Get("web", &cfg)
-	if cfg.ApiKeys == nil {
+	if deps.Config.Exists() {
+		deps.Config.Get(&cfg)
+	} else {
 		cfg.ApiKeys = make(map[string]string)
 		cfg.ApiKeys["unprivileged"] = ""
 		for i := 1; i < 6; i++ {
@@ -76,7 +76,7 @@ func New(deps *Dependencies) *Server {
 			cfg.ApiKeys["exampleclient"+strconv.Itoa(i)] = key
 		}
 		cfg.AllowedActions["exampleclient1"] = []string{"ping", "location/update"}
-		deps.Config.Set("web", cfg)
+		deps.Config.Set(cfg)
 	}
 
 	s := &Server{

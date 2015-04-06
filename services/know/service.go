@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/xconstruct/know"
-	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -25,7 +24,7 @@ type Config struct {
 }
 
 type Dependencies struct {
-	Config *core.Config
+	Config services.Config
 	Log    proto.Logger
 	Client *proto.Client
 }
@@ -41,7 +40,7 @@ func NewService(deps *Dependencies) *Service {
 		Log:    deps.Log,
 		Client: deps.Client,
 	}
-	deps.Config.Get("know", &s.cfg)
+	deps.Config.Get(&s.cfg)
 	if s.cfg.WolframApiKey != "" {
 		know.Wolfram.SetApiKey(s.cfg.WolframApiKey)
 	}

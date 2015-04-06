@@ -12,3 +12,11 @@ type Module struct {
 
 	NewInstance interface{}
 }
+
+type Config interface {
+	Exists() bool
+	Set(v interface{}) error
+	Get(v interface{}) (error, bool)
+
+	Dir() string
+}

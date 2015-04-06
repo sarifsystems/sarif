@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xconstruct/stark/core"
 	"github.com/xconstruct/stark/pkg/natural"
 	"github.com/xconstruct/stark/pkg/schema"
 	"github.com/xconstruct/stark/proto"
@@ -26,7 +25,7 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	Config *core.Config
+	Config services.Config
 	Log    proto.Logger
 	Client *proto.Client
 }
@@ -41,7 +40,7 @@ type Conversation struct {
 }
 
 type Service struct {
-	Config *core.Config
+	Config services.Config
 	Log    proto.Logger
 	*proto.Client
 
