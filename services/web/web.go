@@ -40,6 +40,7 @@ type Dependencies struct {
 	Config services.Config
 	Log    proto.Logger
 	Broker *proto.Broker
+	Client *proto.Client
 }
 
 type Server struct {
@@ -47,6 +48,7 @@ type Server struct {
 	Log        proto.Logger
 	Broker     *proto.Broker
 	apiClients map[string]*proto.Client
+	Client     *proto.Client
 }
 
 func GenerateApiKey() (string, error) {
@@ -84,6 +86,7 @@ func New(deps *Dependencies) *Server {
 		deps.Log,
 		deps.Broker,
 		make(map[string]*proto.Client),
+		deps.Client,
 	}
 	return s
 }
@@ -92,6 +95,8 @@ func (s *Server) Enable() error {
 	http.Handle("/", http.FileServer(http.Dir("assets/web")))
 	http.HandleFunc(REST_URL, s.handleRestPublish)
 	http.Handle("/stream/stark", websocket.Handler(s.handleStreamStark))
+
+	s.Client.Subscribe("json", "", s.handleJson)
 
 	go func() {
 		s.Log.Infof("[web] listening on %s", s.cfg.Interface)
