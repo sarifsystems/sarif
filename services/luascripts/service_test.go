@@ -34,12 +34,8 @@ func TestService(t *testing.T) {
 				Text:   "print(3 + 5)",
 			})
 			st.Expect(func(msg proto.Message) {
-				if msg.Action != "lua/done" {
-					t.Error("error executing")
-				}
-				if msg.Text != "8" {
-					t.Error("unexpected text", msg.Text)
-				}
+				st.ExpectAction("lua/done")
+				st.ExpectText("8")
 			})
 		})
 
@@ -47,7 +43,6 @@ func TestService(t *testing.T) {
 			st.When(proto.Message{
 				Action: "lua/do",
 				Text: `
-				local stark = require "stark"
 				stark.subscribe("my/repeat", "", function(msg)
 					stark.publish({
 						action = "my/repeated",
@@ -63,12 +58,8 @@ func TestService(t *testing.T) {
 				Text:   "mooo",
 			})
 			st.Expect(func(msg proto.Message) {
-				if msg.Action != "my/repeated" {
-					t.Error("error repeating")
-				}
-				if msg.Text != "mooomooo" {
-					t.Error("unexpected text", msg.Text)
-				}
+				st.ExpectAction("my/repeated")
+				st.ExpectText("mooomooo")
 			})
 		})
 
@@ -76,7 +67,6 @@ func TestService(t *testing.T) {
 			st.When(proto.Message{
 				Action: "lua/do",
 				Text: `
-				local stark = require "stark"
 				stark.subscribe("", "self", function() end)
 				local rep = stark.request{
 					action = "my/request",
@@ -90,9 +80,7 @@ func TestService(t *testing.T) {
 			})
 
 			st.Expect(func(msg proto.Message) {
-				if msg.Action != "my/request" {
-					t.Error("unexpected action: ", msg.Action)
-				}
+				st.ExpectAction("my/request")
 				st.When(proto.Message{
 					Action:      "my/response",
 					Destination: msg.Source,
@@ -102,12 +90,8 @@ func TestService(t *testing.T) {
 			})
 
 			st.Expect(func(msg proto.Message) {
-				if msg.Action != "got" {
-					t.Error("unexpected action: ", msg.Action)
-				}
-				if msg.Text != "my/response: hello from outside" {
-					t.Error("unexpected text: ", msg.Text)
-				}
+				st.ExpectAction("got")
+				st.ExpectText("my/response: hello from outside")
 			})
 			st.ExpectAction("lua/done")
 		})
