@@ -122,6 +122,11 @@ func (h *HostScan) LastStatus(name string) (Host, error) {
 			return host, nil
 		}
 	}
+	for _, host := range h.status {
+		if strings.Contains(strings.ToLower(host.Name), strings.ToLower(name)) {
+			return host, nil
+		}
+	}
 	return Host{}, errors.New("Host " + name + " not found")
 }
 
