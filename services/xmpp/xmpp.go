@@ -127,6 +127,9 @@ func (c *Client) newConversation(remote string) *conversation {
 
 func (c *Client) handleChatMessage(chat *xmpp.ClientMessage) {
 	c.Log.Debugln("[xmpp] chat: ", chat)
+	if chat.Type != "chat" {
+		return
+	}
 	if chat.Body == "" {
 		return
 	}
