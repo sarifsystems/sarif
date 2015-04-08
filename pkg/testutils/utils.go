@@ -17,10 +17,12 @@ type Tester struct {
 	conn        proto.Conn
 	WaitTimeout time.Duration
 	IgnoreSubs  bool
+	Id          string
 
-	Unit      string
-	Behaviour string
-	Received  chan proto.Message
+	Unit       string
+	Behaviour  string
+	Received   chan proto.Message
+	ExpectCurr *proto.Message
 }
 
 func New(t *testing.T) *Tester {
@@ -29,10 +31,12 @@ func New(t *testing.T) *Tester {
 		nil,
 		time.Second,
 		true,
+		"testutils-" + proto.GenerateId(),
 
 		"",
 		"",
 		make(chan proto.Message, 5),
+		nil,
 	}
 }
 
@@ -56,11 +60,17 @@ func (t *Tester) listen() {
 		if t.IgnoreSubs && msg.IsAction("proto/sub") {
 			continue
 		}
+		if msg.Source == t.Id {
+			continue
+		}
 		t.Received <- msg
 	}
 }
 
 func (t *Tester) Publish(msg proto.Message) {
+	if msg.Source == "" {
+		msg.Source = t.Id
+	}
 	if err := t.conn.Write(msg); err != nil {
 		t.T.Fatal(err)
 	}
@@ -101,9 +111,16 @@ func (t *Tester) HasReplies() bool {
 }
 
 func (t *Tester) Expect(f func(proto.Message)) {
+	if t.ExpectCurr != nil {
+		f(*t.ExpectCurr)
+		return
+	}
+
 	select {
 	case msg := <-t.Received:
+		t.ExpectCurr = &msg
 		f(msg)
+		t.ExpectCurr = nil
 	case <-time.After(t.WaitTimeout):
 		t.T.Fatal(t.Unit, t.Behaviour+": no message received")
 	}
@@ -112,7 +129,15 @@ func (t *Tester) Expect(f func(proto.Message)) {
 func (t *Tester) ExpectAction(action string) {
 	t.Expect(func(msg proto.Message) {
 		if !msg.IsAction(action) {
-			t.T.Fatal(t.Unit, t.Behaviour+": expected action", action, "not", msg.Action)
+			t.T.Fatal(t.Unit, t.Behaviour+": expected action", action, "not", msg.Action+":", msg.Text)
+		}
+	})
+}
+
+func (t *Tester) ExpectText(text string) {
+	t.Expect(func(msg proto.Message) {
+		if msg.Text != text {
+			t.T.Fatalf("%s %s: expected text '%s', not '%s'", t.Unit, t.Behaviour, text, msg.Text)
 		}
 	})
 }

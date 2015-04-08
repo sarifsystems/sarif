@@ -16,11 +16,17 @@ import (
 func InjectTest(container interface{}) proto.Conn {
 	orm := OpenDatabaseInMemory()
 	a, b := proto.NewPipe()
+	broker := proto.NewBroker()
+	broker.SetLogger(DefaultLog)
+	go broker.ListenOnBridge(a)
+
+	DefaultLog.SetLevel(LogLevelTrace)
 
 	inj := inject.NewInjector()
 	inj.Instance(orm.DB)
 	inj.Instance(orm.Database())
 	inj.Instance(proto.Conn(a))
+	inj.Instance(broker)
 	inj.Factory(func() services.Config {
 		return NewConfig("").Section("test")
 	})
@@ -29,7 +35,7 @@ func InjectTest(container interface{}) proto.Conn {
 	})
 	inj.Factory(func() *proto.Client {
 		c := proto.NewClient("testclient-" + proto.GenerateId())
-		c.Connect(a)
+		c.Connect(broker.NewLocalConn())
 		c.SetLogger(DefaultLog)
 		return c
 	})
