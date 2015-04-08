@@ -238,6 +238,10 @@ func (p *LearningParser) LearnMessage(msg proto.Message) {
 }
 
 func (p *LearningParser) LearnMessageSchema(s MessageSchema) {
+	if _, ok := p.messages[s.Action]; ok {
+		// TODO: Merge fields
+		return
+	}
 	p.messages[s.Action] = &s
 
 	feats := s.Features()

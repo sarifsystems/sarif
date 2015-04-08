@@ -2,8 +2,9 @@ package schema
 
 type Action struct {
 	*Thing
-	Reply string `json:"reply,omitempty"`
-	Name  string `json:"name,omitempty"`
+	Reply   string      `json:"reply,omitempty"`
+	Name    string      `json:"name,omitempty"`
+	Payload interface{} `json:"p,omitempty"`
 }
 
 type MultipleChoiceAction struct {

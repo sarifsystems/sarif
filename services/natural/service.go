@@ -8,12 +8,12 @@ package natural
 import (
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/xconstruct/stark/pkg/natural"
-	"github.com/xconstruct/stark/pkg/schema"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -28,15 +28,6 @@ type Dependencies struct {
 	Config services.Config
 	Log    proto.Logger
 	Client *proto.Client
-}
-
-type Conversation struct {
-	Device      string
-	LastTime    time.Time
-	LastMessage proto.Message
-
-	LastUserText    string
-	LastUserMessage proto.Message
 }
 
 type Service struct {
@@ -60,33 +51,31 @@ func NewService(deps *Dependencies) *Service {
 }
 
 func (s *Service) Enable() error {
-	if err := s.Subscribe("natural/handle", "", s.handleNatural); err != nil {
-		return err
-	}
-	if err := s.Subscribe("natural/parse", "", s.handleNaturalParse); err != nil {
-		return err
-	}
-	if err := s.Subscribe("", "user", s.handleUserMessage); err != nil {
-		return err
-	}
+	s.Subscribe("natural/handle", "", s.handleNatural)
+	s.Subscribe("natural/parse", "", s.handleNaturalParse)
+	s.Subscribe("natural/learn/sentence", "", s.handleNaturalLearnSentence)
+	s.Subscribe("natural/learn/meaning", "", s.handleNaturalLearnMeaning)
+	s.Subscribe("", "user", s.handleUserMessage)
 
 	if err := s.loadModel(); err != nil {
 		return err
 	}
-	go func() {
-		time.Sleep(1 * time.Minute)
-		if err := s.saveModel(); err != nil {
-			s.Log.Errorln("[natural] error saving model:", err)
-			return
-		}
-		c := time.Tick(time.Hour)
-		for n := range c {
-			if err := s.saveModel(); err != nil {
-				s.Log.Errorln("[natural] error saving model:", err, n)
-			}
-		}
-	}()
+	go s.saveModelLoop()
 	return nil
+}
+
+func (s *Service) saveModelLoop() {
+	time.Sleep(1 * time.Minute)
+	if err := s.saveModel(); err != nil {
+		s.Log.Errorln("[natural] error saving model:", err)
+		return
+	}
+	c := time.Tick(time.Hour)
+	for n := range c {
+		if err := s.saveModel(); err != nil {
+			s.Log.Errorln("[natural] error saving model:", err, n)
+		}
+	}
 }
 
 func (s *Service) loadModel() error {
@@ -136,14 +125,6 @@ func (s *Service) Disable() error {
 	return nil
 }
 
-type MsgErrNatural struct {
-	Original string `json:"original"`
-}
-
-func (pl MsgErrNatural) String() string {
-	return "I didn't understand your message."
-}
-
 type MsgNaturalParsed struct {
 	Parsed   proto.Message
 	Original string `json:"original"`
@@ -167,14 +148,15 @@ func (s *Service) parseNatural(msg proto.Message) (proto.Message, bool) {
 	if parsed.Text == "" {
 		parsed.Text = msg.Text
 	}
-	return parsed, w > 2
+	return parsed, w > 1
 }
 
 func (s *Service) getConversation(device string) *Conversation {
 	cv, ok := s.conversations[device]
 	if !ok {
 		cv = &Conversation{
-			Device: device,
+			service: s,
+			Device:  device,
 		}
 		s.conversations[device] = cv
 		s.Subscribe("", s.DeviceId+"/"+device, s.handleNetworkMessage)
@@ -182,117 +164,95 @@ func (s *Service) getConversation(device string) *Conversation {
 	return cv
 }
 
-type Actionable struct {
-	Action  *schema.Action   `json:"action"`
-	Actions []*schema.Action `json:"actions"`
-}
-
-func (a Actionable) IsAction() bool {
-	if a.Action == nil {
-		return false
-	}
-	if a.Action.SchemaType == "TextEntryAction" {
-		return true
-	}
-
-	return false
-}
-
-func answer(a *schema.Action, text string) (proto.Message, bool) {
-	reply := proto.Message{
-		Action: a.Reply,
-		Text:   text,
-	}
-	if text == ".cancel" || text == "cancel" || strings.HasPrefix(text, "cancel ") {
-		return reply, false
-	}
-	if a.SchemaType == "TextEntryAction" {
-		return reply, true
-	}
-	return reply, false
-}
-
-func (s *Service) publishForClient(cv *Conversation, msg proto.Message) {
-	msg.Source = s.DeviceId + "/" + cv.Device
-	s.Publish(msg)
-}
-
-func (s *Service) forwardToClient(cv *Conversation, msg proto.Message) {
-	// Save conversation.
-	cv.LastTime = time.Now()
-	cv.LastMessage = msg
-
-	// Forward response to client.
-	msg.Id = proto.GenerateId()
-	msg.Destination = cv.Device
-	natural.FormatMessage(&msg)
-	s.Publish(msg)
-}
-
 func (s *Service) handleNatural(msg proto.Message) {
 	cv := s.getConversation(msg.Source)
-
-	if msg.Text == ".full" {
-		text, err := json.MarshalIndent(cv.LastMessage, "", "    ")
-		if err != nil {
-			panic(err)
-		}
-		s.Reply(msg, proto.Message{
-			Action: "natural/full",
-			Text:   string(text),
-		})
-		return
-	}
-
-	// Check if client answers a conversation.
-	if time.Now().Sub(cv.LastTime) < 5*time.Minute {
-		var act Actionable
-		if err := cv.LastMessage.DecodePayload(&act); err == nil {
-			if act.IsAction() {
-				parsed, ok := answer(act.Action, msg.Text)
-				parsed.Destination = cv.LastMessage.Source
-				cv.LastTime = time.Time{}
-				if ok {
-					s.publishForClient(cv, parsed)
-				}
-				return
-			}
-		}
-	}
-
-	// Otherwise parse message as normal request.
-	parsed, ok := s.parseNatural(msg)
-	if !ok {
-		reply := proto.CreateMessage("err/natural", MsgErrNatural{msg.Text})
-		s.Publish(msg.Reply(reply))
-		return
-	}
-	cv.LastUserText = msg.Text
-	cv.LastUserMessage = parsed
-	parsed.CorrId = msg.Id
-	s.publishForClient(cv, parsed)
+	cv.HandleClientMessage(msg)
 }
 
 func (s *Service) handleNaturalParse(msg proto.Message) {
 	parsed, ok := s.parseNatural(msg)
 	if !ok {
-		reply := proto.CreateMessage("err/natural", MsgErrNatural{msg.Text})
-		s.Publish(msg.Reply(reply))
+		s.Reply(msg, proto.CreateMessage("err/natural", MsgErrNatural{
+			Original: msg.Text,
+		}))
 		return
 	}
 
-	reply := proto.CreateMessage("natural/parsed", MsgNaturalParsed{parsed, msg.Text})
-	s.Publish(msg.Reply(reply))
+	s.Reply(msg, proto.CreateMessage("natural/parsed", MsgNaturalParsed{parsed, msg.Text}))
 }
 
 func (s *Service) handleNetworkMessage(msg proto.Message) {
 	client := strings.TrimPrefix(msg.Destination, s.DeviceId+"/")
 	cv := s.getConversation(client)
-	s.forwardToClient(cv, msg)
+	cv.SendToClient(msg)
 }
 
 func (s *Service) handleUserMessage(msg proto.Message) {
 	for _, cv := range s.conversations {
-		s.forwardToClient(cv, msg)
+		cv.SendToClient(msg)
 	}
+}
+
+type msgLearnedSentence struct {
+	Rule   string `json:"rule"`
+	Action string `json:"action,omitempty"`
+}
+
+func (p msgLearnedSentence) String() string {
+	if p.Action != "" {
+		return fmt.Sprintf("I learned '%s'. I think it means %s.", p.Rule, p.Action)
+	}
+	return fmt.Sprintf("I learned '%s'.", p.Rule)
+}
+
+func (s *Service) handleNaturalLearnSentence(msg proto.Message) {
+	rule := strings.TrimSpace(msg.Text)
+	if rule == "" {
+		return
+	}
+
+	s.Log.Infof("[natural] learning new rule: '%s'", rule)
+	s.parser.LearnSentence(rule)
+
+	action := ""
+	if parsed, ok := s.parseNatural(msg); ok {
+		action = parsed.Action
+	}
+	s.Reply(msg, proto.CreateMessage("natural/learned/sentence", &msgLearnedSentence{rule, action}))
+}
+
+type msgLearnMeaning struct {
+	Sentence string `json:"sentence"`
+}
+
+type msgLearnedMeaning struct {
+	Sentence string `json:"sentence"`
+	Action   string `json:"action"`
+}
+
+func (p msgLearnedMeaning) String() string {
+	return "I learned to associate '" + p.Sentence + "' with " + p.Action + "."
+}
+
+func (s *Service) handleNaturalLearnMeaning(msg proto.Message) {
+	var p msgLearnMeaning
+	if err := msg.DecodePayload(&p); err != nil {
+		s.ReplyBadRequest(msg, err)
+		return
+	}
+	sentence := strings.TrimSpace(p.Sentence)
+	if sentence == "" {
+		return
+	}
+
+	var parsed proto.Message
+	ok := false
+	if parsed, ok = natural.ParseSimple(msg.Text); !ok {
+		parsed.Action = strings.TrimLeft(strings.TrimSpace(msg.Text), ".")
+	}
+
+	s.Log.Infof("[natural] reinforcing: '%s' with %s", sentence, parsed.Action)
+	s.parser.LearnMessage(parsed)
+	s.parser.ReinforceSentence(sentence, parsed.Action)
+	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearnedMeaning{sentence, parsed.Action}))
 }
