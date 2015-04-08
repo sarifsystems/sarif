@@ -8,6 +8,7 @@ package natural
 import (
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -55,6 +56,7 @@ func (s *Service) Enable() error {
 	s.Subscribe("natural/parse", "", s.handleNaturalParse)
 	s.Subscribe("natural/learn/sentence", "", s.handleNaturalLearnSentence)
 	s.Subscribe("natural/learn/meaning", "", s.handleNaturalLearnMeaning)
+	s.Subscribe("natural/reinforce", "", s.handleNaturalReinforce)
 	s.Subscribe("", "user", s.handleUserMessage)
 
 	if err := s.loadModel(); err != nil {
@@ -126,12 +128,12 @@ func (s *Service) Disable() error {
 }
 
 type MsgNaturalParsed struct {
-	Parsed   proto.Message
-	Original string `json:"original"`
+	Parsed   proto.Message `json:"parsed"`
+	Original string        `json:"original"`
 }
 
-func (pl MsgNaturalParsed) String() string {
-	return "Natural message correctly parsed."
+func (p MsgNaturalParsed) String() string {
+	return fmt.Sprintf("Interpreted '%s' as action '%s'.", p.Original, p.Parsed.Action)
 }
 
 func (s *Service) parseNatural(msg proto.Message) (proto.Message, bool) {
@@ -255,4 +257,22 @@ func (s *Service) handleNaturalLearnMeaning(msg proto.Message) {
 	s.parser.LearnMessage(parsed)
 	s.parser.ReinforceSentence(sentence, parsed.Action)
 	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearnedMeaning{sentence, parsed.Action}))
+}
+
+func (s *Service) handleNaturalReinforce(msg proto.Message) {
+	var p msgLearnedMeaning
+	if err := msg.DecodePayload(&p); err != nil {
+		s.ReplyBadRequest(msg, err)
+		return
+	}
+	if p.Sentence == "" || p.Action == "" {
+		s.ReplyBadRequest(msg, errors.New("No sentence or action given."))
+		return
+	}
+
+	s.Log.Infof("[natural] reinforcing: '%s' with %s", p.Sentence, p.Action)
+	s.parser.ReinforceSentence(p.Sentence, p.Action)
+
+	parsed, _ := s.parser.Parse(p.Sentence)
+	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearnedMeaning{p.Sentence, parsed.Action}))
 }
