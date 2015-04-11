@@ -50,7 +50,7 @@ func TestParseSimple(t *testing.T) {
 
 		simple{`.ping with "some device=me" host="another things" this`, true, proto.Message{
 			Action: "ping",
-			Text:   `with "some device=me" this`,
+			Text:   `with some device=me this`,
 		}, map[string]interface{}{
 			"host": "another things",
 		}},
