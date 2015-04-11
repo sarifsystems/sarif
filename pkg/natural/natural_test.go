@@ -36,15 +36,23 @@ func TestParseSimple(t *testing.T) {
 		}, nil},
 
 		simple{"!ping some text", true, proto.Message{
-			Action: "cmd/ping",
+			Action: "ping",
 			Text:   "some text",
 		}, nil},
 
-		simple{".ping device=me host=another", true, proto.Message{
+		simple{".ping with some device=me host=another things", true, proto.Message{
 			Action:      "ping",
 			Destination: "me",
+			Text:        "with some things",
 		}, map[string]interface{}{
 			"host": "another",
+		}},
+
+		simple{`.ping with "some device=me" host="another things" this`, true, proto.Message{
+			Action: "ping",
+			Text:   `with "some device=me" this`,
+		}, map[string]interface{}{
+			"host": "another things",
 		}},
 
 		simple{"ping no", false, proto.Message{}, nil},

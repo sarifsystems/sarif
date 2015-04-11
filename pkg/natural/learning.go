@@ -112,7 +112,7 @@ func (r *sentenceRule) Parse(s string) map[string]string {
 		if field == "" {
 			continue
 		}
-		vars[field] = match[i]
+		vars[field] = TrimQuotes(match[i])
 	}
 	return vars
 }

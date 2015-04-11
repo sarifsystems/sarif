@@ -30,34 +30,28 @@ func ParseSimple(text string) (proto.Message, bool) {
 		}
 	}
 
-	// "!cmd arguments", simple commands
-	if strings.HasPrefix(text, "!") || strings.HasPrefix(text, ".") {
-		isCmd := strings.HasPrefix(text, "!")
-
-		text = strings.TrimLeft(text, "!. ")
-		parts := strings.Split(text, " ")
+	if strings.HasPrefix(text, ".") || strings.HasPrefix(text, "!") {
+		text = strings.TrimLeft(text, ".! ")
+		parts, _ := SplitQuoted(text, " ")
 		if parts[0] == "" {
 			return msg, false
 		}
-		if isCmd {
-			msg.Action = "cmd/" + parts[0]
-		} else {
-			msg.Action = parts[0]
-		}
+		msg.Action = parts[0]
 
 		msg.Text = ""
 		payload := make(map[string]interface{}, 0)
 		for _, part := range parts[1:] {
-			keyval := strings.SplitN(part, "=", 2)
+			keyval, _ := SplitQuoted(part, "=")
 			if len(keyval) == 1 {
 				if msg.Text != "" {
 					msg.Text += " "
 				}
-				msg.Text += keyval[0]
+				msg.Text += TrimQuotes(keyval[0])
 				continue
 			}
 
-			k, v := keyval[0], keyval[1]
+			k := TrimQuotes(keyval[0])
+			v := TrimQuotes(strings.Join(keyval[1:], "="))
 			switch k {
 			case "text":
 				msg.Text = v
