@@ -163,14 +163,19 @@ func (m *Machine) luaHandle(msg proto.Message, handler *lua.LFunction) {
 	}
 }
 
+func (m *Machine) FlushOut() string {
+	out := strings.TrimSpace(m.OutputBuffer)
+	m.OutputBuffer = ""
+	return out
+}
+
 func (m *Machine) Do(code string) (string, error) {
 	m.StateLock.Lock()
 	defer m.StateLock.Unlock()
 
-	m.OutputBuffer = ""
+	m.FlushOut()
 	err := m.Lua.DoString(code)
-	out := strings.TrimSpace(m.OutputBuffer)
-	m.OutputBuffer = ""
+	out := m.FlushOut()
 
 	return out, err
 }
