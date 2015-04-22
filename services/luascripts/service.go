@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
@@ -110,7 +109,6 @@ func (s *Service) createMachine(name string) (*Machine, error) {
 	}
 
 	c := proto.NewClient("luascripts/" + name)
-	c.RequestTimeout = 5 * time.Second
 	c.Connect(s.Broker.NewLocalConn())
 
 	m := NewMachine(s.Log, c)

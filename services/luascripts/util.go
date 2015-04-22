@@ -36,7 +36,7 @@ func messageToTable(L *lua.LState, msg proto.Message) lua.LValue {
 	tableSetString(t, "text", msg.Text)
 
 	p := make(map[string]interface{})
-	msg.DecodePayload(p)
+	msg.DecodePayload(&p)
 	t.RawSetH(lua.LString("p"), luareflect.ToLua(L, p))
 	return t
 }

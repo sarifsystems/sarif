@@ -156,7 +156,7 @@ func (m *Machine) luaHandle(msg proto.Message, handler *lua.LFunction) {
 		m.Log.Warnln("[luascripts] handle err:", err)
 	}
 
-	for _, l := range strings.Split(m.OutputBuffer, "\n") {
+	for _, l := range strings.Split(m.FlushOut(), "\n") {
 		if l != "" {
 			m.Log.Infoln("[luascripts] print:", l)
 		}

@@ -28,7 +28,7 @@ type Client struct {
 func NewClient(deviceId string) *Client {
 	c := &Client{
 		deviceId,
-		2 * time.Second,
+		30 * time.Second,
 
 		nil,
 		nil,
