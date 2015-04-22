@@ -55,6 +55,8 @@ func New() *App {
 		{"interactive", app.Interactive, ""},
 		{"location_import", app.LocationImport, ""},
 		{"cat", app.Cat, usageCat},
+		{"down", app.Down, ""},
+		{"up", app.Up, ""},
 	}
 
 	return app
