@@ -53,20 +53,18 @@ func main() {
 	srv.RegisterModule(xmpp.Module)
 
 	// Default configuration
-	srv.ServerConfig = server.Config{
-		EnabledModules: []string{
-			"commands",
-			"events",
-			"know",
-			"location",
-			"meals",
-			"natural",
-			"scheduler",
-			"states",
-			"store",
-			"trigger",
-			"web",
-		},
+	srv.ServerConfig.EnabledModules = []string{
+		"commands",
+		"events",
+		"know",
+		"location",
+		"meals",
+		"natural",
+		"scheduler",
+		"states",
+		"store",
+		"trigger",
+		"web",
 	}
 
 	srv.Run()

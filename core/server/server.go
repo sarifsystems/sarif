@@ -6,6 +6,7 @@
 package server
 
 import (
+	"os"
 	"time"
 
 	"github.com/xconstruct/stark/core"
@@ -25,6 +26,7 @@ type Server struct {
 }
 
 type Config struct {
+	Name           string
 	Listen         []*proto.NetConfig
 	Bridges        []*proto.NetConfig
 	Gateways       []*proto.NetConfig
@@ -36,11 +38,15 @@ func New(appName, moduleName string) *Server {
 		moduleName = "server"
 	}
 	app := core.NewApp(appName, moduleName)
-	return &Server{
+	s := &Server{
 		App:       app,
 		Modules:   make(map[string]*services.Module),
 		Instances: make(map[string]interface{}),
 	}
+	if n, err := os.Hostname(); err != nil {
+		s.ServerConfig.Name = n
+	}
+	return s
 }
 
 func (s *Server) Init() {
@@ -162,7 +168,11 @@ func (s *Server) SetupInjector(inj *inject.Injector, name string) {
 			return s.Broker.NewLocalConn()
 		})
 		inj.Factory(func() *proto.Client {
-			c := proto.NewClient(name)
+			cname := name
+			if s.ServerConfig.Name != "" {
+				cname = s.ServerConfig.Name + "/" + name
+			}
+			c := proto.NewClient(cname)
 			c.Connect(s.Broker.NewLocalConn())
 			c.SetLogger(s.Log)
 			return c

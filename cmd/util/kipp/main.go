@@ -10,7 +10,6 @@ import (
 	"github.com/xconstruct/stark/core/server"
 	"github.com/xconstruct/stark/services/dbus"
 	"github.com/xconstruct/stark/services/mpd"
-	"github.com/xconstruct/stark/services/natural"
 )
 
 func main() {
@@ -18,14 +17,11 @@ func main() {
 
 	srv.RegisterModule(dbus.Module)
 	srv.RegisterModule(mpd.Module)
-	srv.RegisterModule(natural.Module)
 
 	// Default configuration
-	srv.ServerConfig = server.Config{
-		EnabledModules: []string{
-			"dbus",
-			"mpd",
-		},
+	srv.ServerConfig.EnabledModules = []string{
+		"dbus",
+		"mpd",
 	}
 
 	srv.Run()
