@@ -77,7 +77,7 @@ func (c *Client) Disconnect() error {
 
 func (c *Client) listen(conn Conn) error {
 	for {
-		msg, err := c.conn.Read()
+		msg, err := conn.Read()
 		if err != nil {
 			c.conn = nil
 			c.log.Errorln("[client] read:", err)
