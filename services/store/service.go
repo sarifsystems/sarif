@@ -45,15 +45,10 @@ func (s *Service) Enable() error {
 	if err := s.Store.Setup(); err != nil {
 		return err
 	}
-	if err := s.Subscribe("store/put", "", s.handlePut); err != nil {
-		return err
-	}
-	if err := s.Subscribe("store/get", "", s.handleGet); err != nil {
-		return err
-	}
-	if err := s.Subscribe("store/del", "", s.handleDel); err != nil {
-		return err
-	}
+	s.Subscribe("store/put", "", s.handlePut)
+	s.Subscribe("store/get", "", s.handleGet)
+	s.Subscribe("store/del", "", s.handleDel)
+	s.Subscribe("store/scan", "", s.handleScan)
 	return nil
 }
 
@@ -147,4 +142,28 @@ func (s *Service) handleDel(msg proto.Message) {
 
 	s.Reply(msg, proto.CreateMessage("store/deleted/"+key, nil))
 	s.Publish(proto.CreateMessage("store/deleted/"+key, nil))
+}
+
+type scanMessage struct {
+	Prefix string `json:"prefix"`
+	Start  string `json:"start"`
+	End    string `json:"end"`
+}
+
+func (s *Service) handleScan(msg proto.Message) {
+	var p scanMessage
+	if err := msg.DecodePayload(&p); err != nil {
+		s.ReplyBadRequest(msg, err)
+		return
+	}
+	if p.Prefix == "" && strings.HasPrefix(msg.Action, "store/scan/") {
+		p.Prefix = strings.TrimPrefix(msg.Action, "store/scan/")
+	}
+	keys, err := s.Store.Scan(p.Prefix, p.Start, p.End)
+	if err != nil {
+		s.Log.Errorln("[store] could not scan:", err)
+		s.ReplyInternalError(msg, err)
+		return
+	}
+	s.Reply(msg, proto.CreateMessage("store/scanned", keys))
 }

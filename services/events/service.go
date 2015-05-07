@@ -100,9 +100,9 @@ var MessageEventNotFound = proto.Message{
 	Text:   "No event found.",
 }
 
-func parseDataFromAction(action string) (s string, v float64, ok bool) {
+func parseDataFromAction(action, prefix string) (s string, v float64, ok bool) {
 	v = 1
-	action = strings.TrimLeft(strings.TrimPrefix(action, "timeseries/record"), "/")
+	action = strings.TrimLeft(strings.TrimPrefix(action, prefix), "/")
 	if action == "" {
 		return "", v, false
 	}
@@ -126,8 +126,8 @@ type EventFilter struct {
 
 func applyFilter(f EventFilter) func(*gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		if f.Event.Action != "" {
-			db = db.Where("(action = ? OR action LIKE ?)", f.Event.Action, f.Event.Action+"/%")
+		if action := strings.TrimRight(f.Event.Action, "/"); action != "" {
+			db = db.Where("(action = ? OR action LIKE ?)", action, action+"/%")
 			f.Event.Action = ""
 		}
 		db = db.Where(&f.Event)
@@ -290,10 +290,10 @@ func (s *Service) handleEventNew(msg proto.Message) {
 	isTargeted := msg.IsAction("event/new")
 
 	var e Event
-	e.Action = strings.TrimPrefix(msg.Action, "event/new/")
 	e.Text = msg.Text
 	e.Time = time.Now()
-	if s, v, ok := parseDataFromAction(e.Action); ok {
+	e.Value = 1
+	if s, v, ok := parseDataFromAction(msg.Action, "event/new"); ok {
 		e.Action, e.Value = s, v
 	}
 	if err := msg.DecodePayload(&e); err != nil && isTargeted {

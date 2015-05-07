@@ -38,6 +38,7 @@ type Store interface {
 	Put(doc Document) (Document, error)
 	Get(key string) (Document, error)
 	Del(key string) error
+	Scan(prefix, start, end string) ([]string, error)
 }
 
 type sqlStore struct {
@@ -87,4 +88,21 @@ func (d *sqlStore) Get(key string) (Document, error) {
 		err = ErrNoResult
 	}
 	return doc, err
+}
+
+func (d *sqlStore) Scan(prefix, start, end string) ([]string, error) {
+	var keys []string
+	db := d.DB.Model(&Document{})
+	if prefix != "" {
+		db = db.Where("dkey LIKE ?", prefix+"%")
+	}
+	if start != "" {
+		db = db.Where("dkey > ?", start)
+	}
+	if end != "" {
+		db = db.Where("dkey < ?", end)
+	}
+
+	err := db.Pluck("dkey", &keys).Error
+	return keys, err
 }
