@@ -57,6 +57,7 @@ func TestClientRequest(t *testing.T) {
 	b := NewClient("b")
 	a.Connect(bconn)
 	b.Connect(aconn)
+	b.RequestTimeout = 100 * time.Millisecond
 
 	a.Subscribe("hello_a", "", func(msg Message) {
 		a.Reply(msg, Message{

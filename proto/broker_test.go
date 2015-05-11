@@ -185,3 +185,115 @@ func TestBrokerGateway(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkBrokerSingle(b *testing.B) {
+	br := NewBroker()
+	c := br.NewLocalConn()
+	c.Write(Subscribe("testaction", ""))
+
+	msg := Message{
+		Version: VERSION,
+		Action:  "testaction",
+		Source:  "me",
+		Text:    "this text ist a bit longer to test things.",
+	}
+	msg.EncodePayload(map[string]interface{}{
+		"a_value":   3,
+		"some_text": "additional info",
+		"nested_magic": []string{
+			"yeah",
+			"right",
+			"this is okay",
+		},
+	})
+
+	for n := 0; n < b.N; n++ {
+		msg2 := msg
+		msg2.Id = GenerateId()
+		c.Write(msg2)
+		c.Read()
+	}
+}
+
+func BenchmarkBrokerSingleParallel(b *testing.B) {
+	br := NewBroker()
+	c := br.NewLocalConn()
+	c.Write(Subscribe("testaction", ""))
+
+	msg := Message{
+		Version: VERSION,
+		Action:  "testaction",
+		Source:  "me",
+		Text:    "this text ist a bit longer to test things.",
+	}
+	msg.EncodePayload(map[string]interface{}{
+		"a_value":   3,
+		"some_text": "additional info",
+		"nested_magic": []string{
+			"yeah",
+			"right",
+			"this is okay",
+		},
+	})
+
+	go func() {
+		for n := 0; n < b.N; n++ {
+			msg2 := msg
+			msg2.Id = GenerateId()
+			c.Write(msg2)
+		}
+	}()
+	for n := 0; n < b.N; n++ {
+		c.Read()
+	}
+}
+
+func BenchmarkBrokerSingleNet(b *testing.B) {
+	cfg := &NetConfig{
+		Address: "tcp://127.0.0.1:23401",
+	}
+	br := NewBroker()
+	go br.Listen(cfg)
+	time.Sleep(10 * time.Millisecond)
+	c, err := Dial(cfg)
+	if err != nil {
+		b.Fatal(err)
+	}
+	msg := Subscribe("testaction", "")
+	msg.Source = "me"
+	if err := c.Write(msg); err != nil {
+		b.Fatal(err)
+	}
+
+	msg = Message{
+		Id:      GenerateId(),
+		Version: VERSION,
+		Action:  "testaction",
+		Source:  "me",
+		Text:    "this text ist a bit longer to test things.",
+	}
+	msg.EncodePayload(map[string]interface{}{
+		"a_value":   3,
+		"some_text": "additional info",
+		"nested_magic": []string{
+			"yeah",
+			"right",
+			"this is okay",
+		},
+	})
+
+	go func() {
+		for n := 0; n < b.N; n++ {
+			msg2 := msg
+			msg2.Id = GenerateId()
+			if err := c.Write(msg2); err != nil {
+				b.Fatal(err)
+			}
+		}
+	}()
+	for n := 0; n < b.N; n++ {
+		if _, err := c.Read(); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
