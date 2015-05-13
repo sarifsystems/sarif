@@ -60,6 +60,8 @@ func ToLua(L *lua.LState, data interface{}) lua.LValue {
 
 func DecodeToBasic(data lua.LValue) interface{} {
 	switch data.Type() {
+	case lua.LTNil:
+		return nil
 	case lua.LTBool:
 		return lua.LVAsBool(data)
 	case lua.LTNumber:
@@ -75,7 +77,7 @@ func DecodeToBasic(data lua.LValue) interface{} {
 		})
 		return m
 	}
-	return lua.LTNil
+	return nil
 }
 
 func getKind(val reflect.Value) reflect.Kind {
