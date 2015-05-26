@@ -26,6 +26,7 @@ import (
 	"github.com/xconstruct/stark/services/states"
 	"github.com/xconstruct/stark/services/store"
 	"github.com/xconstruct/stark/services/trigger"
+	"github.com/xconstruct/stark/services/vdir"
 	"github.com/xconstruct/stark/services/web"
 	"github.com/xconstruct/stark/services/xmpp"
 
@@ -51,6 +52,7 @@ func main() {
 	srv.RegisterModule(statenet.Module)
 	srv.RegisterModule(store.Module)
 	srv.RegisterModule(trigger.Module)
+	srv.RegisterModule(vdir.Module)
 	srv.RegisterModule(web.Module)
 	srv.RegisterModule(xmpp.Module)
 
@@ -67,6 +69,7 @@ func main() {
 		"states",
 		"store",
 		"trigger",
+		"vdir",
 		"web",
 	}
 
