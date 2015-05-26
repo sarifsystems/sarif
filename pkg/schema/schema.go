@@ -3,8 +3,10 @@ package schema
 import "reflect"
 
 type Thing struct {
-	SchemaType    string `json:"@type"`
-	SchemaContext string `json:"@context"`
+	SchemaContext string `json:"@context,omitempty"`
+	SchemaType    string `json:"@type,omitempty"`
+	SchemaId      string `json:"@id,omitempty"`
+	SchemaLabel   string `json:"rdfs:label,omitempty"`
 }
 
 var (
