@@ -8,6 +8,7 @@ package natural
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -27,6 +28,18 @@ func ParseSimple(text string) (proto.Message, bool) {
 	if strings.HasPrefix(text, "{") {
 		if err := json.Unmarshal([]byte(text), &msg); err == nil {
 			return msg, true
+		}
+	}
+
+	if strings.HasPrefix(text, "stark://") {
+		if u, err := url.Parse(text); err == nil {
+			if err := msg.EncodePayload(u.Query()); err == nil {
+				msg.Action = u.Host + u.Path
+				if u.User != nil {
+					msg.Destination = u.User.Username()
+				}
+				return msg, true
+			}
 		}
 	}
 
