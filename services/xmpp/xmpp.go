@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/agl/xmpp"
+	"github.com/agl/xmpp-client/xmpp"
 
 	"github.com/xconstruct/stark/pkg/natural"
 	"github.com/xconstruct/stark/proto"
