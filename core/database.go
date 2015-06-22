@@ -56,7 +56,7 @@ func OpenDatabase(cfg DatabaseConfig) (*Orm, error) {
 }
 
 func OpenDatabaseInMemory() *Orm {
-	sdb, err := gorm.Open("sqlite3", ":memory:")
+	sdb, err := gorm.Open("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
 		panic(err)
 	}
