@@ -45,14 +45,11 @@ func NewService(deps *Dependencies) *Service {
 	s := &Service{
 		Log:      deps.Log,
 		Broker:   deps.Broker,
+		Client:   deps.Client,
 		Machines: make(map[string]*Machine),
 	}
 	s.cfg.ScriptDir = deps.Config.Dir() + "/luascripts"
 	deps.Config.Get(&s.cfg)
-
-	sv := proto.NewClient("luascripts")
-	sv.Connect(s.Broker.NewLocalConn())
-	s.Client = sv
 
 	s.createMachine("default")
 	return s
@@ -108,7 +105,7 @@ func (s *Service) createMachine(name string) (*Machine, error) {
 		return nil, errors.New("Machine " + name + " already exists")
 	}
 
-	c := proto.NewClient("luascripts/" + name)
+	c := proto.NewClient(s.DeviceId + "/" + name)
 	c.Connect(s.Broker.NewLocalConn())
 
 	m := NewMachine(s.Log, c)

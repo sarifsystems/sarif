@@ -16,9 +16,9 @@ const (
 )
 
 type Cluster struct {
-	Start  Location
-	End    Location
-	Status ClusterStatus
+	Start  Location      `json:"start,omitempty"`
+	End    Location      `json:"end,omitempty"`
+	Status ClusterStatus `json:"status"`
 }
 
 func NewClusterGenerator() *ClusterGenerator {

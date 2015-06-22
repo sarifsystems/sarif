@@ -131,15 +131,21 @@ func (q *Query) Exec(result interface{}) error {
 
 var (
 	CommonPrefixes = map[string]string{
+		"stark": "stark://schema/",
+
 		"dbpedia":      "http://dbpedia.org/resource/",
 		"dbpedia-owl":  "http://dbpedia.org/ontology/",
 		"dbpedia-prop": "http://dbpedia.org/property/",
 		"foaf":         "http://xmlns.com/foaf/0.1/",
+		"freebase-key": "http://rdf.freebase.com/key/",
+		"freebase-ns":  "http://rdf.freebase.com/ns/",
 		"mo":           "http://purl.org/ontology/mo/",
 		"owl":          "http://www.w3.org/2002/07/owl#",
 		"rdf":          "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
 		"rdfs":         "http://www.w3.org/2000/01/rdf-schema#",
+		"schema":       "http://schema.org/",
 		"vcard":        "http://www.w3.org/2006/vcard/ns#",
 		"yago":         "http://yago-knowledge.org/resource/",
+		"xsd":          "http://www.w3.org/2001/XMLSchema#",
 	}
 )

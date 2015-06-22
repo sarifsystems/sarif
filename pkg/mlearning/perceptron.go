@@ -5,7 +5,10 @@
 
 package mlearning
 
-import "math/rand"
+import (
+	"math/rand"
+	"sort"
+)
 
 type Feature string
 type Class string
@@ -101,6 +104,35 @@ func (p *Perceptron) Predict(features []Feature) (Class, Weight) {
 		}
 	}
 	return mclass, mweight
+}
+
+type Prediction struct {
+	Class  Class
+	Weight Weight
+}
+
+type byWeight []Prediction
+
+func (a byWeight) Len() int           { return len(a) }
+func (a byWeight) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byWeight) Less(i, j int) bool { return a[i].Weight > a[j].Weight }
+
+func (p *Perceptron) PredictAll(features []Feature) []Prediction {
+	scores := map[Class]Weight{}
+	for _, feat := range features {
+		if weights, ok := p.Weights[feat]; ok {
+			for class, weight := range weights {
+				scores[class] += weight
+			}
+		}
+	}
+
+	predictions := make([]Prediction, 0, len(scores))
+	for c, w := range scores {
+		predictions = append(predictions, Prediction{c, w})
+	}
+	sort.Sort(byWeight(predictions))
+	return predictions
 }
 
 func (p *Perceptron) Train(fs Iterator) (int, int) {
