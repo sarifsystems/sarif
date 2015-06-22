@@ -47,7 +47,9 @@ func (c *WebClient) RunFrontend() {
 	thrust.InitLogger()
 	thrust.Start()
 
-	thrustWindow := thrust.NewWindow("http://localhost:54693/#/chat", nil)
+	thrustWindow := thrust.NewWindow(thrust.WindowOptions{
+		RootUrl: "http://localhost:54693/#/chat",
+	})
 	thrustWindow.Show()
 	thrustWindow.Focus()
 
