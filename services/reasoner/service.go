@@ -63,7 +63,8 @@ func (s *Service) Enable() error {
 }
 
 type resultPayload struct {
-	Facts []*Fact `json:"facts"`
+	Result interface{} `json:"result"`
+	Facts  []*Fact     `json:"facts"`
 }
 
 func (p resultPayload) Text() string {
@@ -106,7 +107,10 @@ func (s *Service) HandleQuery(msg proto.Message) {
 		return
 	}
 
-	s.Reply(msg, proto.CreateMessage("concepts/result", &resultPayload{facts}))
+	s.Reply(msg, proto.CreateMessage("concepts/result", &resultPayload{
+		ToJsonLd(facts),
+		facts,
+	}))
 }
 
 func (s *Service) InterpretLiterals(f Fact) (Fact, error) {
@@ -152,7 +156,13 @@ func (s *Service) HandleStore(msg proto.Message) {
 		return
 	}
 
-	if err := s.DB.Save(&f).Error; err != nil {
+	f, err := s.InterpretLiterals(f)
+	if err != nil {
+		s.ReplyBadRequest(msg, err)
+		return
+	}
+
+	if err := s.DB.FirstOrCreate(&f, &f).Error; err != nil {
 		s.ReplyInternalError(msg, err)
 		return
 	}
@@ -177,7 +187,10 @@ func (s *Service) HandleQueryExternal(msg proto.Message) {
 	}
 
 	result := ApplyBindings(facts, r.Results.Bindings, sparql.CommonPrefixes)
-	s.Reply(msg, proto.CreateMessage("concepts/result", &resultPayload{result}))
+	s.Reply(msg, proto.CreateMessage("concepts/result", &resultPayload{
+		ToJsonLd(result),
+		result,
+	}))
 
 	for _, f := range result {
 		if err := s.DB.FirstOrCreate(&f, &f).Error; err != nil {
@@ -273,4 +286,8 @@ func AddNamespacePrefix(s string, ns map[string]string) string {
 		}
 	}
 	return s
+}
+
+func CreateURIFromLiteral(s string) string {
+	return "stark:" + strings.Replace(s, " ", "_", -1)
 }

@@ -116,3 +116,48 @@ func FormSentences(fs []*Fact) []string {
 	}
 	return sentences
 }
+
+func ToJsonLd(fs []*Fact) []interface{} {
+	subjects := make(map[string]map[string]interface{})
+	nested := make(map[string]struct{})
+
+	for _, f := range fs {
+		if _, ok := subjects[f.Subject]; !ok {
+			subjects[f.Subject] = map[string]interface{}{
+				"@id": f.Subject,
+			}
+		}
+	}
+
+	for _, f := range fs {
+		sub := subjects[f.Subject]
+		pred := f.Predicate
+		if pred == "rdf:type" {
+			pred = "@type"
+		}
+		var obj interface{} = f.Object
+		if sub, ok := subjects[f.Object]; ok {
+			obj = sub
+		}
+		if existing, ok := sub[f.Predicate]; ok {
+			switch v := existing.(type) {
+			case []interface{}:
+				sub[f.Predicate] = append(v, obj)
+			default:
+				sub[f.Predicate] = []interface{}{v, obj}
+			}
+		} else {
+			sub[f.Predicate] = obj
+		}
+		nested[f.Object] = struct{}{}
+	}
+
+	for s := range nested {
+		delete(subjects, s)
+	}
+	graph := make([]interface{}, 0, len(subjects))
+	for _, s := range subjects {
+		graph = append(graph, s)
+	}
+	return graph
+}

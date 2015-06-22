@@ -44,9 +44,7 @@ func TestService(t *testing.T) {
 			}))
 
 			st.Expect(func(msg proto.Message) {
-				if msg.Action != "event/found" {
-					t.Error("did not find event")
-				}
+				st.ExpectAction("event/found")
 				got := Event{}
 				msg.DecodePayload(&got)
 				if got.Text != "User drinks coffee." {
@@ -121,9 +119,7 @@ func TestService(t *testing.T) {
 			}))
 
 			st.Expect(func(msg proto.Message) {
-				if msg.Action != "event/found" {
-					t.Error("did not find event")
-				}
+				st.ExpectAction("event/found")
 				got := Event{}
 				msg.DecodePayload(&got)
 				if got.Text != "some value has changed" {
