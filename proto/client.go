@@ -7,6 +7,7 @@ package proto
 
 import (
 	"errors"
+	"strings"
 	"sync"
 	"time"
 )
@@ -156,7 +157,13 @@ func (c *Client) Subscribe(action, device string, h func(Message)) error {
 		device = c.DeviceId
 	}
 	c.internalSubscribe(action, device, h)
-	return c.Publish(Subscribe(action, device))
+	if err := c.Publish(Subscribe(action, device)); err != nil {
+		return err
+	}
+	if !strings.HasPrefix(action, "proto/discover/") {
+		return c.Subscribe("proto/discover/"+action, "", c.handlePing)
+	}
+	return nil
 }
 
 func (c *Client) Reply(orig, reply Message) error {
