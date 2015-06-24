@@ -18,11 +18,13 @@ import (
 )
 
 type model struct {
+	Rules  natural.SentenceRuleSet
 	Parser *natural.Model
 	Pos    *mlearning.Model
 }
 
 type Parser struct {
+	regular   *natural.RegularParser
 	tokenizer *natural.Tokenizer
 	parser    *natural.LearningParser
 	pos       *natural.PosTagger
@@ -31,6 +33,7 @@ type Parser struct {
 
 func NewParser() *Parser {
 	return &Parser{
+		natural.NewRegularParser(),
 		natural.NewTokenizer(),
 		natural.NewLearningParser(),
 		natural.NewPosTagger(),
@@ -47,6 +50,7 @@ func (p *Parser) SaveModel(path string) error {
 
 	gz := gzip.NewWriter(f)
 	model := model{
+		p.regular.Rules(),
 		p.parser.Model(),
 		p.pos.Perceptron.Model,
 	}
@@ -60,7 +64,7 @@ func (p *Parser) LoadModel(path string) error {
 	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			natural.TrainDefaults(p.parser)
+			p.regular.Load(natural.DefaultRules)
 			ss, err := natural.LoadCoNLL(strings.NewReader(twpos.Data))
 			if err != nil {
 				return err
@@ -79,6 +83,9 @@ func (p *Parser) LoadModel(path string) error {
 
 	model := model{}
 	if err := dec.Decode(&model); err != nil {
+		return err
+	}
+	if err := p.regular.Load(model.Rules); err != nil {
 		return err
 	}
 	if err := p.parser.LoadModel(model.Parser); err != nil {
@@ -102,6 +109,9 @@ type Context struct {
 }
 
 func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
+	if ctx == nil {
+		ctx = &Context{}
+	}
 	r := &ParseResult{
 		Text: text,
 	}
@@ -111,6 +121,13 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 
 	if msg, ok := natural.ParseSimple(text); ok {
 		r.Type = "simple"
+		r.Message = msg
+		r.Weight = 100
+		return r, nil
+	}
+
+	if msg, ok := p.regular.Parse(text); ok {
+		r.Type = "regular"
 		r.Message = msg
 		r.Weight = 100
 		return r, nil
@@ -144,8 +161,16 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 		return r, err
 	}
 
-	r.Message, r.Weight = p.parser.Parse(text)
-	return r, err
+	return r, nil
+}
+
+func (p *Parser) ReinforceSentence(text string, action string) error {
+	r, err := p.Parse(text, &Context{})
+	if err != nil {
+		return err
+	}
+	p.parser.ReinforceMeaning(r.Meaning, action)
+	return nil
 }
 
 func inStringSlice(s string, ss []string) bool {

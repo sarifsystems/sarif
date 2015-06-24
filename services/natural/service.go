@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xconstruct/stark/pkg/natural"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -51,8 +50,7 @@ func NewService(deps *Dependencies) *Service {
 func (s *Service) Enable() error {
 	s.Subscribe("natural/handle", "", s.handleNatural)
 	s.Subscribe("natural/parse", "", s.handleNaturalParse)
-	s.Subscribe("natural/learn/sentence", "", s.handleNaturalLearnSentence)
-	s.Subscribe("natural/learn/meaning", "", s.handleNaturalLearnMeaning)
+	s.Subscribe("natural/learn", "", s.handleNaturalLearn)
 	s.Subscribe("natural/reinforce", "", s.handleNaturalReinforce)
 	s.Subscribe("", "user", s.handleUserMessage)
 
@@ -148,72 +146,36 @@ func (s *Service) handleUserMessage(msg proto.Message) {
 	}
 }
 
-type msgLearnedSentence struct {
-	Rule   string `json:"rule"`
-	Action string `json:"action,omitempty"`
-}
-
-func (p msgLearnedSentence) String() string {
-	if p.Action != "" {
-		return fmt.Sprintf("I learned '%s'. I think it means %s.", p.Rule, p.Action)
-	}
-	return fmt.Sprintf("I learned '%s'.", p.Rule)
-}
-
-func (s *Service) handleNaturalLearnSentence(msg proto.Message) {
-	rule := strings.TrimSpace(msg.Text)
-	if rule == "" {
-		return
-	}
-
-	s.Log.Infof("[natural] learning new rule: '%s'", rule)
-	s.parser.parser.LearnSentence(rule)
-
-	action := ""
-	if res, err := s.parser.Parse(msg.Text, &Context{}); err != nil && res.Weight > 0 {
-		action = res.Message.Action
-	}
-	s.Reply(msg, proto.CreateMessage("natural/learned/sentence", &msgLearnedSentence{rule, action}))
-}
-
-type msgLearnMeaning struct {
-	Sentence string `json:"sentence"`
-}
-
-type msgLearnedMeaning struct {
+type msgLearn struct {
 	Sentence string `json:"sentence"`
 	Action   string `json:"action"`
 }
 
-func (p msgLearnedMeaning) String() string {
+func (p msgLearn) Text() string {
 	return "I learned to associate '" + p.Sentence + "' with " + p.Action + "."
 }
 
-func (s *Service) handleNaturalLearnMeaning(msg proto.Message) {
-	var p msgLearnMeaning
+func (s *Service) handleNaturalLearn(msg proto.Message) {
+	var p msgLearn
 	if err := msg.DecodePayload(&p); err != nil {
 		s.ReplyBadRequest(msg, err)
 		return
 	}
-	sentence := strings.TrimSpace(p.Sentence)
-	if sentence == "" {
+	p.Sentence = strings.TrimSpace(p.Sentence)
+	if p.Sentence == "" {
 		return
 	}
+	p.Action = strings.TrimLeft(p.Action, ".")
 
-	var parsed proto.Message
-	ok := false
-	if parsed, ok = natural.ParseSimple(msg.Text); !ok {
-		parsed.Action = strings.TrimLeft(strings.TrimSpace(msg.Text), ".")
+	if err := s.parser.regular.Learn(p.Sentence, p.Action); err != nil {
+		s.ReplyBadRequest(msg, err)
 	}
-
-	s.Log.Infof("[natural] reinforcing: '%s' with %s", sentence, parsed.Action)
-	s.parser.parser.LearnMessage(parsed)
-	s.parser.parser.ReinforceSentence(sentence, parsed.Action)
-	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearnedMeaning{sentence, parsed.Action}))
+	s.Log.Infof("[natural] associating '%s' with %s", p.Sentence, p.Action)
+	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", p))
 }
 
 func (s *Service) handleNaturalReinforce(msg proto.Message) {
-	var p msgLearnedMeaning
+	var p msgLearn
 	if err := msg.DecodePayload(&p); err != nil {
 		s.ReplyBadRequest(msg, err)
 		return
@@ -224,8 +186,8 @@ func (s *Service) handleNaturalReinforce(msg proto.Message) {
 	}
 
 	s.Log.Infof("[natural] reinforcing: '%s' with %s", p.Sentence, p.Action)
-	s.parser.parser.ReinforceSentence(p.Sentence, p.Action)
+	s.parser.ReinforceSentence(p.Sentence, p.Action)
 
-	parsed, _ := s.parser.parser.Parse(p.Sentence)
-	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearnedMeaning{p.Sentence, parsed.Action}))
+	parsed, _ := s.parser.Parse(p.Sentence, &Context{})
+	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearn{p.Sentence, parsed.Message.Action}))
 }

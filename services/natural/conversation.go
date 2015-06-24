@@ -153,20 +153,6 @@ func (cv *Conversation) handleUnknownUserMessage(msg proto.Message) {
 	pl := &MsgErrNatural{
 		Original: msg.Text,
 	}
-	if m := cv.service.parser.parser.ParseSentence(msg.Text); m != nil {
-		pl.Type = "meaning"
-		pl.Action = schema.Fill(&schema.TextEntryAction{
-			Reply:   "natural/learn/meaning",
-			Name:    "Give an example message or action to learn this sentence.",
-			Payload: &msgLearnMeaning{msg.Text},
-		})
-	} else {
-		pl.Type = "sentence"
-		pl.Action = schema.Fill(&schema.TextEntryAction{
-			Reply: "natural/learn/sentence",
-			Name:  "Give a rule to learn this sentence.",
-		})
-	}
 
 	cv.SendToClient(msg.Reply(proto.CreateMessage("err/natural", pl)))
 }

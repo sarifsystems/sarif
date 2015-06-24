@@ -5,12 +5,6 @@
 
 package natural
 
-import (
-	"fmt"
-
-	"github.com/xconstruct/stark/pkg/mlearning"
-)
-
 var LearningSentencesDefault = []string{
 	"record that [text]",
 	"note that [text]",
@@ -178,32 +172,4 @@ var LearningReinforcementDefaults = map[string]string{
 	"when did i last visit Berlin":                "location/last",
 	"create a geofence at Berlin":                 "location/fence/create",
 	"what is this thing":                          "knowledge/query",
-}
-
-func TrainDefaults(p *LearningParser) (int, int) {
-	for _, s := range LearningSentencesDefault {
-		p.LearnSentence(s)
-	}
-
-	it := &mlearning.SimpleIterator{}
-	for s, a := range LearningReinforcementDefaults {
-		m := p.ParseSentence(s)
-		if m == nil {
-			panic(s)
-		}
-		it.FeatureSlice = append(it.FeatureSlice, m.Features())
-		it.ClassSlice = append(it.ClassSlice, mlearning.Class(a))
-	}
-	csum, nsum := 0, 0
-	for i := 0; i < 5; i++ {
-		for _, s := range LearningMessagesDefault {
-			p.LearnMessageSchema(s)
-		}
-		it.Reset()
-		c, n := p.perceptron.Train(it)
-		csum += c
-		nsum += n
-		fmt.Printf("Iter %d: %d/%d=%.3f\n", i, c, n, float64(c)/float64(n)*100)
-	}
-	return csum, nsum
 }

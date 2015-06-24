@@ -14,9 +14,9 @@ import (
 type Sentence []*Token
 
 type Token struct {
-	Value string
-	Lemma string
-	Tags  map[string]struct{}
+	Value string              `json:"value,omitempty"`
+	Lemma string              `json:"lemma,omitempty"`
+	Tags  map[string]struct{} `json:"tags,omitempty"`
 }
 
 func (t Token) Is(tag string) bool {

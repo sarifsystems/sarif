@@ -14,7 +14,7 @@ func NewMeaningParser() *MeaningParser {
 
 func (p *MeaningParser) ParseImperative(tokens []*Token) (*Meaning, error) {
 	m := &Meaning{
-		Variables: make([]Var, 0),
+		Variables: make(map[string]string),
 	}
 
 	preps := make(map[string]int)
@@ -32,8 +32,8 @@ func (p *MeaningParser) ParseImperative(tokens []*Token) (*Meaning, error) {
 	t = it.Next()
 	for t != nil {
 		primary := true
-		if m.Action == "" && t.Is("V") {
-			m.Action = t.Lemma
+		if m.Predicate == "" && t.Is("V") {
+			m.Predicate = t.Lemma
 			t = it.Next()
 			continue
 		}
@@ -66,15 +66,9 @@ func (p *MeaningParser) ParseImperative(tokens []*Token) (*Meaning, error) {
 				values = append(values, t)
 				t = it.Next()
 			}
-			m.Variables = append(m.Variables, Var{
-				prep.Lemma,
-				JoinTokens(values),
-			})
+			m.Variables[prep.Lemma] = JoinTokens(values)
 			if len(values) > 1 {
-				m.Variables = append(m.Variables, Var{
-					values[0].Lemma,
-					JoinTokens(values[1:]),
-				})
+				m.Variables[values[0].Lemma] = JoinTokens(values[1:])
 			}
 			continue
 		}
