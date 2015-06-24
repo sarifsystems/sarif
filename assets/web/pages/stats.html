@@ -1,0 +1,24 @@
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-md-6">
+			<h1>Statistics <small>for things</small></h1>
+		</div>
+		<div class="col-md-6">
+			<div class="pull-right btn-group">
+				<button type="button" class="btn btn-default" datepicker-popup="dd-MM-yyyy" ng-model="dailyDate" ng-click="openDailyDatepicker($event)" is-open="dailyDatepickerOpened" ng-change="goDailyDate()">
+					<i class="glyphicon glyphicon-calendar"></i>
+				</button>
+				<button type="button" class="btn btn-default" ng-click="changeDay(-1)"><i class="glyphicon glyphicon-chevron-left"></i> Previous</button>
+				<button type="button" class="btn btn-default" ng-click="changeDay(1)">Next <i class="glyphicon glyphicon-chevron-right"></i></button>
+			</div>
+		</div>
+	</div>
+
+	<div class="row">
+		<div id="chart">
+			<svg style="height: 700px;"></svg>
+		</div>
+	</div>
+</div>
+
+
