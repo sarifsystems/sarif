@@ -6,11 +6,8 @@
 package natural
 
 import (
-	"compress/gzip"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -36,7 +33,7 @@ type Service struct {
 	Log    proto.Logger
 	*proto.Client
 
-	parser        *natural.LearningParser
+	parser        *Parser
 	conversations map[string]*Conversation
 }
 
@@ -46,7 +43,7 @@ func NewService(deps *Dependencies) *Service {
 		deps.Log,
 		deps.Client,
 
-		natural.NewLearningParser(),
+		NewParser(),
 		make(map[string]*Conversation),
 	}
 }
@@ -82,45 +79,14 @@ func (s *Service) saveModelLoop() {
 
 func (s *Service) loadModel() error {
 	path := s.Config.Dir() + "/" + "natural.json.gz"
-	f, err := os.Open(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			s.Log.Debugln("[natural] loading default model")
-			natural.TrainDefaults(s.parser)
-			return nil
-		}
-		return err
-	}
-	defer f.Close()
 	s.Log.Debugln("[natural] loading model from", path)
-	gz, err := gzip.NewReader(f)
-	if err != nil {
-		return err
-	}
-	dec := json.NewDecoder(gz)
-
-	model := &natural.Model{}
-	if err := dec.Decode(model); err != nil {
-		return err
-	}
-	return s.parser.LoadModel(model)
+	return s.parser.LoadModel(path)
 }
 
 func (s *Service) saveModel() error {
 	path := s.Config.Dir() + "/" + "natural.json.gz"
 	s.Log.Debugln("[natural] saving model to", path)
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	gz := gzip.NewWriter(f)
-	model := s.parser.Model()
-	if err := json.NewEncoder(gz).Encode(model); err != nil {
-		return err
-	}
-	return gz.Close()
+	return s.parser.SaveModel(path)
 }
 
 func (s *Service) Disable() error {
@@ -128,29 +94,14 @@ func (s *Service) Disable() error {
 }
 
 type MsgNaturalParsed struct {
-	Parsed   proto.Message `json:"parsed"`
-	Original string        `json:"original"`
+	*ParseResult
 }
 
 func (p MsgNaturalParsed) String() string {
-	return fmt.Sprintf("Interpreted '%s' as action '%s'.", p.Original, p.Parsed.Action)
-}
-
-func (s *Service) parseNatural(msg proto.Message) (proto.Message, bool) {
-	if msg.Text == "" {
-		return proto.Message{}, false
+	if p.Weight <= 0 {
+		return "Could not parse this text."
 	}
-
-	if parsed, ok := natural.ParseSimple(msg.Text); ok {
-		return parsed, ok
-	}
-	parsed, w := s.parser.Parse(msg.Text)
-	s.Log.Debugf(`[natural] parsed "%s" as action "%s" (%g)`, msg.Text, parsed.Action, w)
-
-	if parsed.Text == "" {
-		parsed.Text = msg.Text
-	}
-	return parsed, w > 1
+	return fmt.Sprintf("Interpreted '%s' as action '%s'.", p.Text, p.Message.Action)
 }
 
 func (s *Service) getConversation(device string) *Conversation {
@@ -172,15 +123,17 @@ func (s *Service) handleNatural(msg proto.Message) {
 }
 
 func (s *Service) handleNaturalParse(msg proto.Message) {
-	parsed, ok := s.parseNatural(msg)
-	if !ok {
-		s.Reply(msg, proto.CreateMessage("err/natural", MsgErrNatural{
-			Original: msg.Text,
-		}))
+	res, err := s.parser.Parse(msg.Text, &Context{})
+	if err != nil {
+		s.ReplyBadRequest(msg, err)
 		return
 	}
+	action := "natural/parsed"
+	if res.Weight <= 0 {
+		action = "err/natural/parsed"
+	}
 
-	s.Reply(msg, proto.CreateMessage("natural/parsed", MsgNaturalParsed{parsed, msg.Text}))
+	s.Reply(msg, proto.CreateMessage(action, MsgNaturalParsed{res}))
 }
 
 func (s *Service) handleNetworkMessage(msg proto.Message) {
@@ -214,11 +167,11 @@ func (s *Service) handleNaturalLearnSentence(msg proto.Message) {
 	}
 
 	s.Log.Infof("[natural] learning new rule: '%s'", rule)
-	s.parser.LearnSentence(rule)
+	s.parser.parser.LearnSentence(rule)
 
 	action := ""
-	if parsed, ok := s.parseNatural(msg); ok {
-		action = parsed.Action
+	if res, err := s.parser.Parse(msg.Text, &Context{}); err != nil && res.Weight > 0 {
+		action = res.Message.Action
 	}
 	s.Reply(msg, proto.CreateMessage("natural/learned/sentence", &msgLearnedSentence{rule, action}))
 }
@@ -254,8 +207,8 @@ func (s *Service) handleNaturalLearnMeaning(msg proto.Message) {
 	}
 
 	s.Log.Infof("[natural] reinforcing: '%s' with %s", sentence, parsed.Action)
-	s.parser.LearnMessage(parsed)
-	s.parser.ReinforceSentence(sentence, parsed.Action)
+	s.parser.parser.LearnMessage(parsed)
+	s.parser.parser.ReinforceSentence(sentence, parsed.Action)
 	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearnedMeaning{sentence, parsed.Action}))
 }
 
@@ -271,8 +224,8 @@ func (s *Service) handleNaturalReinforce(msg proto.Message) {
 	}
 
 	s.Log.Infof("[natural] reinforcing: '%s' with %s", p.Sentence, p.Action)
-	s.parser.ReinforceSentence(p.Sentence, p.Action)
+	s.parser.parser.ReinforceSentence(p.Sentence, p.Action)
 
-	parsed, _ := s.parser.Parse(p.Sentence)
+	parsed, _ := s.parser.parser.Parse(p.Sentence)
 	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearnedMeaning{p.Sentence, parsed.Action}))
 }

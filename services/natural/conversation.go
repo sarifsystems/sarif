@@ -28,9 +28,10 @@ type Conversation struct {
 }
 
 type MsgErrNatural struct {
-	Original string      `json:"original"`
-	Type     string      `json:"-"`
-	Action   interface{} `json:"action"`
+	Original string       `json:"original"`
+	Type     string       `json:"-"`
+	Action   interface{}  `json:"action"`
+	Result   *ParseResult `json:"result"`
 }
 
 type Actionable struct {
@@ -42,11 +43,7 @@ func (a Actionable) IsAction() bool {
 	if a.Action == nil || a.Action.Thing == nil {
 		return false
 	}
-	if a.Action.SchemaType == "TextEntryAction" {
-		return true
-	}
-
-	return false
+	return strings.HasSuffix(a.Action.SchemaType, "Action")
 }
 
 func (pl MsgErrNatural) String() string {
@@ -57,23 +54,6 @@ func (pl MsgErrNatural) String() string {
 		return "I didn't understand your message. Please give me an example message or action to learn this sentence."
 	}
 	return "I didn't understand your message."
-}
-
-func answer(a *schema.Action, text string) (proto.Message, bool) {
-	reply := proto.Message{
-		Action: a.Reply,
-		Text:   text,
-	}
-	if text == ".cancel" || text == "cancel" || strings.HasPrefix(text, "cancel ") {
-		return reply, false
-	}
-	if a.SchemaType == "TextEntryAction" {
-		if a.Payload != nil {
-			reply.EncodePayload(a.Payload)
-		}
-		return reply, true
-	}
-	return reply, false
 }
 
 func (cv *Conversation) PublishForClient(msg proto.Message) {
@@ -113,7 +93,7 @@ func (cv *Conversation) HandleClientMessage(msg proto.Message) {
 	// Check if client answers a conversation.
 	if time.Now().Sub(cv.LastTime) < 5*time.Minute {
 		if cv.LastMessageAction.IsAction() {
-			parsed, ok := answer(cv.LastMessageAction.Action, msg.Text)
+			parsed, ok := cv.answer(cv.LastMessageAction.Action, msg.Text)
 			cv.LastTime = time.Time{}
 			parsed.Destination = cv.LastMessage.Source
 			if ok {
@@ -124,23 +104,56 @@ func (cv *Conversation) HandleClientMessage(msg proto.Message) {
 	}
 
 	// Otherwise parse message as normal request.
-	parsed, ok := cv.service.parseNatural(msg)
-	if !ok {
+	ctx := &Context{}
+	res, err := cv.service.parser.Parse(msg.Text, ctx)
+	if err != nil || res.Weight <= 0 {
 		cv.handleUnknownUserMessage(msg)
 		return
 	}
 
+	if res.Message.Text == "" {
+		res.Message.Text = msg.Text
+	}
 	cv.LastUserText = msg.Text
-	cv.LastUserMessage = parsed
-	parsed.CorrId = msg.Id
-	cv.PublishForClient(parsed)
+	cv.LastUserMessage = res.Message
+	res.Message.CorrId = msg.Id
+	cv.PublishForClient(res.Message)
+}
+
+func (cv *Conversation) answer(a *schema.Action, text string) (proto.Message, bool) {
+	reply := proto.Message{
+		Action: a.Reply,
+		Text:   text,
+	}
+	if text == ".cancel" || text == "cancel" || strings.HasPrefix(text, "cancel ") {
+		return reply, false
+	}
+
+	t := a.SchemaType
+	if t == "ConfirmAction" || t == "DeleteAction" || t == "CancelAction" {
+		ctx := &Context{ExpectedReply: "affirmative"}
+		r, err := cv.service.parser.Parse(text, ctx)
+		if err != nil {
+			return reply, false
+		}
+		if r.Type == "neg" {
+			reply.Action = a.ReplyNegative
+			return reply, reply.Action != ""
+		}
+	}
+
+	if a.Payload != nil {
+		reply.EncodePayload(a.Payload)
+	}
+	return reply, true
+	return reply, false
 }
 
 func (cv *Conversation) handleUnknownUserMessage(msg proto.Message) {
 	pl := &MsgErrNatural{
 		Original: msg.Text,
 	}
-	if m := cv.service.parser.ParseSentence(msg.Text); m != nil {
+	if m := cv.service.parser.parser.ParseSentence(msg.Text); m != nil {
 		pl.Type = "meaning"
 		pl.Action = schema.Fill(&schema.TextEntryAction{
 			Reply:   "natural/learn/meaning",

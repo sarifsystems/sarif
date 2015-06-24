@@ -24,18 +24,20 @@ var (
 func main() {
 	flag.Parse()
 
-	switch os.Args[1] {
+	switch flag.Arg(0) {
 	case "train":
 		train()
 	case "test":
 		test()
+	case "tag":
+		tag()
 	default:
 		log.Fatal("train/tag")
 	}
 }
 
 func train() {
-	fpath := os.Args[2]
+	fpath := flag.Arg(1)
 	f, err := os.Open(fpath)
 	if err != nil {
 		log.Fatal(err)
@@ -51,7 +53,7 @@ func train() {
 			words = make([]string, 0)
 			tags = make([]string, 0)
 		} else {
-			parts := strings.Split(train.Text(), " ")
+			parts := strings.Split(train.Text(), "\t")
 			words = append(words, parts[0])
 			tags = append(tags, parts[1])
 		}
@@ -88,7 +90,7 @@ func test() {
 	}
 	p.Perceptron.Model = model
 
-	fpath := os.Args[2]
+	fpath := flag.Arg(1)
 	f, err := os.Open(fpath)
 	if err != nil {
 		log.Fatal(err)
@@ -104,7 +106,7 @@ func test() {
 			words = make([]string, 0)
 			tags = make([]string, 0)
 		} else {
-			parts := strings.Split(train.Text(), " ")
+			parts := strings.Split(train.Text(), "\t")
 			words = append(words, parts[0])
 			tags = append(tags, parts[1])
 		}
@@ -115,4 +117,27 @@ func test() {
 	}
 
 	p.Test(sentences)
+}
+
+func tag() {
+	p := nlparser.New()
+
+	fm, err := os.Open(*modelPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	dec := gob.NewDecoder(fm)
+	model := &mlearning.Model{}
+	if err := dec.Decode(model); err != nil {
+		log.Fatal(err)
+	}
+	p.Perceptron.Model = model
+
+	words := flag.Args()[1:]
+	s := nlparser.Sentence{words, nil}
+	p.Predict(&s)
+
+	for i, w := range s.Words {
+		log.Printf("%s - %s\n", w, s.Tags[i])
+	}
 }

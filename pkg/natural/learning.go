@@ -101,18 +101,18 @@ func inStringSlice(s string, ss []string) bool {
 	return false
 }
 
-func (r *sentenceRule) Parse(s string) map[string]string {
+func (r *sentenceRule) Parse(s string) []Var {
 	match := r.Regexp.FindStringSubmatch(s)
 	if match == nil {
 		return nil
 	}
 
-	vars := make(map[string]string)
+	vars := make([]Var, 0)
 	for i, field := range r.Regexp.SubexpNames() {
 		if field == "" {
 			continue
 		}
-		vars[field] = TrimQuotes(match[i])
+		vars = append(vars, Var{field, match[i]})
 	}
 	return vars
 }
@@ -144,14 +144,29 @@ func (p *LearningParser) LearnSentence(s string) {
 }
 
 type Meaning struct {
+	Action     string
+	Object     string
+	ObjectType string
+
 	Words     []string
-	Variables map[string]string
+	Variables []Var
+}
+
+type Var struct {
+	Name  string
+	Value string
 }
 
 func (m Meaning) Features() []mlearning.Feature {
 	fs := make([]mlearning.Feature, 0)
 	fs = append(fs, "bias")
 
+	if m.Action != "" {
+		fs = append(fs, mlearning.Feature("first="+m.Action))
+	}
+	if m.Object != "" {
+		fs = append(fs, mlearning.Feature("second="+m.Object))
+	}
 	for i, w := range m.Words {
 		if w[0] == '[' {
 			continue
@@ -167,8 +182,8 @@ func (m Meaning) Features() []mlearning.Feature {
 			fs = append(fs, mlearning.Feature("word="+w))
 		}
 	}
-	for v, _ := range m.Variables {
-		fs = append(fs, mlearning.Feature("var="+v))
+	for _, v := range m.Variables {
+		fs = append(fs, mlearning.Feature("var="+v.Name))
 	}
 	return fs
 }
@@ -178,8 +193,8 @@ func (p LearningParser) ParseSentence(s string) *Meaning {
 	for _, r := range p.sentences {
 		if v := r.Parse(s); v != nil {
 			return &Meaning{
-				strings.Split(r.Rule, " "),
-				v,
+				Words:     strings.Split(r.Rule, " "),
+				Variables: v,
 			}
 		}
 	}
@@ -207,18 +222,27 @@ func (r *MessageSchema) Features() []mlearning.Feature {
 func (r *MessageSchema) Apply(m *Meaning) proto.Message {
 	msg := proto.Message{}
 	msg.Action = r.Action
-	for k, v := range m.Variables {
-		switch k {
+	pl := make(map[string]string)
+	for _, v := range m.Variables {
+		switch v.Name {
 		case "_action":
-			msg.Action = v
-			delete(m.Variables, k)
+			msg.Action = v.Value
 		case "text":
-			msg.Text = v
-			delete(m.Variables, k)
+			msg.Text = v.Value
+		case "to":
+			fallthrough
+		case "that":
+			if msg.Text == "" {
+				msg.Text = v.Value
+			}
+		default:
+			if _, ok := r.Fields[v.Name]; ok {
+				pl[v.Name] = v.Value
+			}
 		}
 	}
 	if len(m.Variables) > 0 {
-		msg.EncodePayload(&m.Variables)
+		msg.EncodePayload(&pl)
 	}
 	return msg
 }
@@ -260,7 +284,7 @@ func (p *LearningParser) ReinforceSentence(sentence, action string) {
 	p.perceptron.Update(mlearning.Class(action), guess, feats)
 }
 
-func (p *LearningParser) findMessageForMeaning(m *Meaning) (*MessageSchema, float64) {
+func (p *LearningParser) FindMessageForMeaning(m *Meaning) (*MessageSchema, float64) {
 	guess, w := p.perceptron.Predict(m.Features())
 
 	schema := p.messages[string(guess)]
@@ -275,7 +299,7 @@ func (p *LearningParser) Parse(text string) (proto.Message, float64) {
 		return msg, 0
 	}
 
-	r, w := p.findMessageForMeaning(m)
+	r, w := p.FindMessageForMeaning(m)
 	if r == nil {
 		return msg, 0
 	}

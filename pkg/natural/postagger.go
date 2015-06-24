@@ -3,7 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package nlparser
+package natural
 
 import (
 	"fmt"
@@ -13,19 +13,14 @@ import (
 	"github.com/xconstruct/stark/pkg/mlearning"
 )
 
-type Parser struct {
+type PosTagger struct {
 	Perceptron *mlearning.Perceptron
 }
 
-func New() *Parser {
-	return &Parser{
+func NewPosTagger() *PosTagger {
+	return &PosTagger{
 		mlearning.NewPerceptron(),
 	}
-}
-
-type Sentence struct {
-	Words []string
-	Tags  []string
 }
 
 const (
@@ -57,7 +52,7 @@ func (s *sentenceSet) Reset() {
 func (s *sentenceSet) Next() bool {
 	s.CurrWord++
 
-	if s.CurrSentence == -1 || s.CurrWord >= len(s.Sentences[s.CurrSentence].Words) {
+	if s.CurrSentence == -1 || s.CurrWord >= len(s.Sentences[s.CurrSentence]) {
 		s.CurrWord = 0
 		s.CurrSentence++
 
@@ -66,10 +61,10 @@ func (s *sentenceSet) Next() bool {
 		}
 
 		sentence := s.Sentences[s.CurrSentence]
-		ctx := make([]string, len(sentence.Words)+2)
+		ctx := make([]string, len(sentence)+2)
 		ctx[0], ctx[len(ctx)-1] = START, END
-		for i, w := range sentence.Words {
-			ctx[i+1] = normalize(w)
+		for i, w := range sentence {
+			ctx[i+1] = normalize(w.Lemma)
 		}
 		s.Context = ctx
 	}
@@ -77,12 +72,16 @@ func (s *sentenceSet) Next() bool {
 }
 
 func (s *sentenceSet) Class() mlearning.Class {
-	return mlearning.Class(s.Sentences[s.CurrSentence].Tags[s.CurrWord])
+	tags := s.Sentences[s.CurrSentence][s.CurrWord].Tags
+	for t := range tags {
+		return mlearning.Class(t)
+	}
+	return ""
 }
 
 func (s *sentenceSet) Features() []mlearning.Feature {
 	i := s.CurrWord
-	word := s.Sentences[s.CurrSentence].Words[s.CurrWord]
+	word := s.Sentences[s.CurrSentence][s.CurrWord].Lemma
 	wprev1, wprev2 := sget(s.Context, i-1), sget(s.Context, i-2)
 	wnext1, wnext2 := sget(s.Context, i+1), sget(s.Context, i+2)
 	fs := map[string]struct{}{}
@@ -113,6 +112,10 @@ func (s *sentenceSet) Predicted(c mlearning.Class) {
 	s.PrevClass2, s.PrevClass = s.PrevClass, string(c)
 }
 
+func (s *sentenceSet) SetCurrentTag(c mlearning.Class) {
+	s.Sentences[s.CurrSentence][s.CurrWord].Tags[string(c)] = struct{}{}
+}
+
 func addFeat(fs map[string]struct{}, f string, args ...string) {
 	if len(args) > 0 {
 		f += "+" + strings.Join(args, "+")
@@ -134,7 +137,7 @@ func sget(sl []string, i int) string {
 	return ""
 }
 
-func (p *Parser) Train(iterations int, sentences []Sentence) {
+func (p *PosTagger) Train(iterations int, sentences []Sentence) {
 	set := &sentenceSet{
 		Sentences: sentences,
 	}
@@ -145,7 +148,7 @@ func (p *Parser) Train(iterations int, sentences []Sentence) {
 	}
 }
 
-func (p *Parser) Test(sentences []Sentence) {
+func (p *PosTagger) Test(sentences []Sentence) {
 	set := &sentenceSet{
 		Sentences: sentences,
 	}
@@ -154,9 +157,9 @@ func (p *Parser) Test(sentences []Sentence) {
 	fmt.Printf("Test: %d/%d=%.3f\n", c, n, float64(c)/float64(n)*100)
 }
 
-func (p *Parser) Predict(s *Sentence) {
+func (p *PosTagger) Predict(s Sentence) {
 	fs := &sentenceSet{
-		Sentences: []Sentence{*s},
+		Sentences: []Sentence{s},
 	}
 
 	fs.Reset()
@@ -164,6 +167,37 @@ func (p *Parser) Predict(s *Sentence) {
 		feats := fs.Features()
 		guess, _ := p.Perceptron.Predict(feats)
 		fs.Predicted(guess)
-		s.Tags = append(s.Tags, string(guess))
+		fs.SetCurrentTag(guess)
 	}
+}
+
+var DefaultTags = map[string]string{
+	"N": "common noun",
+	"O": "pronoun", // interrogatives
+	"^": "proper noun",
+	"S": "nominal + possessive",
+	"Z": "proper noun + possessive",
+
+	"V": "verb", // incl. copula, auxiliaries
+	"A": "adjective",
+	"R": "adverb",
+	"!": "interjection",
+
+	"D": "determiner",
+	"P": "preposition", // proposition, subordinating conjunction
+	"&": "conjunction",
+	"T": "verb particle",
+	"X": "predeterminer", // existential there
+
+	"#": "topic",
+	"@": "recipient",
+	"U": "url",
+	"E": "emoticon",
+
+	"$": "numeral",
+	",": "punctuation",
+	"G": "abbreviations",    // other, symbols, ...
+	"L": "nominal + verbal", // i'm, let's
+	"M": "proper noun + verbal",
+	"Y": "X + verbal",
 }
