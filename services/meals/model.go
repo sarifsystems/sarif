@@ -17,6 +17,7 @@ type Stats struct {
 	Sugar         Weight `json:"sugar,omitempty"`
 	Protein       Weight `json:"protein,omitempty"`
 	Salt          Weight `json:"salt,omitempty"`
+	Water         Volume `json:"water,omitempty"`
 }
 
 func (s *Stats) Multiply(size float64) {
@@ -28,6 +29,7 @@ func (s *Stats) Multiply(size float64) {
 	s.Sugar *= Weight(size)
 	s.Protein *= Weight(size)
 	s.Salt *= Weight(size)
+	s.Water *= Volume(size)
 }
 
 func (s *Stats) ScaleToWeight(w Weight) {
@@ -59,6 +61,7 @@ func (s *Stats) Add(o Stats) {
 	s.Fat += o.Fat
 	s.Protein += o.Protein
 	s.Salt += o.Salt
+	s.Water += o.Water
 }
 
 type Product struct {
@@ -96,5 +99,8 @@ type Serving struct {
 }
 
 func (s Serving) Stats() Stats {
+	if s.Product == nil {
+		return Stats{}
+	}
 	return s.Product.Servings(s.Size)
 }

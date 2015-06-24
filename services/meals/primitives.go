@@ -8,6 +8,8 @@ package meals
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 type Weight float64
@@ -26,6 +28,27 @@ const (
 	Millilitre Volume = 1.0
 	Litre      Volume = 1000 * Millilitre
 )
+
+func (w *Weight) UnmarshalJSON(item []byte) error {
+	s := strings.Trim(string(item), `"`)
+	n, err := strconv.ParseFloat(s, 64)
+	*w = Weight(n)
+	return err
+}
+
+func (w *Volume) UnmarshalJSON(item []byte) error {
+	s := strings.Trim(string(item), `"`)
+	n, err := strconv.ParseFloat(s, 64)
+	*w = Volume(n)
+	return err
+}
+
+func (w *Energy) UnmarshalJSON(item []byte) error {
+	s := strings.Trim(string(item), `"`)
+	n, err := strconv.ParseFloat(s, 64)
+	*w = Energy(n)
+	return err
+}
 
 func (w *Weight) Scan(src interface{}) error {
 	if v, ok := src.(float64); ok {

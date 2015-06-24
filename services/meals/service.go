@@ -103,15 +103,17 @@ func (s *Service) handleServingRecord(msg proto.Message) {
 			return
 		}
 
-		if len(ps) == 0 {
-			s.ReplyBadRequest(msg, errors.New("No product named "+name+" found."))
-			return
-		}
 		if len(ps) > 1 {
-			s.ReplyBadRequest(msg, fmt.Errorf("%d products named %s found.", len(ps), sv.Name))
+			pList := ""
+			for _, p := range ps {
+				pList += "\n- " + p.Name
+			}
+			s.ReplyBadRequest(msg, fmt.Errorf("%d products named %s found.%s", len(ps), sv.Name, pList))
 			return
 		}
-		sv.Product = &ps[0]
+		if len(ps) == 1 {
+			sv.Product = &ps[0]
+		}
 	}
 	if sv.Time.IsZero() {
 		sv.Time = time.Now()
@@ -126,16 +128,28 @@ func (s *Service) handleServingRecord(msg proto.Message) {
 }
 
 func (s *Service) findProduct(name string) ([]Product, error) {
+	words := strings.Split(name, " ")
 	var ps []Product
 	if name == "" {
 		return ps, errors.New("No name specified.")
 	}
+	q := s.DB
+	for _, w := range words {
+		q = q.Where("name LIKE ?", "%"+w+"%")
+	}
 
-	if err := s.DB.Where("name LIKE ?", "%"+name+"%").Find(&ps).Error; err != nil {
+	if err := q.Find(&ps).Error; err != nil {
 		return ps, err
 	}
 
 	return ps, nil
+}
+
+var sizeNames = map[string]float64{
+	"a":   1,
+	"an":  1,
+	"one": 1,
+	"two": 2,
 }
 
 func splitSizeName(s string) (float64, string) {
@@ -143,8 +157,8 @@ func splitSizeName(s string) (float64, string) {
 	if len(parts) != 2 {
 		return 0, s
 	}
-	if parts[0] == "a" || parts[0] == "an" {
-		return 1, parts[1]
+	if v, ok := sizeNames[parts[0]]; ok {
+		return v, parts[1]
 	}
 	if v, err := strconv.ParseFloat(parts[0], 64); err == nil {
 		return v, parts[1]
