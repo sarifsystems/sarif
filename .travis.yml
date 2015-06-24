@@ -3,4 +3,7 @@ language: go
 go:
   - 1.4
 
+env:
+  - GOMAXPROCS=1
+
 script: go test ./...

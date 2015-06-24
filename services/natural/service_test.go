@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/xconstruct/stark/core"
-	"github.com/xconstruct/stark/proto"
 )
 
 func TestParse(t *testing.T) {
@@ -20,26 +19,23 @@ func TestParse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	parsed, ok := srv.parseNatural(proto.Message{
-		Action: "natural/parse",
-		Text:   "When did I last visit Berlin?",
-	})
-	if !ok {
+	parsed, err := srv.parser.Parse("When did I last visit Berlin?", &Context{})
+	if err != nil {
 		t.Fatal("message should parse")
 	}
 	t.Log("parsed:", parsed)
-	if parsed.Action != "location/last" {
-		t.Error("wrong action: ", parsed.Action)
+	if parsed.Message.Action != "location/last" {
+		t.Error("wrong action: ", parsed.Message.Action)
 	}
 
 	got := struct {
 		Address string
 	}{}
-	parsed.DecodePayload(&got)
+	parsed.Message.DecodePayload(&got)
 	if got.Address != "Berlin" {
 		t.Error("wrong address: ", got.Address)
 	}
 	if parsed.Text != "When did I last visit Berlin?" {
-		t.Error("wrong text: ", parsed.Text)
+		t.Error("wrong text: ", parsed.Message.Text)
 	}
 }
