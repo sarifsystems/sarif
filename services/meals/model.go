@@ -77,6 +77,10 @@ type Product struct {
 	UpdatedAt time.Time `json:"-"`
 }
 
+func (p Product) TableName() string {
+	return "meals_products"
+}
+
 func (p Product) Servings(n float64) Stats {
 	stats := p.Stats
 	if p.ServingVolume != 0 {
@@ -96,6 +100,10 @@ type Serving struct {
 
 	ProductId int64    `json:"-"`
 	Product   *Product `json:"product,omitempty"`
+}
+
+func (s Serving) TableName() string {
+	return "meals_servings"
 }
 
 func (s Serving) Stats() Stats {

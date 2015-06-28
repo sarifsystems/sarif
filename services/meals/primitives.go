@@ -6,7 +6,6 @@
 package meals
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -50,28 +49,38 @@ func (w *Energy) UnmarshalJSON(item []byte) error {
 	return err
 }
 
-func (w *Weight) Scan(src interface{}) error {
-	if v, ok := src.(float64); ok {
-		*w = Weight(v)
-		return nil
+func convertToFloat64(src interface{}) (float64, error) {
+	switch v := src.(type) {
+	case float64:
+		return v, nil
+	case []uint8:
+		return strconv.ParseFloat(string(v), 64)
 	}
-	return errors.New("weight expected float64 as source type")
+	return 0, fmt.Errorf("cannot convert %v (%T) to float64", src, src)
+}
+
+func (w *Weight) Scan(src interface{}) error {
+	v, err := convertToFloat64(src)
+	if err == nil {
+		*w = Weight(v)
+	}
+	return err
 }
 
 func (w *Volume) Scan(src interface{}) error {
-	if v, ok := src.(float64); ok {
+	v, err := convertToFloat64(src)
+	if err == nil {
 		*w = Volume(v)
-		return nil
 	}
-	return errors.New("volume expected float64 as source type")
+	return err
 }
 
 func (w *Energy) Scan(src interface{}) error {
-	if v, ok := src.(float64); ok {
+	v, err := convertToFloat64(src)
+	if err == nil {
 		*w = Energy(v)
-		return nil
 	}
-	return errors.New("energy expected float64 as source type")
+	return err
 }
 
 func (v Weight) String() string {

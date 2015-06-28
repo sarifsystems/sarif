@@ -191,7 +191,7 @@ func (s *Service) handleStats(msg proto.Message) {
 	}
 
 	var servings []*Serving
-	if err := s.DB.Scopes(applyFilter(f)).Order("time ASC").Preload("Product").Find(&servings).Error; err != nil {
+	if err := s.DB.Preload("Product").Scopes(applyFilter(f)).Order("time ASC").Preload("Product").Find(&servings).Error; err != nil {
 		s.ReplyBadRequest(msg, err)
 		return
 	}
