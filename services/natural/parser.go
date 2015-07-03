@@ -106,6 +106,8 @@ type ParseResult struct {
 
 type Context struct {
 	ExpectedReply string
+	Sender        string
+	Recipient     string
 }
 
 func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
@@ -141,12 +143,19 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 	}
 
 	p.pos.Predict(r.Tokens)
+	p.ResolvePronouns(r.Tokens, ctx)
 
 	// TODO
 	r.Type = natural.AnalyzeSentenceFunction(r.Tokens)
 	var err error
 	switch r.Type {
 	case "declarative":
+		if r.Meaning, err = p.meaning.ParseDeclarative(r.Tokens); err != nil {
+			return r, err
+		}
+		r.Message, err = p.InventMessageForMeaning(r.Meaning)
+		r.Weight = 1 // TODO
+		return r, err
 	case "exclamatory":
 	case "interrogative":
 	case "imperative":
@@ -164,6 +173,19 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 	return r, nil
 }
 
+func (p *Parser) ResolvePronouns(ts []*natural.Token, ctx *Context) {
+	for _, t := range ts {
+		if t.Is("O") {
+			switch t.Lemma {
+			case "i":
+				t.Lemma = ctx.Sender
+			case "you":
+				t.Lemma = ctx.Recipient
+			}
+		}
+	}
+}
+
 func (p *Parser) ReinforceSentence(text string, action string) error {
 	r, err := p.Parse(text, &Context{})
 	if err != nil {
@@ -171,6 +193,24 @@ func (p *Parser) ReinforceSentence(text string, action string) error {
 	}
 	p.parser.ReinforceMeaning(r.Meaning, action)
 	return nil
+}
+
+func (p *Parser) InventMessageForMeaning(m *natural.Meaning) (proto.Message, error) {
+	msg := proto.Message{}
+
+	if m.Subject != "" {
+		msg.Action += "/" + m.Subject
+	}
+	if m.Predicate != "" {
+		msg.Action += "/" + m.Predicate
+	}
+	if m.Object != "" {
+		msg.Action += "/" + m.Object
+	}
+
+	msg.Action = strings.Trim(msg.Action, "/")
+	msg.EncodePayload(m.Variables)
+	return msg, nil
 }
 
 func inStringSlice(s string, ss []string) bool {

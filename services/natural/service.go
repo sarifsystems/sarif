@@ -121,7 +121,10 @@ func (s *Service) handleNatural(msg proto.Message) {
 }
 
 func (s *Service) handleNaturalParse(msg proto.Message) {
-	res, err := s.parser.Parse(msg.Text, &Context{})
+	res, err := s.parser.Parse(msg.Text, &Context{
+		Sender:    "user",
+		Recipient: "stark",
+	})
 	if err != nil {
 		s.ReplyBadRequest(msg, err)
 		return

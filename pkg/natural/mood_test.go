@@ -11,7 +11,7 @@ func TestAnalyzeSentenceFunction(t *testing.T) {
 	tests := map[string]string{
 		"remind:V me:O to:P make:V coffee:N":             "imperative",
 		"play:V some:D music:N":                          "imperative",
-		"stark:N do:V some:D magic:N":                    "imperative",
+		"do:V some:D magic:N":                            "imperative",
 		"when:O did:V i:O last:A make:V coffee:N ?:,":    "interrogative",
 		"what:O is:V the:D capital:N of:P Germany:N ?:,": "interrogative",
 		"where:O are:V you:O":                            "interrogative",
@@ -19,8 +19,10 @@ func TestAnalyzeSentenceFunction(t *testing.T) {
 		"awesome:!":                                      "exclamatory",
 		"things:N are:V good:A":                          "declarative",
 		"alice:N is:V tired:A":                           "declarative",
+		"thanks:!":                                       "exclamatory",
+		"thank:V you:O":                                  "imperative",
 
-		"unknown:A": "imperative",
+		"unknown:A": "exclamatory",
 	}
 	for sentence, exp := range tests {
 		got := AnalyzeSentenceFunction(tagged(sentence))

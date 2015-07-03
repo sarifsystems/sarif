@@ -104,7 +104,10 @@ func (cv *Conversation) HandleClientMessage(msg proto.Message) {
 	}
 
 	// Otherwise parse message as normal request.
-	ctx := &Context{}
+	ctx := &Context{
+		Sender:    "user",
+		Recipient: "stark",
+	}
 	res, err := cv.service.parser.Parse(msg.Text, ctx)
 	if err != nil || res.Weight <= 0 {
 		cv.handleUnknownUserMessage(msg)
