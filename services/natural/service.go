@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/xconstruct/stark/pkg/natural"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -33,6 +34,7 @@ type Service struct {
 	*proto.Client
 
 	parser        *Parser
+	phrases       *natural.Phrasebook
 	conversations map[string]*Conversation
 }
 
@@ -43,6 +45,7 @@ func NewService(deps *Dependencies) *Service {
 		deps.Client,
 
 		NewParser(),
+		natural.NewPhrasebook(),
 		make(map[string]*Conversation),
 	}
 }
@@ -52,6 +55,7 @@ func (s *Service) Enable() error {
 	s.Subscribe("natural/parse", "", s.handleNaturalParse)
 	s.Subscribe("natural/learn", "", s.handleNaturalLearn)
 	s.Subscribe("natural/reinforce", "", s.handleNaturalReinforce)
+	s.Subscribe("natural/phrases", "", s.handleNaturalPhrases)
 	s.Subscribe("", "user", s.handleUserMessage)
 
 	if err := s.loadModel(); err != nil {
@@ -193,4 +197,18 @@ func (s *Service) handleNaturalReinforce(msg proto.Message) {
 
 	parsed, _ := s.parser.Parse(p.Sentence, &Context{})
 	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearn{p.Sentence, parsed.Message.Action}))
+}
+
+func (s *Service) handleNaturalPhrases(msg proto.Message) {
+	ctx := strings.Trim(strings.TrimPrefix(msg.Action, "natural/phrases"), "/")
+	if ctx == "" {
+		s.ReplyBadRequest(msg, errors.New("The context seems to be missing."))
+		return
+	}
+
+	text := s.phrases.Get(ctx)
+	s.Reply(msg, proto.Message{
+		Action: "natural/phrase",
+		Text:   text,
+	})
 }
