@@ -51,7 +51,7 @@ func (t *Tokenizer) Tokenize(s string) []*Token {
 	for _, w := range words {
 		tok := &Token{
 			Value: w,
-			Lemma: w,
+			Lemma: TrimQuotes(w),
 			Tags:  make(map[string]struct{}),
 		}
 		if inStringSlice(w, t.StopWords) {

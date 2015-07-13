@@ -140,11 +140,11 @@ func (s *Service) InterpretLiterals(f Fact) (Fact, error) {
 		return f, err
 	}
 	for _, r := range results {
-		f.Each(func(s string) string {
+		f.EachType(func(s, t string) (string, string) {
 			if s == r.Object {
-				return r.Subject
+				return r.Subject, "uri"
 			}
-			return s
+			return s, t
 		})
 	}
 	return f, nil
@@ -163,7 +163,9 @@ func (s *Service) HandleStore(msg proto.Message) {
 		return
 	}
 
-	if err := s.DB.FirstOrCreate(&f, &f).Error; err != nil {
+	db := s.DB.Where(Fact{Subject: f.Subject, Predicate: f.Predicate})
+	db = s.DB.Assign(f)
+	if err := db.FirstOrCreate(&f).Error; err != nil {
 		s.ReplyInternalError(msg, err)
 		return
 	}

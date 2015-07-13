@@ -33,6 +33,12 @@ func (f *Fact) Each(fn func(string) string) {
 	f.Object = fn(f.Object)
 }
 
+func (f *Fact) EachType(fn func(v, t string) (string, string)) {
+	f.Subject, f.SubjectType = fn(f.Subject, f.SubjectType)
+	f.Predicate, f.PredicateType = fn(f.Predicate, f.PredicateType)
+	f.Object, f.ObjectType = fn(f.Object, f.ObjectType)
+}
+
 func GuessType(s string) string {
 	if s == "" {
 		return ""
