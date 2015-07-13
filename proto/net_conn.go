@@ -34,8 +34,9 @@ func (c *netConn) Write(msg Message) error {
 }
 
 func (c *netConn) KeepaliveLoop(ka time.Duration) error {
-	for _ = range time.Tick(ka) {
-		c.conn.SetWriteDeadline(time.Now().Add(5 * time.Minute))
+	for {
+		time.Sleep(ka)
+		c.conn.SetWriteDeadline(time.Now().Add(3 * ka))
 		if _, err := c.conn.Write([]byte(" ")); err != nil {
 			return err
 		}
