@@ -153,11 +153,20 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 		if r.Meaning, err = p.meaning.ParseDeclarative(r.Tokens); err != nil {
 			return r, err
 		}
-		r.Message, err = p.InventMessageForMeaning(r.Meaning)
+		action := "event"
+		if r.Meaning.Variables["fact"] != "" {
+			action = "concept"
+		}
+		r.Message, err = p.InventMessageForMeaning(action, r.Meaning)
 		r.Weight = 1 // TODO
 		return r, err
 	case "exclamatory":
 	case "interrogative":
+		if r.Meaning, err = p.meaning.ParseInterrogative(r.Tokens); err != nil {
+			return r, err
+		}
+		r.Message, err = p.InventMessageForMeaning("concepts/query", r.Meaning)
+		r.Weight = 1 // TODO
 	case "imperative":
 		if r.Meaning, err = p.meaning.ParseImperative(r.Tokens); err != nil {
 			return r, err
@@ -177,6 +186,8 @@ func (p *Parser) ResolvePronouns(ts []*natural.Token, ctx *Context) {
 	for _, t := range ts {
 		if t.Is("O") {
 			switch t.Lemma {
+			case "me":
+				t.Lemma = ctx.Sender
 			case "i":
 				t.Lemma = ctx.Sender
 			case "you":
@@ -195,9 +206,12 @@ func (p *Parser) ReinforceSentence(text string, action string) error {
 	return nil
 }
 
-func (p *Parser) InventMessageForMeaning(m *natural.Meaning) (proto.Message, error) {
+func (p *Parser) InventMessageForMeaning(action string, m *natural.Meaning) (proto.Message, error) {
 	msg := proto.Message{}
 
+	if action != "" {
+		msg.Action += "/" + action
+	}
 	if m.Subject != "" {
 		msg.Action += "/" + m.Subject
 	}

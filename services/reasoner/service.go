@@ -59,6 +59,7 @@ func (s *Service) Enable() error {
 	s.Subscribe("concepts/query", "", s.HandleQuery)
 	s.Subscribe("concepts/query_external", "", s.HandleQueryExternal)
 	s.Subscribe("concepts/store", "", s.HandleStore)
+	s.Subscribe("concept", "", s.HandleStore)
 	return nil
 }
 
