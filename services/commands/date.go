@@ -13,10 +13,6 @@ import (
 	"github.com/xconstruct/stark/proto"
 )
 
-const (
-	timeFormat = time.RFC1123
-)
-
 func printTime(t time.Time) string {
 	return t.Local().Format(time.RFC1123) + "\n" +
 		t.UTC().Format(time.RFC1123)

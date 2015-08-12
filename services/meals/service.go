@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/xconstruct/stark/pkg/util"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -23,13 +24,23 @@ var Module = &services.Module{
 	NewInstance: NewService,
 }
 
+type Config struct {
+	FDDB struct {
+		ApiKey   string
+		Username string
+		Password string
+	}
+}
+
 type Dependencies struct {
 	DB     *gorm.DB
+	Config services.Config
 	Log    proto.Logger
 	Client *proto.Client
 }
 
 type Service struct {
+	cfg Config
 	DB  *gorm.DB
 	Log proto.Logger
 	*proto.Client
@@ -41,6 +52,7 @@ func NewService(deps *Dependencies) *Service {
 		Log:    deps.Log,
 		Client: deps.Client,
 	}
+	deps.Config.Get(&s.cfg)
 	return s
 }
 
@@ -49,9 +61,14 @@ func (s *Service) Enable() error {
 		return err
 	}
 
+	if s.cfg.FDDB.ApiKey != "" {
+		go s.FddbLoop()
+	}
+
 	s.Subscribe("meal/product/new", "", s.handleProductNew)
 	s.Subscribe("meal/record", "", s.handleServingRecord)
 	s.Subscribe("meal/stats", "", s.handleStats)
+	s.Subscribe("meal/fetch_fddb", "", s.handleFetchFddb)
 	return nil
 }
 
@@ -92,10 +109,6 @@ func (s *Service) handleServingRecord(msg proto.Message) {
 	if sv.Name == "" {
 		sv.Name = name
 	}
-	if sv.Size == 0 {
-		s.ReplyBadRequest(msg, errors.New("No serving size specified."))
-		return
-	}
 	if sv.Product == nil {
 		ps, err := s.findProduct(sv.Name)
 		if err != nil {
@@ -114,6 +127,16 @@ func (s *Service) handleServingRecord(msg proto.Message) {
 		if len(ps) == 1 {
 			sv.Product = &ps[0]
 		}
+	}
+	if sv.AmountWeight <= 0 {
+		sv.AmountWeight = Weight(sv.Size) * sv.Product.ServingWeight
+	}
+	if sv.AmountVolume <= 0 {
+		sv.AmountVolume = Volume(sv.Size) * sv.Product.ServingVolume
+	}
+	if sv.AmountWeight <= 0 && sv.AmountVolume <= 0 {
+		s.ReplyBadRequest(msg, errors.New("No serving amount specified."))
+		return
 	}
 	if sv.Time.IsZero() {
 		sv.Time = time.Now()
@@ -183,7 +206,7 @@ func (s ServingStats) String() string {
 func (s *Service) handleStats(msg proto.Message) {
 	f := ServingFilter{
 		After:  time.Now().Truncate(24 * time.Hour).Add(5 * time.Hour),
-		Before: time.Now().Add(1 * time.Minute),
+		Before: time.Now().Truncate(24 * time.Hour).Add(29 * time.Hour),
 	}
 	if err := msg.DecodePayload(&f); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -213,5 +236,12 @@ func applyFilter(f ServingFilter) func(*gorm.DB) *gorm.DB {
 			db = db.Where("time < ?", f.Before)
 		}
 		return db
+	}
+}
+
+func (s *Service) handleFetchFddb(msg proto.Message) {
+	day := util.ParseTime(msg.Text, time.Now())
+	if err := s.FetchFddb(day); err != nil {
+		s.ReplyInternalError(msg, err)
 	}
 }

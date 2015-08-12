@@ -37,7 +37,6 @@ func NewTokenizer() *Tokenizer {
 }
 
 func (t *Tokenizer) Tokenize(s string) []*Token {
-	s = strings.ToLower(s)
 	s = strings.TrimRight(s, ".!? ")
 
 	var words []string
@@ -50,8 +49,8 @@ func (t *Tokenizer) Tokenize(s string) []*Token {
 	tokens := make([]*Token, 0, len(words))
 	for _, w := range words {
 		tok := &Token{
-			Value: w,
-			Lemma: TrimQuotes(w),
+			Value: TrimQuotes(w),
+			Lemma: strings.ToLower(TrimQuotes(w)),
 			Tags:  make(map[string]struct{}),
 		}
 		if inStringSlice(w, t.StopWords) {

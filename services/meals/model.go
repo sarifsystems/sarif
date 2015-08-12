@@ -65,9 +65,10 @@ func (s *Stats) Add(o Stats) {
 }
 
 type Product struct {
-	Id   int64  `json:"-"`
-	Name string `json:"name,omitempty"`
-	Code string `json:"code,omitempty"`
+	Id    int64  `json:"-"`
+	RefId int64  `json:"ref_id,omitempty"`
+	Name  string `json:"name,omitempty"`
+	Code  string `json:"code,omitempty"`
 
 	ServingWeight Weight `json:"serving_weight,omitempty"`
 	ServingVolume Volume `json:"serving_volume,omitempty"`
@@ -93,22 +94,34 @@ func (p Product) Servings(n float64) Stats {
 }
 
 type Serving struct {
-	Id   int64     `json:"-"`
-	Name string    `json:"name"`
-	Size float64   `json:"size"`
-	Time time.Time `json:"time" sql:"index"`
+	Id           int64     `json:"-"`
+	RefId        int64     `json:"ref_id,omitempty"`
+	Name         string    `json:"name"`
+	AmountWeight Weight    `json:"amount_weight"`
+	AmountVolume Volume    `json:"amount_volume"`
+	Time         time.Time `json:"time" sql:"index"`
 
 	ProductId int64    `json:"-"`
 	Product   *Product `json:"product,omitempty"`
+
+	Size            float64 `json:"size,omitempty" sql:"-"`
+	CalculatedStats *Stats  `json:"stats,omitempty"`
 }
 
 func (s Serving) TableName() string {
 	return "meals_servings"
 }
 
-func (s Serving) Stats() Stats {
+func (s *Serving) Stats() Stats {
 	if s.Product == nil {
 		return Stats{}
 	}
-	return s.Product.Servings(s.Size)
+	stats := s.Product.Stats
+	if s.AmountWeight > 0 {
+		stats.ScaleToWeight(s.AmountWeight)
+	} else if s.AmountVolume > 0 {
+		stats.ScaleToVolume(s.AmountVolume)
+	}
+	s.CalculatedStats = &stats
+	return stats
 }
