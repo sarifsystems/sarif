@@ -8,7 +8,7 @@ package dbus
 import "github.com/godbus/dbus"
 
 type NotificationObject struct {
-	*dbus.Object
+	dbus.BusObject
 }
 
 func NewNotificationObject(conn *dbus.Conn) *NotificationObject {

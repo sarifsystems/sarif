@@ -8,7 +8,7 @@ package dbus
 import "github.com/godbus/dbus"
 
 type LogindObject struct {
-	*dbus.Object
+	dbus.BusObject
 }
 
 func NewLogindObject(conn *dbus.Conn) *LogindObject {
