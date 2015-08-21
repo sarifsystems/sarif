@@ -11,7 +11,7 @@ import (
 	"math"
 	"os"
 
-	"github.com/llgcode/draw2d"
+	"github.com/llgcode/draw2d/draw2dkit"
 )
 
 type BackgroundLayout struct {
@@ -50,7 +50,7 @@ func (l *BackgroundLayout) Render(ctx *Context, bounds Rect) error {
 
 	if l.Color {
 		ctx.SetFillColor(ctx.Style.ColorDarkPrimary)
-		draw2d.Rect(ctx, bounds.Left, bounds.Top, bounds.Right, bounds.Bottom)
+		draw2dkit.Rectangle(ctx, bounds.Left, bounds.Top, bounds.Right, bounds.Bottom)
 		ctx.Fill()
 	}
 

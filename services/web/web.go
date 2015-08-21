@@ -14,7 +14,7 @@ import (
 
 	"crypto/rand"
 
-	"code.google.com/p/go.net/websocket"
+	"golang.org/x/net/websocket"
 
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"

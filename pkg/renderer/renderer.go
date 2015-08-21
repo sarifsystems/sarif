@@ -16,11 +16,12 @@ import (
 
 	"code.google.com/p/freetype-go/freetype/truetype"
 	"github.com/llgcode/draw2d"
+	"github.com/llgcode/draw2d/draw2dimg"
 )
 
 type Context struct {
 	Image draw.Image
-	*draw2d.ImageGraphicContext
+	*draw2dimg.GraphicContext
 	Style Style
 }
 
@@ -36,7 +37,7 @@ type OutputFormat struct {
 
 type Renderer struct {
 	Image   draw.Image
-	Context *draw2d.ImageGraphicContext
+	Context *draw2d.GraphicContext
 }
 
 type Style struct {
@@ -57,7 +58,7 @@ func NewContext() *Context {
 	img := image.NewRGBA(image.Rect(0, 0, 640, 360))
 	ctx := &Context{
 		img,
-		draw2d.NewGraphicContext(img),
+		draw2dimg.NewGraphicContext(img),
 		StyleDefault,
 	}
 	ctx.SetFontData(draw2d.FontData{Name: "Default"})
