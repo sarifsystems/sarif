@@ -30,10 +30,12 @@ func (s *Service) handleDate(msg proto.Message) {
 		return
 	}
 
-	if d, err := util.ParseDuration(text); err == nil {
-		s.ReplyText(msg, printTime(time.Now().Add(d)))
+	d, err := util.ParseDuration(text)
+	if err != nil {
+		s.ReplyBadRequest(msg, err)
 		return
 	}
+	s.ReplyText(msg, printTime(time.Now().Add(d)))
 }
 
 func (s *Service) handleUnix(msg proto.Message) {
@@ -53,8 +55,10 @@ func (s *Service) handleUnix(msg proto.Message) {
 		return
 	}
 
-	if d, err := util.ParseDuration(text); err == nil {
-		s.ReplyText(msg, strconv.FormatInt(time.Now().Add(d).Unix(), 10))
+	d, err := util.ParseDuration(text)
+	if err != nil {
+		s.ReplyBadRequest(msg, err)
 		return
 	}
+	s.ReplyText(msg, strconv.FormatInt(time.Now().Add(d).Unix(), 10))
 }

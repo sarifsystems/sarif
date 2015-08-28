@@ -114,7 +114,7 @@ func (cv *Conversation) HandleClientMessage(msg proto.Message) {
 		return
 	}
 
-	if res.Message.Text == "" {
+	if res.Message.Text == "" && res.Type != "simple" {
 		res.Message.Text = msg.Text
 	}
 	cv.LastUserText = msg.Text

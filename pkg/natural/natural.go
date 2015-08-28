@@ -44,7 +44,7 @@ func ParseSimple(text string) (proto.Message, bool) {
 	}
 
 	if strings.HasPrefix(text, ".") || strings.HasPrefix(text, "!") {
-		text = strings.TrimLeft(text, ".! ")
+		text = strings.TrimLeft(text, ".!/ ")
 		parts, _ := SplitQuoted(text, " ")
 		if parts[0] == "" {
 			return msg, false
