@@ -144,7 +144,7 @@ func (p *PosTagger) Train(iterations int, sentences []Sentence) {
 	for it := 0; it < iterations; it++ {
 		set.Reset()
 		c, n := p.Perceptron.Train(set)
-		fmt.Printf("Iter %d: %d/%d=%.3f\n", it, c, n, float64(c)/float64(n)*100)
+		fmt.Printf("PosTagger iter %d: %d/%d=%.3f\n", it, c, n, float64(c)/float64(n)*100)
 	}
 }
 

@@ -28,10 +28,10 @@ type Conversation struct {
 }
 
 type MsgErrNatural struct {
-	Original string       `json:"original"`
-	Type     string       `json:"-"`
-	Action   interface{}  `json:"action"`
-	Result   *ParseResult `json:"result"`
+	Original string               `json:"original"`
+	Type     string               `json:"-"`
+	Action   interface{}          `json:"action"`
+	Result   *natural.ParseResult `json:"result"`
 }
 
 type Actionable struct {
@@ -104,7 +104,7 @@ func (cv *Conversation) HandleClientMessage(msg proto.Message) {
 	}
 
 	// Otherwise parse message as normal request.
-	ctx := &Context{
+	ctx := &natural.Context{
 		Sender:    "user",
 		Recipient: "stark",
 	}
@@ -134,7 +134,7 @@ func (cv *Conversation) answer(a *schema.Action, text string) (proto.Message, bo
 
 	t := a.SchemaType
 	if t == "ConfirmAction" || t == "DeleteAction" || t == "CancelAction" {
-		ctx := &Context{ExpectedReply: "affirmative"}
+		ctx := &natural.Context{ExpectedReply: "affirmative"}
 		r, err := cv.service.parser.Parse(text, ctx)
 		if err != nil {
 			return reply, false

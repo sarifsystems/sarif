@@ -13,8 +13,13 @@ func NewMeaningParser() *MeaningParser {
 }
 
 func (p *MeaningParser) ParseImperative(tokens []*Token) (*Meaning, error) {
+	words := make([]string, len(tokens))
+	for i, t := range tokens {
+		words[i] = t.Lemma
+	}
 	m := &Meaning{
 		Variables: make(map[string]string),
+		Words:     words,
 	}
 
 	preps := make(map[string]int)
@@ -63,11 +68,12 @@ func (p *MeaningParser) ParseImperative(tokens []*Token) (*Meaning, error) {
 						break
 					}
 				}
+				t.Tag("var")
 				values = append(values, t)
 				t = it.Next()
 			}
 			m.Variables[prep.Lemma] = JoinTokens(values)
-			if len(values) > 1 {
+			if len(values) > 1 && !values[0].Is("$") {
 				m.Variables[values[0].Lemma] = JoinTokens(values[1:])
 			}
 			continue

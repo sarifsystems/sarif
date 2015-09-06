@@ -21,9 +21,13 @@ type Iterator interface {
 	Predicted(c Class)
 }
 
+type FeatureCollection interface {
+	Features() []Feature
+}
+
 type SimpleIterator struct {
 	Index          int
-	FeatureSlice   [][]Feature
+	FeatureSlice   []FeatureCollection
 	ClassSlice     []Class
 	PredictedSlice []Class
 }
@@ -34,7 +38,7 @@ func (i *SimpleIterator) Next() bool {
 }
 
 func (i *SimpleIterator) Features() []Feature {
-	return i.FeatureSlice[i.Index-1]
+	return i.FeatureSlice[i.Index-1].Features()
 }
 
 func (i *SimpleIterator) Class() Class {
@@ -47,12 +51,15 @@ func (i *SimpleIterator) Predicted(c Class) {
 	}
 }
 
-func (i *SimpleIterator) Reset() {
+func (i *SimpleIterator) Reset(shuffle bool) {
 	i.Index = 0
-	for j := range i.FeatureSlice {
-		k := rand.Intn(j + 1)
-		i.FeatureSlice[j], i.FeatureSlice[k] = i.FeatureSlice[k], i.FeatureSlice[j]
-		i.ClassSlice[j], i.ClassSlice[k] = i.ClassSlice[k], i.ClassSlice[j]
+
+	if shuffle {
+		for j := range i.FeatureSlice {
+			k := rand.Intn(j + 1)
+			i.FeatureSlice[j], i.FeatureSlice[k] = i.FeatureSlice[k], i.FeatureSlice[j]
+			i.ClassSlice[j], i.ClassSlice[k] = i.ClassSlice[k], i.ClassSlice[j]
+		}
 	}
 }
 

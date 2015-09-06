@@ -24,6 +24,10 @@ func (t Token) Is(tag string) bool {
 	return ok
 }
 
+func (t *Token) Tag(tag string) {
+	t.Tags[tag] = struct{}{}
+}
+
 type Tokenizer struct {
 	SplitQuoted bool
 	StopWords   []string

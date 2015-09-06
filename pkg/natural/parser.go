@@ -11,33 +11,40 @@ import (
 	"os"
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/xconstruct/stark/pkg/datasets/commands"
+	"github.com/xconstruct/stark/pkg/datasets/twpos"
 	"github.com/xconstruct/stark/pkg/mlearning"
-	"github.com/xconstruct/stark/pkg/natural"
-	"github.com/xconstruct/stark/pkg/natural/twpos"
 	"github.com/xconstruct/stark/proto"
 )
 
 type model struct {
-	Rules  natural.SentenceRuleSet
-	Parser *natural.Model
+	Schema map[string]*MessageSchema
+	Rules  SentenceRuleSet
+	Parser *mlearning.Model
 	Pos    *mlearning.Model
+	Var    *mlearning.Model
 }
 
 type Parser struct {
-	regular   *natural.RegularParser
-	tokenizer *natural.Tokenizer
-	parser    *natural.LearningParser
-	pos       *natural.PosTagger
-	meaning   *natural.MeaningParser
+	schema       *MessageSchemaStore
+	regular      *RegularParser
+	tokenizer    *Tokenizer
+	parser       *LearningParser
+	pos          *PosTagger
+	meaning      *MeaningParser
+	varPredictor *VarPredictor
 }
 
 func NewParser() *Parser {
 	return &Parser{
-		natural.NewRegularParser(),
-		natural.NewTokenizer(),
-		natural.NewLearningParser(),
-		natural.NewPosTagger(),
-		natural.NewMeaningParser(),
+		NewMessageSchemaStore(),
+		NewRegularParser(),
+		NewTokenizer(),
+		NewLearningParser(),
+		NewPosTagger(),
+		NewMeaningParser(),
+		NewVarPredictor(),
 	}
 }
 
@@ -50,9 +57,11 @@ func (p *Parser) SaveModel(path string) error {
 
 	gz := gzip.NewWriter(f)
 	model := model{
+		p.schema.Messages,
 		p.regular.Rules(),
-		p.parser.Model(),
+		p.parser.Perceptron.Model,
 		p.pos.Perceptron.Model,
+		p.varPredictor.Perceptron.Model,
 	}
 	if err := json.NewEncoder(gz).Encode(model); err != nil {
 		return err
@@ -64,13 +73,7 @@ func (p *Parser) LoadModel(path string) error {
 	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			p.regular.Load(natural.DefaultRules)
-			ss, err := natural.LoadCoNLL(strings.NewReader(twpos.Data))
-			if err != nil {
-				return err
-			}
-			p.pos.Train(5, ss)
-			return nil
+			return p.TrainModel()
 		}
 		return err
 	}
@@ -85,23 +88,42 @@ func (p *Parser) LoadModel(path string) error {
 	if err := dec.Decode(&model); err != nil {
 		return err
 	}
+	p.schema.Messages = model.Schema
 	if err := p.regular.Load(model.Rules); err != nil {
 		return err
 	}
-	if err := p.parser.LoadModel(model.Parser); err != nil {
+	p.parser.Perceptron.Model = model.Parser
+	p.pos.Perceptron.Model = model.Pos
+	p.varPredictor.Perceptron.Model = model.Var
+	return nil
+}
+
+func (p *Parser) TrainModel() error {
+	set, err := ReadDataSet(strings.NewReader(commands.Data))
+	if err != nil {
 		return err
 	}
-	p.pos.Perceptron.Model = model.Pos
+	ss, err := LoadCoNLL(strings.NewReader(twpos.Data))
+	if err != nil {
+		return err
+	}
+
+	p.parser.Train(3, set)
+	p.schema.AddDataSet(set)
+	p.regular.Load(DefaultRules)
+	p.pos.Train(5, ss)
+	p.varPredictor.Train(10, set)
+
 	return nil
 }
 
 type ParseResult struct {
-	Text    string           `json:"text"`
-	Type    string           `json:"type"`
-	Weight  float64          `json:"weight"`
-	Meaning *natural.Meaning `json:"meaning"`
-	Message proto.Message    `json:"msg"`
-	Tokens  []*natural.Token `json:"tokens"`
+	Text    string        `json:"text"`
+	Type    string        `json:"type"`
+	Weight  float64       `json:"weight"`
+	Meaning *Meaning      `json:"meaning"`
+	Message proto.Message `json:"msg"`
+	Tokens  []*Token      `json:"tokens"`
 }
 
 type Context struct {
@@ -121,7 +143,7 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 		return r, nil
 	}
 
-	if msg, ok := natural.ParseSimple(text); ok {
+	if msg, ok := ParseSimple(text); ok {
 		r.Type = "simple"
 		r.Message = msg
 		r.Weight = 100
@@ -138,7 +160,7 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 	r.Tokens = p.tokenizer.Tokenize(text)
 
 	if ctx.ExpectedReply == "affirmative" {
-		r.Type, r.Weight = natural.AnalyzeAffirmativeSentiment(r.Tokens)
+		r.Type, r.Weight = AnalyzeAffirmativeSentiment(r.Tokens)
 		return r, nil
 	}
 
@@ -146,7 +168,7 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 	p.ResolvePronouns(r.Tokens, ctx)
 
 	// TODO
-	r.Type = natural.AnalyzeSentenceFunction(r.Tokens)
+	r.Type = AnalyzeSentenceFunction(r.Tokens)
 	var err error
 	switch r.Type {
 	case "declarative":
@@ -160,6 +182,7 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 		r.Message, err = p.InventMessageForMeaning(action, r.Meaning)
 		r.Weight = 1 // TODO
 		return r, err
+
 	case "exclamatory":
 	case "interrogative":
 		if r.Meaning, err = p.meaning.ParseInterrogative(r.Tokens); err != nil {
@@ -167,13 +190,21 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 		}
 		r.Message, err = p.InventMessageForMeaning("concepts/query", r.Meaning)
 		r.Weight = 1 // TODO
+
 	case "imperative":
 		if r.Meaning, err = p.meaning.ParseImperative(r.Tokens); err != nil {
 			return r, err
 		}
-		mschema, w := p.parser.FindMessageForMeaning(r.Meaning)
+		action, w := p.parser.Predict(r.Meaning)
 		r.Weight = w
+
+		mschema := p.schema.Get(action)
 		if mschema != nil {
+			vars := p.varPredictor.PredictTokens(r.Tokens, mschema.Action)
+			spew.Dump(vars)
+			for _, v := range vars {
+				r.Meaning.Variables[v.Name] = v.Value
+			}
 			r.Message = mschema.Apply(r.Meaning)
 		}
 		return r, err
@@ -182,7 +213,7 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 	return r, nil
 }
 
-func (p *Parser) ResolvePronouns(ts []*natural.Token, ctx *Context) {
+func (p *Parser) ResolvePronouns(ts []*Token, ctx *Context) {
 	for _, t := range ts {
 		if t.Is("O") {
 			switch t.Lemma {
@@ -197,6 +228,10 @@ func (p *Parser) ResolvePronouns(ts []*natural.Token, ctx *Context) {
 	}
 }
 
+func (p *Parser) LearnRule(text string, action string) error {
+	return p.regular.Learn(text, action)
+}
+
 func (p *Parser) ReinforceSentence(text string, action string) error {
 	r, err := p.Parse(text, &Context{})
 	if err != nil {
@@ -206,7 +241,11 @@ func (p *Parser) ReinforceSentence(text string, action string) error {
 	return nil
 }
 
-func (p *Parser) InventMessageForMeaning(action string, m *natural.Meaning) (proto.Message, error) {
+func (p *Parser) LearnMessage(msg *proto.Message) {
+	p.schema.AddMessage(msg)
+}
+
+func (p *Parser) InventMessageForMeaning(action string, m *Meaning) (proto.Message, error) {
 	msg := proto.Message{}
 
 	if action != "" {
@@ -225,13 +264,4 @@ func (p *Parser) InventMessageForMeaning(action string, m *natural.Meaning) (pro
 	msg.Action = strings.Trim(msg.Action, "/")
 	msg.EncodePayload(m.Variables)
 	return msg, nil
-}
-
-func inStringSlice(s string, ss []string) bool {
-	for _, a := range ss {
-		if s == a {
-			return true
-		}
-	}
-	return false
 }

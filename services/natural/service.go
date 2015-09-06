@@ -33,7 +33,7 @@ type Service struct {
 	Log    proto.Logger
 	*proto.Client
 
-	parser        *Parser
+	parser        *natural.Parser
 	phrases       *natural.Phrasebook
 	conversations map[string]*Conversation
 }
@@ -44,7 +44,7 @@ func NewService(deps *Dependencies) *Service {
 		deps.Log,
 		deps.Client,
 
-		NewParser(),
+		natural.NewParser(),
 		natural.NewPhrasebook(),
 		make(map[string]*Conversation),
 	}
@@ -96,7 +96,7 @@ func (s *Service) Disable() error {
 }
 
 type MsgNaturalParsed struct {
-	*ParseResult
+	*natural.ParseResult
 }
 
 func (p MsgNaturalParsed) String() string {
@@ -125,7 +125,7 @@ func (s *Service) handleNatural(msg proto.Message) {
 }
 
 func (s *Service) handleNaturalParse(msg proto.Message) {
-	res, err := s.parser.Parse(msg.Text, &Context{
+	res, err := s.parser.Parse(msg.Text, &natural.Context{
 		Sender:    "user",
 		Recipient: "stark",
 	})
@@ -174,7 +174,7 @@ func (s *Service) handleNaturalLearn(msg proto.Message) {
 	}
 	p.Action = strings.TrimLeft(p.Action, ".")
 
-	if err := s.parser.regular.Learn(p.Sentence, p.Action); err != nil {
+	if err := s.parser.LearnRule(p.Sentence, p.Action); err != nil {
 		s.ReplyBadRequest(msg, err)
 	}
 	s.Log.Infof("[natural] associating '%s' with %s", p.Sentence, p.Action)
@@ -195,7 +195,7 @@ func (s *Service) handleNaturalReinforce(msg proto.Message) {
 	s.Log.Infof("[natural] reinforcing: '%s' with %s", p.Sentence, p.Action)
 	s.parser.ReinforceSentence(p.Sentence, p.Action)
 
-	parsed, _ := s.parser.Parse(p.Sentence, &Context{})
+	parsed, _ := s.parser.Parse(p.Sentence, &natural.Context{})
 	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearn{p.Sentence, parsed.Message.Action}))
 }
 
