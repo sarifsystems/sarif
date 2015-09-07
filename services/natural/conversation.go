@@ -109,18 +109,18 @@ func (cv *Conversation) HandleClientMessage(msg proto.Message) {
 		Recipient: "stark",
 	}
 	res, err := cv.service.parser.Parse(msg.Text, ctx)
-	if err != nil || res.Weight <= 0 {
+	if err != nil || res.Prediction == nil || res.Prediction.Weight <= 0 {
 		cv.handleUnknownUserMessage(msg)
 		return
 	}
 
-	if res.Message.Text == "" && res.Type != "simple" {
-		res.Message.Text = msg.Text
+	if res.Prediction.Message.Text == "" && res.Type != "simple" {
+		res.Prediction.Message.Text = msg.Text
 	}
 	cv.LastUserText = msg.Text
-	cv.LastUserMessage = res.Message
-	res.Message.CorrId = msg.Id
-	cv.PublishForClient(res.Message)
+	cv.LastUserMessage = res.Prediction.Message
+	res.Prediction.Message.CorrId = msg.Id
+	cv.PublishForClient(res.Prediction.Message)
 }
 
 func (cv *Conversation) answer(a *schema.Action, text string) (proto.Message, bool) {

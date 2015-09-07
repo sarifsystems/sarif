@@ -7,7 +7,6 @@ package natural
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -100,10 +99,7 @@ type MsgNaturalParsed struct {
 }
 
 func (p MsgNaturalParsed) String() string {
-	if p.Weight <= 0 {
-		return "Could not parse this text."
-	}
-	return fmt.Sprintf("Interpreted '%s' as action '%s'.", p.Text, p.Message.Action)
+	return p.ParseResult.String()
 }
 
 func (s *Service) getConversation(device string) *Conversation {
@@ -134,7 +130,7 @@ func (s *Service) handleNaturalParse(msg proto.Message) {
 		return
 	}
 	action := "natural/parsed"
-	if res.Weight <= 0 {
+	if res.Prediction == nil || res.Prediction.Weight <= 0 {
 		action = "err/natural/parsed"
 	}
 
@@ -196,7 +192,7 @@ func (s *Service) handleNaturalReinforce(msg proto.Message) {
 	s.parser.ReinforceSentence(p.Sentence, p.Action)
 
 	parsed, _ := s.parser.Parse(p.Sentence, &natural.Context{})
-	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearn{p.Sentence, parsed.Message.Action}))
+	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearn{p.Sentence, parsed.Prediction.Message.Action}))
 }
 
 func (s *Service) handleNaturalPhrases(msg proto.Message) {

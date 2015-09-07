@@ -5,17 +5,29 @@
 
 package natural
 
-import "github.com/xconstruct/stark/proto"
+import (
+	"sort"
+
+	"github.com/xconstruct/stark/proto"
+)
 
 type MessageSchema struct {
 	Action string
 	Fields map[string]string
 }
 
+type byWeight []*Var
+
+func (a byWeight) Len() int           { return len(a) }
+func (a byWeight) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byWeight) Less(i, j int) bool { return a[i].Weight > a[j].Weight }
+
 func (r *MessageSchema) Apply(vars []*Var) proto.Message {
 	msg := proto.Message{}
 	msg.Action = r.Action
 	pl := make(map[string]string)
+	sort.Sort(sort.Reverse(byWeight(vars)))
+
 	for _, v := range vars {
 		switch v.Name {
 		case "_action":

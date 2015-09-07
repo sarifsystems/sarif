@@ -626,6 +626,7 @@ Remove note tagged call from evernote. [service_name=evernote]
 reminder/set
 Remind me at 3 PM. [time=3 PM]
 Remind me in 6 hours. [duration=6 hours]
+Remind me that I need to run. [summary=I need to run]
 Remind about running. [summary=running]
 Remind me to call Tom when I get home. [location=home]
 Remind about running every day. [recurrence:const=every day]

@@ -8,6 +8,7 @@ package natural
 import (
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 
@@ -123,8 +124,24 @@ type ParseResult struct {
 	Meaning *Meaning `json:"meaning"`
 	Tokens  []*Token `json:"tokens"`
 
-	*Prediction
+	Prediction  *Prediction
 	Predictions []*Prediction `json:"predictions"`
+}
+
+func (r ParseResult) String() string {
+	s := "Type: " + r.Type
+	s += "\nInterpretation: " + r.Text
+	if r.Prediction != nil {
+		for _, v := range r.Prediction.Vars {
+			s += " " + v.String()
+		}
+		s += "\n\nIntent: " + r.Prediction.String()
+	} else {
+		for _, v := range r.Meaning.Vars {
+			s += " " + v.String()
+		}
+	}
+	return s
 }
 
 type Context struct {
@@ -140,6 +157,17 @@ type Prediction struct {
 	Weight  float64       `json:"weight"`
 }
 
+func (p Prediction) String() string {
+	s := "." + p.Message.Action
+	v := make(map[string]string)
+	p.Message.DecodePayload(&v)
+	for name, val := range v {
+		s += " " + name + "=" + val
+	}
+	s += fmt.Sprintf(" [weight: %g]", p.Weight)
+	return s
+}
+
 func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 	if ctx == nil {
 		ctx = &Context{}
@@ -153,14 +181,18 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 
 	if msg, ok := ParseSimple(text); ok {
 		r.Type = "simple"
-		r.Message = msg
-		r.Weight = 100
+		r.Prediction = &Prediction{
+			Action:  msg.Action,
+			Message: msg,
+			Weight:  100,
+		}
 		return r, nil
 	}
 
 	if msg, ok := p.regular.Parse(text); ok {
 		r.Type = "regular"
 		r.Prediction = &Prediction{
+			Action:  msg.Action,
 			Message: msg,
 			Weight:  100,
 		}
@@ -170,7 +202,9 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 	r.Tokens = p.tokenizer.Tokenize(text)
 
 	if ctx.ExpectedReply == "affirmative" {
-		r.Type, r.Weight = AnalyzeAffirmativeSentiment(r.Tokens)
+		var w float64
+		r.Type, w = AnalyzeAffirmativeSentiment(r.Tokens)
+		r.Prediction = &Prediction{Weight: w}
 		return r, nil
 	}
 
@@ -192,6 +226,7 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 		// }
 		msg, err = p.InventMessageForMeaning(action, r.Meaning)
 		r.Prediction = &Prediction{
+			Action:  msg.Action,
 			Message: msg,
 			Vars:    r.Meaning.Vars,
 			Weight:  1, // TODO
@@ -203,8 +238,8 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 			return r, err
 		}
 		msg, err = p.InventMessageForMeaning("concepts/query", r.Meaning)
-		r.Weight = 1 // TODO
 		r.Prediction = &Prediction{
+			Action:  msg.Action,
 			Message: msg,
 			Vars:    r.Meaning.Vars,
 			Weight:  1, // TODO

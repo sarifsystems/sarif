@@ -25,6 +25,14 @@ type Data struct {
 	Vars     []*Var
 }
 
+func NewDataFromTokens(tok []*Token, vars []*Var, action string) Data {
+	return Data{
+		Action:   action,
+		Sentence: JoinTokens(tok),
+		Vars:     vars,
+	}
+}
+
 func (d Data) CleanedSentence(placeholder string) string {
 	s := d.Sentence
 	for _, v := range d.Vars {
@@ -54,6 +62,9 @@ func (v Var) String() string {
 	}
 	if v.Type != "" {
 		s += ":" + v.Type
+	}
+	if v.Weight != 0 {
+		s += fmt.Sprintf("|%g", v.Weight)
 	}
 	if v.Value != "" {
 		s += "=" + v.Value

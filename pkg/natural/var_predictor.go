@@ -122,7 +122,9 @@ func (p *VarPredictor) PredictTokens(tok []*Token, action string) []*Var {
 	set := &mlearning.SimpleIterator{}
 	for i, t := range tok {
 		if !t.Is("var") || prevVar {
-			prevVar = false
+			if !t.Is("var") {
+				prevVar = false
+			}
 			continue
 		}
 
