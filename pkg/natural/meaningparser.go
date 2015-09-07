@@ -18,8 +18,8 @@ func (p *MeaningParser) ParseImperative(tokens []*Token) (*Meaning, error) {
 		words[i] = t.Lemma
 	}
 	m := &Meaning{
-		Variables: make(map[string]string),
-		Words:     words,
+		Vars:   make([]*Var, 0),
+		Tokens: tokens,
 	}
 
 	preps := make(map[string]int)
@@ -55,7 +55,7 @@ func (p *MeaningParser) ParseImperative(tokens []*Token) (*Meaning, error) {
 			}
 		}
 
-		if t.Is("P") || t.Is("&") {
+		if t.Is("P") || t.Is("&") || t.Is("T") {
 			prep := t
 			preps[t.Lemma]--
 			values := make([]*Token, 0)
@@ -72,9 +72,15 @@ func (p *MeaningParser) ParseImperative(tokens []*Token) (*Meaning, error) {
 				values = append(values, t)
 				t = it.Next()
 			}
-			m.Variables[prep.Lemma] = JoinTokens(values)
+			m.Vars = append(m.Vars, &Var{
+				Name:  prep.Lemma,
+				Value: JoinTokens(values),
+			})
 			if len(values) > 1 && !values[0].Is("$") {
-				m.Variables[values[0].Lemma] = JoinTokens(values[1:])
+				m.Vars = append(m.Vars, &Var{
+					Name:  values[0].Lemma,
+					Value: JoinTokens(values[1:]),
+				})
 			}
 			continue
 		}
@@ -87,7 +93,7 @@ func (p *MeaningParser) ParseImperative(tokens []*Token) (*Meaning, error) {
 
 func (p *MeaningParser) ParseDeclarative(tokens []*Token) (*Meaning, error) {
 	m := &Meaning{
-		Variables: make(map[string]string),
+		Vars: make([]*Var, 0),
 	}
 
 	it := newTokenIterator(tokens)
@@ -129,10 +135,16 @@ func (p *MeaningParser) ParseDeclarative(tokens []*Token) (*Meaning, error) {
 		}
 
 		if t.Is("$") {
-			m.Variables["value"] = t.Lemma
+			m.Vars = append(m.Vars, &Var{
+				Name:  "value",
+				Value: t.Lemma,
+			})
 		}
 		if t.Is("A") {
-			m.Variables["adjective"] = t.Lemma
+			m.Vars = append(m.Vars, &Var{
+				Name:  "adjective",
+				Value: t.Lemma,
+			})
 		}
 
 		if couldBeNoun(t) {
@@ -148,19 +160,34 @@ func (p *MeaningParser) ParseDeclarative(tokens []*Token) (*Meaning, error) {
 	}
 
 	if m.Subject != "" {
-		m.Variables["subject"] = m.Subject
+		m.Vars = append(m.Vars, &Var{
+			Name:  "subject",
+			Value: m.Subject,
+		})
 	}
 	if m.Predicate != "" {
-		m.Variables["predicate"] = m.Predicate
+		m.Vars = append(m.Vars, &Var{
+			Name:  "predicate",
+			Value: m.Predicate,
+		})
 		if m.Object != "" {
-			m.Variables[m.Predicate] = m.Object
+			m.Vars = append(m.Vars, &Var{
+				Name:  m.Predicate,
+				Value: m.Object,
+			})
 		}
 	}
 	if m.Object != "" {
-		m.Variables["object"] = m.Object
+		m.Vars = append(m.Vars, &Var{
+			Name:  "object",
+			Value: m.Object,
+		})
 	}
 	if fact {
-		m.Variables["fact"] = "true"
+		m.Vars = append(m.Vars, &Var{
+			Name:  "fact",
+			Value: "true",
+		})
 	}
 
 	return m, nil
@@ -168,7 +195,7 @@ func (p *MeaningParser) ParseDeclarative(tokens []*Token) (*Meaning, error) {
 
 func (p *MeaningParser) ParseInterrogative(tokens []*Token) (*Meaning, error) {
 	m := &Meaning{
-		Variables: make(map[string]string),
+		Vars: make([]*Var, 0),
 	}
 
 	it := newTokenIterator(tokens)
@@ -181,7 +208,10 @@ func (p *MeaningParser) ParseInterrogative(tokens []*Token) (*Meaning, error) {
 		// first interrogative pronoun
 		if !q && t.Is("O") {
 			q = true
-			m.Variables["interrogative"] = t.Lemma
+			m.Vars = append(m.Vars, &Var{
+				Name:  "interrogative",
+				Value: t.Lemma,
+			})
 			t = it.Next()
 			continue
 		}
@@ -226,13 +256,18 @@ func (p *MeaningParser) ParseInterrogative(tokens []*Token) (*Meaning, error) {
 		t = it.Next()
 	}
 
-	m.Variables["query"] = query
-	if m.Subject != "" {
-		m.Variables["subject"] = m.Subject
-	}
-	if m.Predicate != "" {
-		m.Variables["predicate"] = m.Predicate
-	}
+	m.Vars = append(m.Vars, &Var{
+		Name:  "query",
+		Value: query,
+	})
+	m.Vars = append(m.Vars, &Var{
+		Name:  "subject",
+		Value: m.Subject,
+	})
+	m.Vars = append(m.Vars, &Var{
+		Name:  "predicate",
+		Value: m.Predicate,
+	})
 
 	return m, nil
 }

@@ -7,11 +7,8 @@ package natural
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/xconstruct/stark/pkg/mlearning"
-	"github.com/xconstruct/stark/proto"
 )
 
 var DefaultStopWords = []string{
@@ -71,8 +68,8 @@ type Meaning struct {
 	Object     string `json:"object,omitempty"`
 	ObjectType string `json:"object_type,omitempty"`
 
-	Words     []string          `json:"words"`
-	Variables map[string]string `json:"variables"`
+	Tokens []*Token `json:"-"`
+	Vars   []*Var   `json:"vars"`
 }
 
 func (m Meaning) Features() []mlearning.Feature {
@@ -85,61 +82,20 @@ func (m Meaning) Features() []mlearning.Feature {
 	// if m.Object != "" {
 	// 	fs = append(fs, mlearning.Feature("object="+m.Object))
 	// }
-	for i, w := range m.Words {
-		if w == "" || w[0] == '[' {
-			continue
-		}
+	for i, t := range m.Tokens {
 		if i == 0 {
-			fs = append(fs, mlearning.Feature("first="+w))
+			fs = append(fs, mlearning.Feature("first="+t.Lemma))
 		}
 		if i == 1 {
-			fs = append(fs, mlearning.Feature("second="+w))
+			fs = append(fs, mlearning.Feature("second="+t.Lemma))
 		}
 
-		if !inStringSlice(w, DefaultStopWords) {
-			fs = append(fs, mlearning.Feature("word="+w))
-		}
+		fs = append(fs, mlearning.Feature("word="+t.Lemma))
 	}
-	for name, _ := range m.Variables {
-		fs = append(fs, mlearning.Feature("var="+name))
-	}
-	spew.Dump(fs)
-	return fs
-}
-
-func getMessageSchemaFeatures(r MessageSchema) []mlearning.Feature {
-	fs := make([]mlearning.Feature, 0)
-	fs = append(fs, "bias")
-	for _, p := range strings.Split(r.Action, "/") {
-		fs = append(fs, mlearning.Feature("word="+p))
-	}
-	for field := range r.Fields {
-		fs = append(fs, mlearning.Feature("var="+field))
+	for _, v := range m.Vars {
+		fs = append(fs, mlearning.Feature("var="+v.Name))
 	}
 	return fs
-}
-
-func (p *LearningParser) LearnMessage(msg proto.Message) {
-	s := MessageSchema{
-		msg.Action,
-		make(map[string]string),
-	}
-	var fields map[string]interface{}
-	msg.DecodePayload(&fields)
-	for k := range fields {
-		s.Fields[k] = "string"
-	}
-
-	p.LearnMessageSchema(s)
-}
-
-func (p *LearningParser) LearnMessageSchema(s MessageSchema) {
-	if s.Action == "" {
-		return
-	}
-	feats := getMessageSchemaFeatures(s)
-	guess, _ := p.Perceptron.Predict(feats)
-	p.Perceptron.Update(mlearning.Class(s.Action), guess, feats)
 }
 
 func (p *LearningParser) ReinforceMeaning(m *Meaning, action string) {
@@ -153,22 +109,23 @@ func (p *LearningParser) Predict(m *Meaning) (string, float64) {
 	return string(guess), float64(w)
 }
 
+func (p *LearningParser) PredictAll(m *Meaning) []mlearning.Prediction {
+	return p.Perceptron.PredictAll(m.Features())
+}
+
 type Model struct {
 	Rules    []string
 	Schemata []*MessageSchema
 	*mlearning.Model
 }
 
-func (p *LearningParser) Train(iterations int, dataset DataSet) {
+func (p *LearningParser) Train(iterations int, dataset DataSet, tokenizer *Tokenizer) {
 	set := &mlearning.SimpleIterator{}
 	for _, data := range dataset {
-		vars := make(map[string]string)
-		for _, v := range data.Variables {
-			vars[v.Name] = v.Type
-		}
+		tok := tokenizer.Tokenize(data.Sentence)
 		set.FeatureSlice = append(set.FeatureSlice, &Meaning{
-			Words:     strings.Split(data.CleanedSentence(""), " "), // TODO: tokenize
-			Variables: vars,
+			Tokens: tok,
+			Vars:   data.Vars,
 		})
 		set.ClassSlice = append(set.ClassSlice, mlearning.Class(data.Action))
 	}

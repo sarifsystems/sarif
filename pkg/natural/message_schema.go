@@ -12,29 +12,29 @@ type MessageSchema struct {
 	Fields map[string]string
 }
 
-func (r *MessageSchema) Apply(m *Meaning) proto.Message {
+func (r *MessageSchema) Apply(vars []*Var) proto.Message {
 	msg := proto.Message{}
 	msg.Action = r.Action
 	pl := make(map[string]string)
-	for name, value := range m.Variables {
-		switch name {
+	for _, v := range vars {
+		switch v.Name {
 		case "_action":
-			msg.Action = value
+			msg.Action = v.Value
 		case "text":
-			msg.Text = value
+			msg.Text = v.Value
 		case "to":
 			fallthrough
 		case "that":
 			if msg.Text == "" {
-				msg.Text = value
+				msg.Text = v.Value
 			}
 		default:
-			if _, ok := r.Fields[name]; ok {
-				pl[name] = value
+			if _, ok := r.Fields[v.Name]; ok {
+				pl[v.Name] = v.Value
 			}
 		}
 	}
-	if len(m.Variables) > 0 {
+	if len(vars) > 0 {
 		msg.EncodePayload(&pl)
 	}
 	return msg
@@ -90,7 +90,7 @@ func (s *MessageSchemaStore) AddDataSet(set DataSet) {
 			Action: data.Action,
 			Fields: make(map[string]string),
 		}
-		for _, v := range data.Variables {
+		for _, v := range data.Vars {
 			schema.Fields[v.Name] = v.Type
 		}
 		s.Add(schema)

@@ -7,6 +7,8 @@ package proto
 
 import (
 	"crypto/rand"
+	"errors"
+	"net/url"
 	"strings"
 )
 
@@ -59,4 +61,22 @@ func topicParts(action string) []string {
 		return []string{}
 	}
 	return strings.Split(action, "/")
+}
+
+func ConvertURL(u string) (Message, error) {
+	msg := Message{}
+	us, err := url.Parse(u)
+	if err != nil {
+		return msg, err
+	}
+	if us.Scheme != "stark" {
+		return msg, errors.New("Expected url scheme stark://")
+	}
+
+	msg.Action = us.Host + us.Path
+	if us.User != nil {
+		msg.Destination = us.User.Username()
+	}
+	err = msg.EncodePayload(us.Query())
+	return msg, err
 }

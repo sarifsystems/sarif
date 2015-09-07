@@ -15,7 +15,8 @@ import (
 
 func printTime(t time.Time) string {
 	return t.Local().Format(time.RFC1123) + "\n" +
-		t.UTC().Format(time.RFC1123)
+		t.UTC().Format(time.RFC1123) + "\n" +
+		t.Local().Format(time.RFC3339)
 }
 
 func (s *Service) handleDate(msg proto.Message) {

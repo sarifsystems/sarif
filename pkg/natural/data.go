@@ -20,14 +20,14 @@ var reVar = regexp.MustCompile(`(\w+)(:\w+)?=(.+)`)
 type DataSet []Data
 
 type Data struct {
-	Action    string
-	Sentence  string
-	Variables map[string]Var
+	Action   string
+	Sentence string
+	Vars     []*Var
 }
 
 func (d Data) CleanedSentence(placeholder string) string {
 	s := d.Sentence
-	for _, v := range d.Variables {
+	for _, v := range d.Vars {
 		p := placeholder
 		switch p {
 		case "[name]":
@@ -41,10 +41,10 @@ func (d Data) CleanedSentence(placeholder string) string {
 }
 
 type Var struct {
-	Name   string
-	Type   string
-	Value  string
-	Weight float64
+	Name   string  `json:"name"`
+	Type   string  `json:"type,omitempty"`
+	Value  string  `json:"value"`
+	Weight float64 `json:"weight"`
 }
 
 func (v Var) String() string {
@@ -102,7 +102,7 @@ func ReadDataSet(r io.Reader) (DataSet, error) {
 
 func ReadData(data string) (Data, error) {
 	d := Data{
-		Variables: make(map[string]Var),
+		Vars: make([]*Var, 0),
 	}
 
 	m := reSplitData.FindStringSubmatch(data)
@@ -119,11 +119,11 @@ func ReadData(data string) (Data, error) {
 				if v == nil {
 					return d, fmt.Errorf("unexpected variable format %q", vs)
 				}
-				d.Variables[v[1]] = Var{
+				d.Vars = append(d.Vars, &Var{
 					Name:  v[1],
 					Type:  strings.TrimLeft(v[2], ":"),
 					Value: v[3],
-				}
+				})
 			}
 		}
 	}

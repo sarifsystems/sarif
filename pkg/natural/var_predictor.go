@@ -18,9 +18,9 @@ type VarPredictor struct {
 	Perceptron *mlearning.Perceptron
 }
 
-func NewVarPredictor() *VarPredictor {
+func NewVarPredictor(tok *Tokenizer) *VarPredictor {
 	return &VarPredictor{
-		NewTokenizer(),
+		tok,
 		mlearning.NewPerceptron(),
 	}
 }
@@ -29,7 +29,6 @@ type varFeature struct {
 	Sentence []*Token
 	Action   string
 	Pos      int
-	VarName  string
 }
 
 func (f *varFeature) Features() []mlearning.Feature {
@@ -77,7 +76,6 @@ func (p *VarPredictor) dataToIterator(dataset DataSet) *mlearning.SimpleIterator
 				Sentence: tok,
 				Action:   data.Action,
 				Pos:      i,
-				VarName:  name,
 			})
 			vs.ClassSlice = append(vs.ClassSlice, mlearning.Class(name))
 		}
@@ -86,7 +84,7 @@ func (p *VarPredictor) dataToIterator(dataset DataSet) *mlearning.SimpleIterator
 	return vs
 }
 
-func (p *VarPredictor) Train(iterations int, dataset DataSet) {
+func (p *VarPredictor) Train(iterations int, dataset DataSet, tok *Tokenizer) {
 	set := p.dataToIterator(dataset)
 	for it := 0; it < iterations; it++ {
 		set.Reset(true)
@@ -117,8 +115,8 @@ func (p *VarPredictor) Predict(s string, action string, pos int) (string, float6
 	return string(guess), float64(w)
 }
 
-func (p *VarPredictor) PredictTokens(tok []*Token, action string) []Var {
-	vs := make([]Var, 0)
+func (p *VarPredictor) PredictTokens(tok []*Token, action string) []*Var {
+	vs := make([]*Var, 0)
 
 	prevVar := false
 	set := &mlearning.SimpleIterator{}
@@ -138,17 +136,16 @@ func (p *VarPredictor) PredictTokens(tok []*Token, action string) []Var {
 
 	set.Reset(false)
 	for set.Next() {
-		guess, w := p.Perceptron.Predict(set.Features())
-
+		name, w := p.Perceptron.Predict(set.Features())
 		pos := set.FeatureSlice[set.Index-1].(*varFeature).Pos
 		i := pos
 		for i < len(tok) && tok[i].Is("var") {
 			i++
 		}
 
-		vs = append(vs, Var{
-			Name:   string(guess),
-			Value:  JoinTokens(tok[pos : i-1]),
+		vs = append(vs, &Var{
+			Name:   string(name),
+			Value:  JoinTokens(tok[pos:i]),
 			Weight: float64(w),
 		})
 	}
