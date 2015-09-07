@@ -29,7 +29,7 @@ type Parser struct {
 	schema       *MessageSchemaStore
 	regular      *RegularParser
 	tokenizer    *Tokenizer
-	parser       *LearningParser
+	action       *ActionPredictor
 	pos          *PosTagger
 	meaning      *MeaningParser
 	varPredictor *VarPredictor
@@ -41,7 +41,7 @@ func NewParser() *Parser {
 		NewMessageSchemaStore(),
 		NewRegularParser(),
 		NewTokenizer(),
-		NewLearningParser(),
+		NewActionPredictor(),
 		NewPosTagger(),
 		NewMeaningParser(),
 		NewVarPredictor(tok),
@@ -59,7 +59,7 @@ func (p *Parser) SaveModel(path string) error {
 	model := model{
 		p.schema.Messages,
 		p.regular.Rules(),
-		p.parser.Perceptron.Model,
+		p.action.Perceptron.Model,
 		p.pos.Perceptron.Model,
 		p.varPredictor.Perceptron.Model,
 	}
@@ -92,7 +92,7 @@ func (p *Parser) LoadModel(path string) error {
 	if err := p.regular.Load(model.Rules); err != nil {
 		return err
 	}
-	p.parser.Perceptron.Model = model.Parser
+	p.action.Perceptron.Model = model.Parser
 	p.pos.Perceptron.Model = model.Pos
 	p.varPredictor.Perceptron.Model = model.Var
 	return nil
@@ -108,7 +108,7 @@ func (p *Parser) TrainModel() error {
 		return err
 	}
 
-	p.parser.Train(10, set, p.tokenizer)
+	p.action.Train(10, set, p.tokenizer)
 	p.schema.AddDataSet(set)
 	p.regular.Load(DefaultRules)
 	p.pos.Train(5, ss)
@@ -215,7 +215,7 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 			return r, err
 		}
 
-		preds := p.parser.PredictAll(r.Meaning)
+		preds := p.action.PredictAll(r.Meaning)
 		first := true
 		for i, pred := range preds {
 			if i > 9 && !first {
@@ -274,7 +274,7 @@ func (p *Parser) ReinforceSentence(text string, action string) error {
 	if err != nil {
 		return err
 	}
-	p.parser.ReinforceMeaning(r.Meaning, action)
+	p.action.ReinforceMeaning(r.Meaning, action)
 	return nil
 }
 

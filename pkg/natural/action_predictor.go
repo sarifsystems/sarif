@@ -52,12 +52,12 @@ func inStringSlice(s string, ss []string) bool {
 	return false
 }
 
-type LearningParser struct {
+type ActionPredictor struct {
 	Perceptron *mlearning.Perceptron
 }
 
-func NewLearningParser() *LearningParser {
-	return &LearningParser{
+func NewActionPredictor() *ActionPredictor {
+	return &ActionPredictor{
 		mlearning.NewPerceptron(),
 	}
 }
@@ -98,18 +98,18 @@ func (m Meaning) Features() []mlearning.Feature {
 	return fs
 }
 
-func (p *LearningParser) ReinforceMeaning(m *Meaning, action string) {
+func (p *ActionPredictor) ReinforceMeaning(m *Meaning, action string) {
 	feats := m.Features()
 	guess, _ := p.Perceptron.Predict(feats)
 	p.Perceptron.Update(mlearning.Class(action), guess, feats)
 }
 
-func (p *LearningParser) Predict(m *Meaning) (string, float64) {
+func (p *ActionPredictor) Predict(m *Meaning) (string, float64) {
 	guess, w := p.Perceptron.Predict(m.Features())
 	return string(guess), float64(w)
 }
 
-func (p *LearningParser) PredictAll(m *Meaning) []mlearning.Prediction {
+func (p *ActionPredictor) PredictAll(m *Meaning) []mlearning.Prediction {
 	return p.Perceptron.PredictAll(m.Features())
 }
 
@@ -119,7 +119,7 @@ type Model struct {
 	*mlearning.Model
 }
 
-func (p *LearningParser) Train(iterations int, dataset DataSet, tokenizer *Tokenizer) {
+func (p *ActionPredictor) Train(iterations int, dataset DataSet, tokenizer *Tokenizer) {
 	set := &mlearning.SimpleIterator{}
 	for _, data := range dataset {
 		tok := tokenizer.Tokenize(data.Sentence)
@@ -133,6 +133,6 @@ func (p *LearningParser) Train(iterations int, dataset DataSet, tokenizer *Token
 	for it := 0; it < iterations; it++ {
 		set.Reset(true)
 		c, n := p.Perceptron.Train(set)
-		fmt.Printf("LearningParser iter %d: %d/%d=%.3f\n", it, c, n, float64(c)/float64(n)*100)
+		fmt.Printf("ActionPredictor iter %d: %d/%d=%.3f\n", it, c, n, float64(c)/float64(n)*100)
 	}
 }
