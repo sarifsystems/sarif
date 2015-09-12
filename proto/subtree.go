@@ -13,13 +13,13 @@ import (
 
 type subTree struct {
 	Topic   map[string]*subTree
-	Writers map[Writer]struct{}
+	Writers map[writer]struct{}
 }
 
 func newSubtree() *subTree {
 	return &subTree{
 		make(map[string]*subTree, 0),
-		make(map[Writer]struct{}),
+		make(map[writer]struct{}),
 	}
 }
 
@@ -29,7 +29,7 @@ func newSubtree() *subTree {
 // A "+" wildcard matches all branches, thus "location/geofence/+/enter" matches
 // "location/geofence/home/enter" and "location/geofence/work/enter", but not
 // "location/geofence/work/enter".
-func (t *subTree) Subscribe(topic []string, c Writer) {
+func (t *subTree) Subscribe(topic []string, c writer) {
 	if _, ok := t.Writers[c]; ok {
 		// Writerection already subscribed to some parent topic? Nothing to do
 		return
@@ -56,7 +56,7 @@ func (t *subTree) Subscribe(topic []string, c Writer) {
 // specific connection. Thus, unsubscribing from "location" would remove both
 // subscriptions to "location" and "location/geofence". An empty topics removes
 // all subscriptions.
-func (t *subTree) Unsubscribe(topic []string, c Writer) {
+func (t *subTree) Unsubscribe(topic []string, c writer) {
 	if topic != nil && len(topic) > 0 {
 		// Descend further along the topic path
 		if st, ok := t.Topic[topic[0]]; ok {
@@ -98,7 +98,7 @@ func (t *subTree) Get(topic []string) *subTree {
 // "location/geofence/home", but not "location" or "location/update",
 // A "+" wildcard matches all branches: e.g. "topic/+/something" matches both
 // "topic/one/something" and "topic/two/something".
-func (t *subTree) Walk(topic []string, depth int, f func(Writer)) {
+func (t *subTree) Walk(topic []string, depth int, f func(writer)) {
 	if topic != nil && len(topic) > 0 {
 		// Descend further along the topic path
 		if topic[0] == "+" {
@@ -126,7 +126,7 @@ func (t *subTree) Walk(topic []string, depth int, f func(Writer)) {
 //
 // For example, "topic/subtopic" would match children registered to "", ""topic"
 // and "topic/subtopic", but not "topic/subtopic/deeper".
-func (t *subTree) Call(topic []string, f func(Writer)) {
+func (t *subTree) Call(topic []string, f func(writer)) {
 	if topic != nil && len(topic) > 0 {
 		// Descend further along the topic path
 		if st, ok := t.Topic[topic[0]]; ok {

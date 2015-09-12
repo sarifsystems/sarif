@@ -5,7 +5,10 @@
 
 package proto
 
-import "io"
+import (
+	"encoding/json"
+	"io"
+)
 
 // Broker dispatches messages to connections based on their subscriptions.
 type Broker struct {
@@ -170,12 +173,12 @@ func (b *Broker) publish(msg Message) {
 	}
 
 	if b.trace {
-		raw, _ := msg.Encode()
+		raw, _ := json.Marshal(msg)
 		b.Log.Debugln("[broker] publish:", string(raw))
 	}
 
 	topic := getTopic(msg.Action, msg.Destination)
-	b.subs.Call(topicParts(topic), func(c Writer) {
+	b.subs.Call(topicParts(topic), func(c writer) {
 		go c.Write(msg)
 	})
 }

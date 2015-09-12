@@ -5,21 +5,21 @@
 
 package proto
 
-type Writer interface {
+type writer interface {
 	Write(msg Message) error
 }
 
-type Reader interface {
+type reader interface {
 	Read() (Message, error)
 }
 
 type Conn interface {
-	Reader
-	Writer
+	Read() (Message, error)
+	Write(msg Message) error
 	Close() error
 }
 
-func TransmitTo(r Reader, w Writer) error {
+func transmitTo(r reader, w writer) error {
 	for {
 		msg, err := r.Read()
 		if err != nil {
@@ -37,10 +37,10 @@ func Transmit(a, b Conn) error {
 
 	errs := make(chan error, 2)
 	go func() {
-		errs <- TransmitTo(a, b)
+		errs <- transmitTo(a, b)
 	}()
 	go func() {
-		errs <- TransmitTo(b, a)
+		errs <- transmitTo(b, a)
 	}()
 	return <-errs
 }

@@ -24,24 +24,6 @@ type Message struct {
 	Text        string           `json:"text,omitempty"`
 }
 
-func (m Message) Encode() ([]byte, error) {
-	if err := m.IsValid(); err != nil {
-		return nil, err
-	}
-	return json.Marshal(m)
-}
-
-func DecodeMessage(raw []byte) (Message, error) {
-	m := Message{}
-	if err := json.Unmarshal(raw, &m); err != nil {
-		return m, err
-	}
-	if err := m.IsValid(); err != nil {
-		return m, err
-	}
-	return m, nil
-}
-
 func CreateMessage(action string, payload interface{}) Message {
 	msg := Message{
 		Version: VERSION,
