@@ -6,19 +6,33 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"io"
 	"log"
-	"os"
+	"strings"
 	"time"
 
+	"github.com/chzyer/readline"
+	"github.com/fatih/color"
+	"github.com/shiena/ansicolor"
 	"github.com/xconstruct/stark/proto"
 )
 
 var profile = flag.Bool("profile", false, "interactive: print elapsed time for requests")
 
 func (app *App) Interactive() {
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:      color.BlueString("say » "),
+		HistoryFile: app.Config.HistoryFile,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rl.Close()
+	app.Log.SetOutput(rl.Stderr())
+	log.SetOutput(rl.Stderr())
+	color.Output = ansicolor.NewAnsiColorWriter(rl.Stderr())
+
 	pings := make(map[string]time.Time)
 
 	// Subscribe to all replies and print them to stdout
@@ -27,21 +41,22 @@ func (app *App) Interactive() {
 		if text == "" {
 			text = msg.Action + " from " + msg.Source
 		}
+		if msg.IsAction("err") {
+			text = color.RedString(text)
+		}
 
 		if sent, ok := pings[msg.CorrId]; ok {
-			log.Printf("%s [%.1fms]\n", text, time.Since(sent).Seconds()*1e3)
-		} else {
-			log.Println(text)
+			text += color.YellowString("[%.1fms]", time.Since(sent).Seconds()*1e3)
 		}
+		log.Println(color.GreenString(" « ") + strings.Replace(text, "\n", "\n   ", -1))
 	})
 
 	// Interactive mode sends all lines from stdin.
-	in := bufio.NewReader(os.Stdin)
 	for {
-		line, _, err := in.ReadLine()
+		line, err := rl.Readline()
 		if err != nil {
 			if err == io.EOF {
-				os.Exit(0)
+				return
 			}
 			log.Fatal(err)
 		}
@@ -53,7 +68,7 @@ func (app *App) Interactive() {
 		msg := proto.Message{
 			Id:     proto.GenerateId(),
 			Action: "natural/handle",
-			Text:   string(line),
+			Text:   line,
 		}
 		if *profile {
 			pings[msg.Id] = time.Now()

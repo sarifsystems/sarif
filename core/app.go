@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/xconstruct/stark/pkg/inject"
 	"github.com/xconstruct/stark/proto"
@@ -116,6 +117,29 @@ func (app *App) Dial() proto.Conn {
 		app.Log.Fatal(err)
 	}
 	return conn
+}
+
+func (app *App) ClientDial(name string) (*proto.Client, error) {
+	cfg := proto.NetConfig{
+		Address: "tcp://localhost:" + proto.DefaultPort,
+	}
+	app.Config.Get("dial", &cfg)
+	app.WriteConfig()
+
+	c := proto.NewClient(name)
+	c.OnConnectionLost(func(err error) {
+		app.Log.Errorln("connection lost:", err)
+		for {
+			time.Sleep(5 * time.Second)
+			if err := c.Dial(&cfg); err == nil {
+				app.Log.Println("reconnected")
+				return
+			}
+		}
+	})
+
+	err := c.Dial(&cfg)
+	return c, err
 }
 
 func WaitUntilInterrupt() {

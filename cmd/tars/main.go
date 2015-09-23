@@ -26,10 +26,16 @@ func main() {
 	app.Run()
 }
 
+type Config struct {
+	HistoryFile string
+}
+
 type App struct {
 	*core.App
 	Client   *proto.Client
 	Commands []Command
+
+	Config Config
 }
 
 type Command struct {
@@ -39,16 +45,17 @@ type Command struct {
 }
 
 func New() *App {
+	var err error
 	log.SetFlags(0)
 	app := &App{
-		App:    core.NewApp("stark", "client"),
-		Client: proto.NewClient("tars/" + proto.GenerateId()),
+		App: core.NewApp("stark", "client"),
 	}
 	app.Init()
-	app.Must(app.Client.Connect(app.Dial()))
-	app.Client.OnConnectionLost(func(err error) {
-		app.Log.Fatalln("connection lost:", err)
-	})
+	app.Client, err = app.ClientDial("tars/" + proto.GenerateId())
+	app.Must(err)
+
+	app.Config.HistoryFile = app.App.Config.Dir() + "/tars_history"
+	app.App.Config.Get("tars", &app.Config)
 
 	app.Commands = []Command{
 		{"help", app.Help, ""},
