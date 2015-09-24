@@ -5,36 +5,7 @@
 
 package proto
 
-import (
-	"reflect"
-	"testing"
-)
-
-func TestMessageEncoding(t *testing.T) {
-	m := Message{
-		Version: VERSION,
-		Id:      GenerateId(),
-		Action:  "testaction",
-		Source:  "testsource",
-	}
-	t.Log(m)
-
-	enc, err := m.Encode()
-	if err != nil {
-		t.Error(err)
-	}
-	t.Log(string(enc))
-
-	dec, err := DecodeMessage(enc)
-	t.Log(dec)
-	if err != nil {
-		t.Error(err)
-	}
-
-	if !reflect.DeepEqual(dec, m) {
-		t.Error("decoded message differs")
-	}
-}
+import "testing"
 
 func TestValid(t *testing.T) {
 	var m Message

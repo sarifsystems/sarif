@@ -36,7 +36,7 @@ func TestSubtree(t *testing.T) {
 	st.Subscribe(strings.Split("widening/topic/another", "/"), a)
 
 	aFired, bFired := 0, 0
-	count := func(c Writer) {
+	count := func(c writer) {
 		if c == a {
 			aFired++
 		} else if c == b {

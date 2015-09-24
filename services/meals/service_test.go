@@ -124,8 +124,6 @@ func TestService(t *testing.T) {
 				if !msg.IsAction("meal/stats") {
 					t.Fatal("unexpected message received")
 				}
-				b, _ := msg.Encode()
-				t.Log(string(b))
 			})
 		})
 	})
