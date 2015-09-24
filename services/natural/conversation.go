@@ -75,6 +75,7 @@ func (cv *Conversation) SendToClient(msg proto.Message) {
 	msg.Id = proto.GenerateId()
 	msg.Destination = cv.Device
 	natural.FormatMessage(&msg)
+	msg.Text = cv.service.TransformReply(msg.Text)
 	cv.service.Publish(msg)
 }
 

@@ -7,6 +7,7 @@ package natural
 
 import (
 	"errors"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -21,6 +22,11 @@ var Module = &services.Module{
 	NewInstance: NewService,
 }
 
+type Config struct {
+	Address   string
+	ModelPath string
+}
+
 type Dependencies struct {
 	Config services.Config
 	Log    proto.Logger
@@ -29,23 +35,27 @@ type Dependencies struct {
 
 type Service struct {
 	Config services.Config
+	Cfg    Config
 	Log    proto.Logger
 	*proto.Client
 
 	parser        *natural.Parser
 	phrases       *natural.Phrasebook
 	conversations map[string]*Conversation
+	rand          *rand.Rand
 }
 
 func NewService(deps *Dependencies) *Service {
 	return &Service{
 		deps.Config,
+		Config{},
 		deps.Log,
 		deps.Client,
 
 		natural.NewParser(),
 		natural.NewPhrasebook(),
 		make(map[string]*Conversation),
+		rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -56,6 +66,10 @@ func (s *Service) Enable() error {
 	s.Subscribe("natural/reinforce", "", s.handleNaturalReinforce)
 	s.Subscribe("natural/phrases", "", s.handleNaturalPhrases)
 	s.Subscribe("", "user", s.handleUserMessage)
+
+	s.Cfg.Address = "sir"
+	s.Cfg.ModelPath = s.Config.Dir() + "/" + "natural.json.gz"
+	s.Config.Get(&s.Cfg)
 
 	if err := s.loadModel(); err != nil {
 		return err
@@ -79,15 +93,13 @@ func (s *Service) saveModelLoop() {
 }
 
 func (s *Service) loadModel() error {
-	path := s.Config.Dir() + "/" + "natural.json.gz"
-	s.Log.Debugln("[natural] loading model from", path)
-	return s.parser.LoadModel(path)
+	s.Log.Debugln("[natural] loading model from", s.Cfg.ModelPath)
+	return s.parser.LoadModel(s.Cfg.ModelPath)
 }
 
 func (s *Service) saveModel() error {
-	path := s.Config.Dir() + "/" + "natural.json.gz"
-	s.Log.Debugln("[natural] saving model to", path)
-	return s.parser.SaveModel(path)
+	s.Log.Debugln("[natural] saving model to", s.Cfg.ModelPath)
+	return s.parser.SaveModel(s.Cfg.ModelPath)
 }
 
 func (s *Service) Disable() error {
@@ -207,4 +219,22 @@ func (s *Service) handleNaturalPhrases(msg proto.Message) {
 		Action: "natural/phrase",
 		Text:   text,
 	})
+}
+
+func (s *Service) TransformReply(text string) string {
+	if s.Cfg.Address == "" || text == "" {
+		return text
+	}
+	if strings.LastIndexAny(text, ".!?") != len(text)-1 {
+		return text
+	}
+	if strings.Contains(text, "\n") || len(text) > 80 {
+		return text
+	}
+
+	if s.rand.Float32() <= 0.9 {
+		text = text[0:len(text)-1] + ", " + s.Cfg.Address + text[len(text)-1:]
+	}
+
+	return text
 }
