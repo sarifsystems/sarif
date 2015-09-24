@@ -232,7 +232,7 @@ func (s *Service) TransformReply(text string) string {
 		return text
 	}
 
-	if s.rand.Float32() <= 0.9 {
+	if s.rand.Float32() <= 0.25 {
 		text = text[0:len(text)-1] + ", " + s.Cfg.Address + text[len(text)-1:]
 	}
 
