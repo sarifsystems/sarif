@@ -14,7 +14,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"code.google.com/p/freetype-go/freetype/truetype"
+	"github.com/golang/freetype/truetype"
 	"github.com/llgcode/draw2d"
 	"github.com/llgcode/draw2d/draw2dimg"
 )
