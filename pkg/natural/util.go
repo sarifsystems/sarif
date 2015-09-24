@@ -5,6 +5,8 @@
 
 package natural
 
+import "strings"
+
 type tokenIterator struct {
 	tokens []*Token
 	pos    int
@@ -42,4 +44,9 @@ func JoinTokens(ts []*Token) string {
 		s += t.Value
 	}
 	return s
+}
+
+func SplitWords(s string) []string {
+	s = strings.TrimRight(s, ".!? ")
+	return strings.Split(s, " ")
 }

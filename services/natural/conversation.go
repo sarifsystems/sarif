@@ -23,6 +23,7 @@ type Conversation struct {
 	LastMessage       proto.Message
 	LastMessageAction Actionable
 
+	LastUserTime    time.Time
 	LastUserText    string
 	LastUserMessage proto.Message
 }
@@ -109,7 +110,13 @@ func (cv *Conversation) HandleClientMessage(msg proto.Message) {
 		Recipient: "stark",
 	}
 	res, err := cv.service.parser.Parse(msg.Text, ctx)
-	if err != nil || res.Prediction == nil || res.Prediction.Weight <= 0 {
+	if res.Type == "exclamatory" {
+		cv.SendToClient(msg.Reply(proto.Message{
+			Action: "natural/phrase",
+			Text:   cv.service.phrases.Answer(msg.Text),
+		}))
+		return
+	} else if err != nil || res.Prediction == nil || res.Prediction.Weight <= 0 {
 		cv.handleUnknownUserMessage(msg)
 		return
 	}
@@ -117,6 +124,7 @@ func (cv *Conversation) HandleClientMessage(msg proto.Message) {
 	if res.Prediction.Message.Text == "" && res.Type != "simple" {
 		res.Prediction.Message.Text = msg.Text
 	}
+	cv.LastUserTime = time.Now()
 	cv.LastUserText = msg.Text
 	cv.LastUserMessage = res.Prediction.Message
 	res.Prediction.Message.CorrId = msg.Id

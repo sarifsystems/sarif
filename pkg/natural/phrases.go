@@ -7,6 +7,7 @@ package natural
 
 import (
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -31,12 +32,55 @@ func (b *Phrasebook) Get(context string) string {
 	return phrases[b.Rand.Intn(len(phrases))]
 }
 
+func (b *Phrasebook) GetReverse(phrase string) string {
+	contexts := make(map[string]float64)
+
+	words := SplitWords(strings.ToLower(phrase))
+	for ctx, phrases := range b.Phrases {
+		for _, p := range phrases {
+			if count := countMatches(words, SplitWords(strings.ToLower(p))); count > 0 {
+				contexts[ctx] += 1 / float64(count)
+			}
+		}
+	}
+
+	bestCtx, max := "", float64(0)
+	for ctx, v := range contexts {
+		if v > max {
+			bestCtx = ctx
+		}
+	}
+	return bestCtx
+}
+
+func (b *Phrasebook) Answer(phrase string) string {
+	ctx := b.GetReverse(phrase)
+	ctx2 := DefaultPhraseResponses[ctx]
+	if ctx2 == "" {
+		ctx2 = "unknown"
+	}
+	return b.Get(ctx2)
+}
+
+func countMatches(a, b []string) int {
+	c := 0
+	for _, w := range a {
+		for _, w2 := range b {
+			if w == w2 {
+				c++
+			}
+		}
+	}
+	return c
+}
+
 var DefaultPhrases = map[string][]string{
 	"affirmative": {
 		"Yes.",
 		"Yeah.",
 		"Okay.",
 		"Yep.",
+		"Sure.",
 	},
 	"success": {
 		"Got it.",
@@ -58,6 +102,7 @@ var DefaultPhrases = map[string][]string{
 		"Great!",
 		"Awesome!",
 		"Amazing!",
+		"Nice!",
 	},
 	"thanks": {
 		"Thanks!",
@@ -74,12 +119,15 @@ var DefaultPhrases = map[string][]string{
 		"Hey.",
 		"Hi.",
 		"You there?",
+		"How's it going?",
+		"What's up?",
 	},
 	"greeting/reply": {
 		"Hey.",
 		"Hi.",
 		"Hello.",
 		"How can I help you?",
+		"What's up?",
 	},
 	"wake": {
 		"Good morning!",
@@ -94,4 +142,21 @@ var DefaultPhrases = map[string][]string{
 		"Give me a second.",
 		"One moment.",
 	},
+	"farewell": {
+		"Bye!",
+		"Have a good day!",
+		"Catch you later!",
+		"See you!",
+	},
+}
+
+var DefaultPhraseResponses = map[string]string{
+	"compliment":       "thanks",
+	"thanks":           "acknowledgement",
+	"greeting/initial": "greeting/reply",
+	"greeting/reply":   "greeting/reply",
+	"wake":             "greeting/reply",
+	"farewell":         "farewell",
+	"success":          "compliment",
+	"affirmative":      "compliment",
 }

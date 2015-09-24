@@ -136,7 +136,7 @@ func (r ParseResult) String() string {
 			s += " " + v.String()
 		}
 		s += "\n\nIntent: " + r.Prediction.String()
-	} else {
+	} else if r.Meaning != nil {
 		for _, v := range r.Meaning.Vars {
 			s += " " + v.String()
 		}
