@@ -12,6 +12,8 @@ func TestSimpleQuery(t *testing.T) {
 
 	var r ResourceResponse
 	err := ep.Select(`
+		prefix dbpedia: <http://dbpedia.org/resource/>
+		prefix dbpedia-owl: <http://dbpedia.org/ontology/>
 		select distinct *
 		where {
 			dbpedia:Tuomas_Holopainen dbpedia-owl:birthDate ?o
@@ -27,6 +29,8 @@ func TestSimpleQuery(t *testing.T) {
 func TestBuildQuery(t *testing.T) {
 	var r ResourceResponse
 	err := DBPedia.Query().
+		Prefix("dbpedia", "http://dbpedia.org/resource/").
+		Prefix("dbpedia-owl", "http://dbpedia.org/ontology/").
 		Where("dbpedia:Tuomas_Holopainen", "dbpedia-owl:birthDate", "?o").
 		Optional("dbpedia-owl:birthDate", "rdfs:label", "?rdfs_label").
 		FilterLang("?rdfs_label", "EN").
@@ -41,6 +45,7 @@ func TestBuildQuery(t *testing.T) {
 func TestBuildQueryDescribe(t *testing.T) {
 	var r map[string]interface{}
 	err := DBPedia.Query().
+		Prefix("dbpedia", "http://dbpedia.org/resource/").
 		Describe("dbpedia:Tuomas_Holopainen").
 		Exec(&r)
 
