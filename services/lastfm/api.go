@@ -7,7 +7,6 @@ package lastfm
 
 import (
 	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"net/http"
 	"net/url"
@@ -33,57 +32,51 @@ func NewApi(key string) *Api {
 }
 
 type ApiTrack struct {
-	Artist     string `xml:"artist"`
-	Album      string `xml:"album"`
-	Name       string `xml:"name"`
-	Url        string `xml:"url"`
-	Date       string `xml:"date"`
-	NowPlaying bool   `xml:"nowplaying,attr"`
+	Artist struct {
+		Text string `json:"#text"`
+	} `json:"artist"`
+	Album struct {
+		Text string `json:"#text"`
+	} `json:"album"`
+	Name string `json:"name"`
+	Url  string `json:"url"`
+	Date struct {
+		UTS  int    `json:"uts,string"`
+		Text string `json:"#text"`
+	} `json:"date"`
+	Attr struct {
+		NowPlaying bool `json:"nowplaying,string"`
+	} `json:"@attr"`
 }
 
 func (t ApiTrack) ParseDate() (time.Time, error) {
-	return time.Parse("_2 Jan 2006, 15:04", t.Date)
+	return time.Parse("_2 Jan 2006, 15:04", t.Date.Text)
 }
 
 type ApiRecentTracks struct {
-	User       string     `xml:"user,attr"`
-	Page       int        `xml:"page,attr"`
-	PerPage    int        `xml:"perPage,attr"`
-	TotalPages int        `xml:"totalPages,attr"`
-	Total      int        `xml:"total,attr"`
-	Tracks     []ApiTrack `xml:"track"`
+	ApiResponse
+	RecentTracks struct {
+		Attr struct {
+			User       string `json:"user"`
+			Page       int    `json:"page,string"`
+			PerPage    int    `json:"perPage,string"`
+			TotalPages int    `json:"totalPages,string"`
+			Total      int    `json:"total,string"`
+		} `json:"@attr"`
+		Tracks []ApiTrack `json:"track"`
+	} `json:"recenttracks"`
 }
 
 func (a *Api) UserGetRecentTracks(user string, page int, from int64) (*ApiRecentTracks, error) {
-	if page < 1 {
-		page = 1
-	}
-	u, err := url.Parse(a.Url + "/user/" + user + "/recenttracks.xml")
-	if err != nil {
-		return nil, err
-	}
-
+	result := &ApiRecentTracks{}
 	v := url.Values{}
 	v.Set("page", strconv.Itoa(page))
 	v.Set("limit", "49")
+	v.Set("user", user)
 	if from > 0 {
 		v.Set("from", strconv.FormatInt(from, 10))
 	}
-	u.RawQuery = v.Encode()
-
-	resp, err := http.Get(u.String())
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, errors.New("lastfm api: unexpected status " + resp.Status)
-	}
-
-	result := &ApiRecentTracks{}
-	dec := xml.NewDecoder(resp.Body)
-	err = dec.Decode(result)
+	err := a.authDo("user.getRecentTracks", v, result)
 	return result, err
 }
 
@@ -146,7 +139,7 @@ type ApiTopTags struct {
 
 type ApiTag struct {
 	Name  string `json:"name"`
-	Count int    `json:"count,string"`
+	Count int    `json:"count"`
 	Url   string `json:"url"`
 }
 

@@ -80,7 +80,11 @@ func (s *Service) Enable() error {
 		}()
 	}
 
-	s.Subscribe("lastfm/force_import", "", func(proto.Message) { s.ImportAll() })
+	s.Subscribe("lastfm/force_import", "", func(msg proto.Message) {
+		if err := s.ImportAll(); err != nil {
+			s.ReplyInternalError(msg, err)
+		}
+	})
 	s.Subscribe("lastfm/tag", "", s.handleTag)
 	s.Subscribe("cmd/genre", "", s.handleTag)
 	return nil
@@ -101,27 +105,32 @@ func (s *Service) ImportAll() error {
 		return err
 	}
 
-	page := 100000
+	initial, err := api.UserGetRecentTracks(s.cfg.User, 1, last.Time.Unix()+60)
+	if err != nil {
+		return err
+	}
+	page := initial.RecentTracks.Attr.TotalPages
 	for {
-		result, err := api.UserGetRecentTracks(s.cfg.User, page, last.Time.Unix()+60)
+		aresult, err := api.UserGetRecentTracks(s.cfg.User, page, last.Time.Unix()+60)
 		if err != nil {
 			return err
 		}
+		result := aresult.RecentTracks
+		s.Log.Infof("[lastfm] import page %d/%d", result.Attr.Page, result.Attr.TotalPages)
 		if len(result.Tracks) == 0 {
 			break
 		}
-		s.Log.Infof("[lastfm] import page %d/%d", result.Page, result.TotalPages)
 
 		tracks := make([]Track, len(result.Tracks))
 		for i, track := range result.Tracks {
-			if track.NowPlaying {
+			if track.Attr.NowPlaying {
 				continue
 			}
 			if track.Name == "" {
 				continue
 			}
-			tracks[i].Artist = track.Artist
-			tracks[i].Album = track.Album
+			tracks[i].Artist = track.Artist.Text
+			tracks[i].Album = track.Album.Text
 			tracks[i].Title = track.Name
 			tracks[i].Time, err = track.ParseDate()
 			if err != nil {
@@ -132,7 +141,7 @@ func (s *Service) ImportAll() error {
 		if err := s.storeTracks(tracks); err != nil {
 			return err
 		}
-		page = result.Page - 1
+		page = result.Attr.Page - 1
 		if page == 0 {
 			break
 		}

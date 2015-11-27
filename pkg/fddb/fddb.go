@@ -70,6 +70,9 @@ func (c *Client) do(r request, result interface{}) error {
 		req.SetBasicAuth(c.user, c.pass)
 	}
 	resp, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
 	if resp.StatusCode != http.StatusOK {
 		return errors.New("Unexpected status code: " + resp.Status)
 	}

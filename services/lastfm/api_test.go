@@ -8,17 +8,25 @@ package lastfm
 import (
 	"os"
 	"testing"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 func TestApiRecentTracks(t *testing.T) {
-	api := NewApi("")
+	key := os.Getenv("LASTFM_API_KEY")
+	if key == "" {
+		t.Skip("No LASTFM_API_KEY specified.")
+	}
+	api := NewApi(key)
 
-	tracks, err := api.UserGetRecentTracks("xconstruct", 1, 0)
+	atracks, err := api.UserGetRecentTracks("xconstruct", 1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if tracks.Page != 1 {
-		t.Error("expected page 1, not", tracks.Page)
+	spew.Dump(atracks)
+	tracks := atracks.RecentTracks
+	if tracks.Attr.Page != 1 {
+		t.Error("expected page 1, not", tracks.Attr.Page)
 	}
 	if len(tracks.Tracks) < 40 {
 		t.Log(tracks)
@@ -26,11 +34,11 @@ func TestApiRecentTracks(t *testing.T) {
 	}
 
 	first := tracks.Tracks[1]
-	if first.Artist == "" {
+	if first.Artist.Text == "" {
 		t.Log("first:", first)
 		t.Error("first track has no artist")
 	}
-	if first.Album == "" {
+	if first.Album.Text == "" {
 		t.Log("first:", first)
 		t.Error("first track has no album")
 	}
@@ -42,7 +50,7 @@ func TestApiRecentTracks(t *testing.T) {
 		t.Log("first:", first)
 		t.Error("first track has no url")
 	}
-	if first.Date == "" {
+	if first.Date.Text == "" {
 		t.Log("first:", first)
 		t.Error("first track has no date")
 	}
