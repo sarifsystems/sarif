@@ -5,7 +5,10 @@
 
 package location
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type ClusterStatus int
 
@@ -16,9 +19,27 @@ const (
 )
 
 type Cluster struct {
-	Start  Location      `json:"start,omitempty"`
-	End    Location      `json:"end,omitempty"`
+	Location
 	Status ClusterStatus `json:"status"`
+
+	Start Location `json:"start,omitempty"`
+	End   Location `json:"end,omitempty"`
+}
+
+func (c Cluster) Text() string {
+	if c.Address == "" {
+		c.Address = fmt.Sprintf("%.4f, %.4f", c.Latitude, c.Longitude)
+	}
+
+	switch c.Status {
+	case ConfirmedCluster:
+		ts := c.Start.Timestamp.Local().Format(time.RFC3339)
+		return "Entered " + c.Address + " on " + ts
+	case CompletedCluster:
+		ts := c.End.Timestamp.Local().Format(time.RFC3339)
+		return "Left " + c.Address + " on " + ts
+	}
+	return ""
 }
 
 func NewClusterGenerator() *ClusterGenerator {
@@ -38,8 +59,11 @@ type ClusterGenerator struct {
 
 func (g *ClusterGenerator) Advance(l Location) bool {
 	if g.current.Start.Timestamp.IsZero() {
-		g.current.Status = UnconfirmedCluster
-		g.current.Start = l
+		g.current = Cluster{
+			Start:    l,
+			Location: l,
+			Status:   UnconfirmedCluster,
+		}
 		return false
 	}
 
@@ -52,11 +76,17 @@ func (g *ClusterGenerator) Advance(l Location) bool {
 		}
 
 		g.current = Cluster{
-			Start:  l,
-			Status: UnconfirmedCluster,
+			Start:    l,
+			Location: l,
+			Status:   UnconfirmedCluster,
 		}
 		return changed
 	}
+
+	w := l.Accuracy / (g.current.Accuracy + l.Accuracy + 0.00001)
+	g.current.Longitude = (1-w)*l.Longitude + w*g.current.Longitude
+	g.current.Latitude = (1-w)*l.Latitude + w*g.current.Latitude
+	g.current.Accuracy = (1-w)*l.Accuracy + w*g.current.Accuracy
 
 	g.current.End = l
 	if g.current.Status == UnconfirmedCluster && l.Timestamp.Sub(g.current.Start.Timestamp) >= g.MinInterval {

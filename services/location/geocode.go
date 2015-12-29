@@ -8,12 +8,13 @@ package location
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
+	"strconv"
 )
 
-const API_URL = "https://nominatim.openstreetmap.org/search/"
+const API_URL = "https://nominatim.openstreetmap.org"
 
 type BoundingBox []float64
 
@@ -49,6 +50,10 @@ type GeoAddress struct {
 	Continent    string `json:"continent"`
 }
 
+type GeoName struct {
+	Name string `json:"name,omitempty"`
+}
+
 type GeoPlace struct {
 	BoundingBox BoundingBox `json:"boundingbox,[]string"`
 	Latitude    float64     `json:"lat,string"`
@@ -57,27 +62,49 @@ type GeoPlace struct {
 	Class       string      `json:"class"`
 	Type        string      `json:"type"`
 	Address     GeoAddress  `json:"address"`
+	NameDetails GeoName     `json:"namedetails,omitempty"`
 }
 
 func (p GeoPlace) Pretty() string {
-	switch p.Type {
-	case "house":
-		return p.Address.Road + p.Address.HouseNumber + ", " + p.Address.City
-	case "village":
-		return p.Address.Village + ", " + strings.ToUpper(p.Address.CountryCode)
-	case "administrative":
-		fallthrough
-	case "city":
-		return p.Address.City + ", " + strings.ToUpper(p.Address.CountryCode)
-	default:
-		return p.Name
+	address := ""
+	if p.NameDetails.Name != "" {
+		address += p.Name
 	}
+
+	if p.Address.Road != "" {
+		if address != "" {
+			address += ", "
+		}
+		address += p.Address.Road
+		if p.Address.HouseNumber != "" {
+			address += " " + p.Address.HouseNumber
+		}
+	}
+
+	if address != "" {
+		address += ", "
+	}
+	if p.Address.PostCode != "" {
+		address += p.Address.PostCode + " "
+	}
+	if p.Address.Village != "" {
+		address += p.Address.Village
+	} else if p.Address.Town != "" {
+		address += p.Address.Town
+	} else if p.Address.City != "" {
+		address += p.Address.City
+	}
+
+	if address == "" {
+		address = p.Name
+	}
+	return address
 }
 
 func Geocode(query string) ([]GeoPlace, error) {
 	client := &http.Client{}
 
-	u, err := url.Parse(API_URL + query)
+	u, err := url.Parse(API_URL + "/search/" + query)
 	if err != nil {
 		return nil, err
 	}
@@ -107,4 +134,53 @@ func Geocode(query string) ([]GeoPlace, error) {
 	dec := json.NewDecoder(resp.Body)
 	err = dec.Decode(&results)
 	return results, err
+}
+
+type reverseResponse struct {
+	GeoPlace
+	Error string
+}
+
+func ReverseGeocode(loc Location) (GeoPlace, error) {
+	var r reverseResponse
+	client := &http.Client{}
+
+	u, err := url.Parse(API_URL + "/reverse")
+	if err != nil {
+		return r.GeoPlace, err
+	}
+
+	v := url.Values{}
+	v.Set("format", "json")
+	v.Set("addressdetails", "1")
+	v.Set("namedetails", "1")
+	v.Set("zoom", "18")
+	v.Set("lat", strconv.FormatFloat(loc.Latitude, 'f', -1, 64))
+	v.Set("lon", strconv.FormatFloat(loc.Longitude, 'f', -1, 64))
+	u.RawQuery = v.Encode()
+
+	req, err := http.NewRequest("GET", u.String(), nil)
+	fmt.Println(u.String())
+	req.Header.Set("User-Agent", "github.com/xconstruct/stark")
+	if err != nil {
+		return r.GeoPlace, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return r.GeoPlace, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return r.GeoPlace, errors.New("geocode: unexpected status " + resp.Status)
+	}
+
+	dec := json.NewDecoder(resp.Body)
+	err = dec.Decode(&r)
+	if r.Error != "" {
+		err = errors.New("geocode: " + r.Error)
+	}
+
+	return r.GeoPlace, err
 }

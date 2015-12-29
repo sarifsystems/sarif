@@ -144,18 +144,30 @@ func (s *Service) handleLocationUpdate(msg proto.Message) {
 	if err := s.DB.Order("timestamp DESC").First(&last).Error; err != nil && err != gorm.RecordNotFound {
 		s.Log.Errorln("[location] retrieve last err", err)
 	}
+	if last.Id != 0 {
+		loc.Distance = HaversineDistance(last, loc)
+		loc.Speed = loc.Distance / loc.Timestamp.Sub(last.Timestamp).Seconds()
+	}
 
 	if err := s.DB.Save(&loc).Error; err != nil {
 		s.ReplyInternalError(msg, err)
 	}
 
 	if changed := s.Clusters.Advance(loc); changed {
-		if c := s.Clusters.Current(); c.Status == ConfirmedCluster {
-			s.Publish(proto.CreateMessage("location/cluster/enter", c))
-		} else {
-			s.Publish(proto.CreateMessage("location/cluster/leave", s.Clusters.LastCompleted()))
+		c := s.Clusters.Current()
+		status := "enter"
+		if c.Status != ConfirmedCluster {
+			status = "leave"
+			c = s.Clusters.LastCompleted()
 			s.Clusters.ClearCompleted()
 		}
+
+		// TODO: make optional
+		if place, err := ReverseGeocode(c.Location); err == nil {
+			c.Address = place.Pretty()
+		}
+
+		s.Publish(proto.CreateMessage("location/cluster/"+status, c))
 	}
 
 	if last.Id != 0 {
@@ -232,6 +244,12 @@ func (s *Service) handleLocationLast(msg proto.Message) {
 	}
 	if loc.Address == "" {
 		loc.Address = pl.Address
+		if loc.Address == "" {
+			// TODO: make optional
+			if place, err := ReverseGeocode(loc); err == nil {
+				loc.Address = place.Pretty()
+			}
+		}
 	}
 
 	s.Reply(msg, proto.CreateMessage("location/found", loc))

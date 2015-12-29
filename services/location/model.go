@@ -17,8 +17,11 @@ type Location struct {
 	Latitude  float64   `json:"latitude"`
 	Longitude float64   `json:"longitude"`
 	Accuracy  float64   `json:"accuracy"`
-	Source    string    `json:"source"`
+	Source    string    `json:"source,omitempty"`
 	Address   string    `json:"address,omitempty"`
+
+	Distance float64 `json:"distance,omitempty"`
+	Speed    float64 `json:"speed,omitempty"`
 }
 
 type Geofence struct {

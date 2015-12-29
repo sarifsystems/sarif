@@ -22,3 +22,21 @@ func TestGeocode(t *testing.T) {
 		t.Error("expected city, not", first.Type)
 	}
 }
+
+func TestReverseGeocode(t *testing.T) {
+	place, err := ReverseGeocode(Location{
+		Latitude:  52.5487429714954,
+		Longitude: -1.81602098644987,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(place)
+	if place.Address.HouseNumber != "137" {
+		t.Error("wrong house number:", place.Address.HouseNumber)
+	}
+	if place.Address.Road != "Pilkington Avenue" {
+		t.Error("wrong road:", place.Address.Road)
+	}
+}
