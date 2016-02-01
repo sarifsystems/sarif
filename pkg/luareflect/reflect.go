@@ -3,6 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
+// Package luareflect implements simple mappings from Go to Gopher-Lua types.
 package luareflect
 
 import (

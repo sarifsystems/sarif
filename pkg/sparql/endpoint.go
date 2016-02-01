@@ -3,6 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
+// Package sparql implements a simple SPARQL client and query builder.
 package sparql
 
 import (

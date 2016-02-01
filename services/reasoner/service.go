@@ -3,6 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
+// Service reasoner provides a knowledge base and inference engine.
 package reasoner
 
 import (

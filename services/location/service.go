@@ -3,6 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
+// Service location stores the user location and provides automatic checkins and geocoding.
 package location
 
 import (

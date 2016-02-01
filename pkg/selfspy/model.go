@@ -3,6 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
+// Package selfspy provides access to the selfspy database.
 package selfspy
 
 import (

@@ -3,6 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
+// Service vdir provides access to VCard contacts and VCal calendars.
 package vdir
 
 import (

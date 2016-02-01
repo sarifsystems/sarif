@@ -3,6 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
+// Service trigger provides simple rules to react to messages on the network.
 package trigger
 
 import (

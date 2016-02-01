@@ -3,6 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
+// Service scheduler provides reminders and scheduled task messages.
 package scheduler
 
 import (

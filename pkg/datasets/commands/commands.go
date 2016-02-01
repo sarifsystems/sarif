@@ -3,6 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
+// Package commands contains a dataset of common user commands.
 package commands
 
 const Data = `

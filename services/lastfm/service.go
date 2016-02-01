@@ -3,6 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
+// Service lastfm provides access to Last.FM API and stores the user library.
 package lastfm
 
 import (

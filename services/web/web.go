@@ -3,6 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
+// Service web provides a web dashboard and communication between stark and HTTP.
 package web
 
 import (

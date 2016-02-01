@@ -1,3 +1,14 @@
+// Copyright (C) 2011-2012
+// Kevin Gimpel, Nathan Schneider, Brendan O'Connor, Dipanjan Das, Daniel
+// Mills, Jacob Eisenstein, Michael Heilman, Dani Yogatama, Jeffrey Flanigan,
+// and Noah A. Smith
+// Language Technologies Institute, Carnegie Mellon University
+
+// This data is made available under the terms of the Creative Commons
+// Attribution 3.0 Unported license ("CC-BY"):
+// http://creativecommons.org/licenses/by/3.0/<Paste>
+
+// Package twpos contains the Twitter Part-of-Speech Annotated Data.
 package twpos
 
 var Data = `I	O

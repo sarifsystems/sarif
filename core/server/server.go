@@ -3,6 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
+// Package server provides a broker and modular host for microsservices.
 package server
 
 import (

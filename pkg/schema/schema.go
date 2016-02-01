@@ -1,3 +1,9 @@
+// Copyright (C) 2016 Constantin Schomburg <me@cschomburg.com>
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file.
+
+// Package schema provides simple JSON-LD type annotations for structs.
 package schema
 
 import "reflect"
