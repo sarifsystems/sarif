@@ -121,21 +121,21 @@ func (s *Service) ImportAll() error {
 			break
 		}
 
-		tracks := make([]Track, len(result.Tracks))
-		for i, track := range result.Tracks {
-			if track.Attr.NowPlaying {
+		tracks := make([]Track, 0, len(result.Tracks))
+		for _, track := range result.Tracks {
+			if track.Attr.NowPlaying || track.Name == "" {
 				continue
 			}
-			if track.Name == "" {
-				continue
-			}
-			tracks[i].Artist = track.Artist.Text
-			tracks[i].Album = track.Album.Text
-			tracks[i].Title = track.Name
-			tracks[i].Time, err = track.ParseDate()
+			t, err := track.ParseDate()
 			if err != nil {
 				return err
 			}
+			tracks = append(tracks, Track{
+				Artist: track.Artist.Text,
+				Album:  track.Album.Text,
+				Title:  track.Name,
+				Time:   t,
+			})
 		}
 
 		if err := s.storeTracks(tracks); err != nil {
