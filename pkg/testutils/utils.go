@@ -7,6 +7,7 @@
 package testutils
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -24,20 +25,18 @@ type Tester struct {
 	Behaviour  string
 	Received   chan proto.Message
 	ExpectCurr *proto.Message
+	RecMutex   sync.Mutex
 }
 
 func New(t *testing.T) *Tester {
 	return &Tester{
-		t,
-		nil,
-		time.Second,
-		true,
-		"testutils-" + proto.GenerateId(),
+		T:           t,
+		WaitTimeout: time.Second,
+		IgnoreSubs:  true,
+		Id:          "testutils-" + proto.GenerateId(),
 
-		"",
-		"",
-		make(chan proto.Message, 5),
-		nil,
+		Received: make(chan proto.Message, 5),
+		RecMutex: sync.Mutex{},
 	}
 }
 
@@ -64,7 +63,9 @@ func (t *Tester) listen() {
 		if msg.Source == t.Id {
 			continue
 		}
+		t.RecMutex.Lock()
 		t.Received <- msg
+		t.RecMutex.Unlock()
 	}
 }
 
@@ -82,7 +83,9 @@ func (t *Tester) Wait() {
 }
 
 func (t *Tester) Reset() {
+	t.RecMutex.Lock()
 	t.Received = make(chan proto.Message, 20)
+	t.RecMutex.Unlock()
 }
 
 func (t *Tester) Describe(unit string, f func()) {
