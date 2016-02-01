@@ -48,6 +48,8 @@ func NewService(deps *Dependencies) *Service {
 }
 
 func (s *Service) Enable() error {
+	s.Client.HandleConcurrent = false
+
 	createIndizes := !s.DB.HasTable(&Location{})
 	if err := s.DB.AutoMigrate(&Location{}).Error; err != nil {
 		return err

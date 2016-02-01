@@ -13,8 +13,9 @@ import (
 )
 
 type Client struct {
-	DeviceId       string
-	RequestTimeout time.Duration
+	DeviceId         string
+	RequestTimeout   time.Duration
+	HandleConcurrent bool
 
 	conn                    Conn
 	handler                 func(Message)
@@ -28,17 +29,15 @@ type Client struct {
 
 func NewClient(deviceId string) *Client {
 	c := &Client{
-		deviceId,
-		30 * time.Second,
+		DeviceId:         deviceId,
+		RequestTimeout:   30 * time.Second,
+		HandleConcurrent: true,
 
-		nil,
-		nil,
-		defaultLog,
-		make([]subscription, 0),
-		nil,
+		log:  defaultLog,
+		subs: make([]subscription, 0),
 
-		&sync.Mutex{},
-		make(map[string]chan Message),
+		reqMutex: &sync.Mutex{},
+		requests: make(map[string]chan Message),
 	}
 	c.internalSubscribe("", c.DeviceId, nil)
 	c.internalSubscribe("ping", "", c.handlePing)
@@ -87,7 +86,11 @@ func (c *Client) listen(conn Conn) error {
 			}
 			return err
 		}
-		go c.handle(msg)
+		if c.HandleConcurrent {
+			go c.handle(msg)
+		} else {
+			c.handle(msg)
+		}
 	}
 }
 
