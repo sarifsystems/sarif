@@ -44,7 +44,7 @@ func New(appName, moduleName string) *Server {
 		Modules:   make(map[string]*services.Module),
 		Instances: make(map[string]interface{}),
 	}
-	if n, err := os.Hostname(); err != nil {
+	if n, err := os.Hostname(); err == nil {
 		s.ServerConfig.Name = n
 	}
 	return s

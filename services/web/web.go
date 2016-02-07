@@ -224,9 +224,13 @@ func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
 		if k == "authtoken" {
 			continue
 		}
-		if len(v) == 1 {
+		if k == "_device" {
+			msg.Destination = v[0]
+		} else if k == "text" {
+			msg.Text = strings.Join(v, "\n")
+		} else if len(v) == 1 {
 			pl[k] = parseValue(v[0])
-		} else {
+		} else if k == "_device" {
 			pl[k] = v
 		}
 	}
