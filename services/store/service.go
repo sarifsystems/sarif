@@ -62,7 +62,7 @@ func (s *Service) handlePut(msg proto.Message) {
 	}
 
 	var value json.RawMessage
-	if msg.Payload == nil && msg.Text != "" {
+	if len(msg.Payload.Raw) == 0 && msg.Text != "" {
 		v, _ := json.Marshal(msg.Text)
 		value = json.RawMessage(v)
 	}

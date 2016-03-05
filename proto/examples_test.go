@@ -13,6 +13,10 @@ import (
 	"github.com/xconstruct/stark/proto"
 )
 
+type MyPayload struct {
+	Value string
+}
+
 func ExampleClient() {
 	recv := make(chan bool)
 
@@ -35,14 +39,14 @@ func ExampleClient() {
 	client.Subscribe("testaction", "", func(msg proto.Message) {
 		fmt.Printf("received %q from %q\n", msg.Action, msg.Source)
 
-		var payload interface{}
+		var payload MyPayload
 		msg.DecodePayload(&payload)
-		fmt.Println("payload:", payload)
+		fmt.Println("payload:", payload.Value)
 		recv <- true
 	})
 
 	// Publish a "testaction" message
-	client.Publish(proto.CreateMessage("testaction", "weee, a test message!"))
+	client.Publish(proto.CreateMessage("testaction", MyPayload{"weee, a test message!"}))
 
 	// Block until message received or timeout
 	select {

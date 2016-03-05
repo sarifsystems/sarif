@@ -272,7 +272,9 @@ func (c *brokerConn) Publish(msg Message) {
 }
 
 func (c *brokerConn) String() string {
-	if v, ok := c.Conn.(stringer); ok {
+	if v, ok := c.Conn.(interface {
+		String() string
+	}); ok {
 		return v.String()
 	}
 	return ""

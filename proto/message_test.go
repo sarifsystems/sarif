@@ -74,9 +74,6 @@ func TestEncodePayload(t *testing.T) {
 	if got.Key != "value" {
 		t.Error("encode: wrong Key:", got.Key)
 	}
-	if msg.Text != "My key is value" {
-		t.Error("encode: wrong text:", msg.Text)
-	}
 
 	if got != exp {
 		t.Log(exp)

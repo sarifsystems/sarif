@@ -225,11 +225,6 @@ func (c *Client) resolveRequest(id string, msg Message) bool {
 	return true
 }
 
-func (c *Client) Discover(action string) []string {
-	devs := make([]string, 0)
-	req := CreateMessage("proot/discover/"+action, nil)
-	for msg := range c.Request(req) {
-		devs = append(devs, msg.Source)
-	}
-	return devs
+func (c *Client) Discover(action string) <-chan Message {
+	return c.Request(CreateMessage("proto/discover/"+action, nil))
 }

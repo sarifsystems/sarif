@@ -7,7 +7,6 @@
 package proto
 
 import (
-	"encoding/json"
 	"errors"
 	"strings"
 )
@@ -15,14 +14,14 @@ import (
 const VERSION = "0.5"
 
 type Message struct {
-	Version     string           `json:"stark,omitempty"`
-	Id          string           `json:"id,omitempty"`
-	Action      string           `json:"action,omitempty"`
-	Source      string           `json:"src,omitempty"`
-	Destination string           `json:"dst,omitempty"`
-	Payload     *json.RawMessage `json:"p,omitempty"`
-	CorrId      string           `json:"corr,omitempty"`
-	Text        string           `json:"text,omitempty"`
+	Version     string  `json:"stark,omitempty"`
+	Id          string  `json:"id,omitempty"`
+	Action      string  `json:"action,omitempty"`
+	Source      string  `json:"src,omitempty"`
+	Destination string  `json:"dst,omitempty"`
+	Payload     Partial `json:"p,omitempty"`
+	CorrId      string  `json:"corr,omitempty"`
+	Text        string  `json:"text,omitempty"`
 }
 
 func CreateMessage(action string, payload interface{}) Message {
@@ -33,6 +32,16 @@ func CreateMessage(action string, payload interface{}) Message {
 	}
 	if err := msg.EncodePayload(payload); err != nil {
 		panic(err)
+	}
+
+	if s, ok := payload.(interface {
+		Text() string
+	}); ok {
+		msg.Text = s.Text()
+	} else if s, ok := payload.(interface {
+		String() string
+	}); ok {
+		msg.Text = s.String()
 	}
 	return msg
 }
@@ -73,48 +82,9 @@ func (m Message) IsAction(action string) bool {
 }
 
 func (m Message) DecodePayload(v interface{}) error {
-	if m.Payload == nil {
-		return nil
-	}
-	return json.Unmarshal(*m.Payload, v)
-}
-
-type stringer interface {
-	String() string
-}
-
-type texter interface {
-	Text() string
+	return m.Payload.Decode(v)
 }
 
 func (m *Message) EncodePayload(v interface{}) error {
-	if v == nil {
-		m.Payload = nil
-		return nil
-	}
-
-	raw, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	rawjson := json.RawMessage(raw)
-	m.Payload = &rawjson
-	if m.Text == "" {
-		if s, ok := v.(texter); ok {
-			m.Text = s.Text()
-		} else if s, ok := v.(stringer); ok {
-			m.Text = s.String()
-		}
-	}
-	return nil
-}
-
-func (m Message) Copy() Message {
-	c := m
-	if m.Payload != nil {
-		if err := c.EncodePayload(m.Payload); err != nil {
-			panic(err)
-		}
-	}
-	return c
+	return m.Payload.Encode(v)
 }
