@@ -8,6 +8,7 @@ package core
 
 import (
 	"flag"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -43,6 +44,7 @@ func NewApp(appName, moduleName string) *App {
 		Log:        DefaultLog,
 	}
 	if *vverbose {
+		app.Log.SetFlags(log.Ldate | log.Lmicroseconds)
 		app.Log.SetLevel(LogLevelTrace)
 	} else if *verbose {
 		app.Log.SetLevel(LogLevelDebug)

@@ -8,8 +8,6 @@ package lastfm
 import (
 	"os"
 	"testing"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 func TestApiRecentTracks(t *testing.T) {
@@ -23,7 +21,6 @@ func TestApiRecentTracks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	spew.Dump(atracks)
 	tracks := atracks.RecentTracks
 	if tracks.Attr.Page != 1 {
 		t.Error("expected page 1, not", tracks.Attr.Page)

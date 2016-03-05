@@ -23,7 +23,7 @@ var Module = &services.Module{
 }
 
 type State struct {
-	Value    float64
+	Value    interface{}
 	Modified time.Time
 }
 
@@ -78,11 +78,11 @@ func (s *Service) handleChange(msg proto.Message) {
 
 func (s *Service) handleStatesGet(msg proto.Message) {
 	subcat := ""
-	if msg.Action != "states/get" {
+	if strings.HasPrefix(msg.Action, "states/get/") {
 		subcat = strings.TrimPrefix(msg.Action, "states/get/")
 	}
 
-	filtered := make(map[string]float64)
+	filtered := make(map[string]interface{})
 	for name, state := range s.States {
 		if name == subcat {
 			filtered["value"] = state.Value
