@@ -66,7 +66,7 @@ func TestParseSimple(t *testing.T) {
 		} else if ok {
 			var payload map[string]interface{}
 			msg.DecodePayload(&payload)
-			msg.Payload = nil
+			msg.Payload.Raw = nil
 			if !reflect.DeepEqual(msg, test.expected) {
 				t.Errorf("decoded message differs\nexp '%v'\ngot '%v'", test.expected, msg)
 			}
