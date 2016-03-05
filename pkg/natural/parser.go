@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/xconstruct/stark/pkg/datasets/commands"
@@ -20,7 +21,6 @@ import (
 
 type model struct {
 	Schema map[string]*MessageSchema
-	Rules  SentenceRuleSet
 	Parser *mlearning.Model
 	Pos    *mlearning.Model
 	Var    *mlearning.Model
@@ -28,7 +28,6 @@ type model struct {
 
 type Parser struct {
 	schema       *MessageSchemaStore
-	regular      *RegularParser
 	tokenizer    *Tokenizer
 	action       *ActionPredictor
 	pos          *PosTagger
@@ -40,7 +39,6 @@ func NewParser() *Parser {
 	tok := NewTokenizer()
 	return &Parser{
 		NewMessageSchemaStore(),
-		NewRegularParser(),
 		NewTokenizer(),
 		NewActionPredictor(),
 		NewPosTagger(),
@@ -59,7 +57,6 @@ func (p *Parser) SaveModel(path string) error {
 	gz := gzip.NewWriter(f)
 	model := model{
 		p.schema.Messages,
-		p.regular.Rules(),
 		p.action.Perceptron.Model,
 		p.pos.Perceptron.Model,
 		p.varPredictor.Perceptron.Model,
@@ -90,9 +87,6 @@ func (p *Parser) LoadModel(path string) error {
 		return err
 	}
 	p.schema.Messages = model.Schema
-	if err := p.regular.Load(model.Rules); err != nil {
-		return err
-	}
 	p.action.Perceptron.Model = model.Parser
 	p.pos.Perceptron.Model = model.Pos
 	p.varPredictor.Perceptron.Model = model.Var
@@ -111,7 +105,6 @@ func (p *Parser) TrainModel() error {
 
 	p.action.Train(10, set, p.tokenizer)
 	p.schema.AddDataSet(set)
-	p.regular.Load(DefaultRules)
 	p.pos.Train(5, ss)
 	p.varPredictor.Train(10, set, p.tokenizer)
 
@@ -120,22 +113,19 @@ func (p *Parser) TrainModel() error {
 
 type ParseResult struct {
 	Text    string   `json:"text"`
-	Type    string   `json:"type"`
 	Meaning *Meaning `json:"meaning"`
 	Tokens  []*Token `json:"tokens"`
 
-	Prediction  *Prediction
 	Predictions []*Prediction `json:"predictions"`
 }
 
 func (r ParseResult) String() string {
-	s := "Type: " + r.Type
-	s += "\nInterpretation: " + r.Text
-	if r.Prediction != nil {
-		for _, v := range r.Prediction.Vars {
-			s += " " + v.String()
+	s := "Interpretation: " + r.Text
+	if len(r.Predictions) > 0 {
+		s += "\n"
+		for _, pred := range r.Predictions {
+			s += "\n" + pred.String()
 		}
-		s += "\n\nIntent: " + r.Prediction.String()
 	} else if r.Meaning != nil {
 		for _, v := range r.Meaning.Vars {
 			s += " " + v.String()
@@ -144,13 +134,33 @@ func (r ParseResult) String() string {
 	return s
 }
 
+type predByWeight []*Prediction
+
+func (a predByWeight) Len() int           { return len(a) }
+func (a predByWeight) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a predByWeight) Less(i, j int) bool { return a[i].Weight > a[j].Weight }
+
+func (r *ParseResult) Merge(other *ParseResult, weight float64) {
+	if other.Predictions != nil {
+		for _, pred := range other.Predictions {
+			pred.Weight *= weight
+
+			r.Predictions = append(r.Predictions, pred)
+		}
+		sort.Sort(predByWeight(r.Predictions))
+	}
+}
+
 type Context struct {
+	Text          string
 	ExpectedReply string
 	Sender        string
 	Recipient     string
 }
 
 type Prediction struct {
+	Type string `json:"type"`
+
 	Action  string        `json:"action"`
 	Vars    []*Var        `json:"vars"`
 	Message proto.Message `json:"msg"`
@@ -158,92 +168,79 @@ type Prediction struct {
 }
 
 func (p Prediction) String() string {
-	s := "." + p.Message.Action
+	s := "Intent: " + p.Message.Action
 	v := make(map[string]string)
 	p.Message.DecodePayload(&v)
 	for name, val := range v {
 		s += " " + name + "=" + val
 	}
-	s += fmt.Sprintf(" [weight: %g]", p.Weight)
+	s += "\n       "
+	for _, v := range p.Vars {
+		s += " " + v.String()
+	}
+	s += fmt.Sprintf(" [type: %s] [weight: %g]", p.Type, p.Weight)
 	return s
 }
 
-func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
+func (p *Parser) Parse(ctx *Context) (*ParseResult, error) {
 	if ctx == nil {
 		ctx = &Context{}
 	}
 	r := &ParseResult{
-		Text: text,
+		Text: ctx.Text,
 	}
-	if text == "" {
+	if ctx.Text == "" {
 		return r, nil
 	}
 
-	if msg, ok := ParseSimple(text); ok {
-		r.Type = "simple"
-		r.Prediction = &Prediction{
-			Action:  msg.Action,
-			Message: msg,
-			Weight:  100,
-		}
-		return r, nil
-	}
-
-	if msg, ok := p.regular.Parse(text); ok {
-		r.Type = "regular"
-		r.Prediction = &Prediction{
-			Action:  msg.Action,
-			Message: msg,
-			Weight:  100,
-		}
-		return r, nil
-	}
-
-	r.Tokens = p.tokenizer.Tokenize(text)
+	r.Tokens = p.tokenizer.Tokenize(ctx.Text)
 
 	if ctx.ExpectedReply == "affirmative" {
-		var w float64
-		r.Type, w = AnalyzeAffirmativeSentiment(r.Tokens)
-		r.Prediction = &Prediction{Weight: w}
+		typ, w := AnalyzeAffirmativeSentiment(r.Tokens)
+		r.Predictions = []*Prediction{{Type: typ, Weight: w}}
 		return r, nil
 	}
 
 	p.pos.Predict(r.Tokens)
 	p.ResolvePronouns(r.Tokens, ctx)
 
-	// TODO
-	r.Type = AnalyzeSentenceFunction(r.Tokens)
+	typ := AnalyzeSentenceFunction(r.Tokens)
 	var msg proto.Message
 	var err error
-	switch r.Type {
+	switch typ {
 	case "declarative":
 		if r.Meaning, err = p.meaning.ParseDeclarative(r.Tokens); err != nil {
 			return r, err
 		}
 		action := "event"
-		// if r.Meaning.Vars["fact"] != "" {
-		// 	action = "concept"
-		// }
 		msg, err = p.InventMessageForMeaning(action, r.Meaning)
-		r.Prediction = &Prediction{
+		r.Predictions = []*Prediction{{
+			Type: typ,
+
 			Action:  msg.Action,
 			Message: msg,
 			Vars:    r.Meaning.Vars,
 			Weight:  1, // TODO
-		}
+		}}
 
 	case "exclamatory":
+		r.Predictions = []*Prediction{{
+			Type:   typ,
+			Weight: 1,
+		}}
 	case "interrogative":
 		if r.Meaning, err = p.meaning.ParseInterrogative(r.Tokens); err != nil {
 			return r, err
 		}
 		msg, err = p.InventMessageForMeaning("concepts/query", r.Meaning)
-		r.Prediction = &Prediction{
+		r.Predictions = []*Prediction{{
+			Type: typ,
+
 			Action:  msg.Action,
 			Message: msg,
 			Vars:    r.Meaning.Vars,
 			Weight:  1, // TODO
-		}
+		}}
 
 	case "imperative":
 		if r.Meaning, err = p.meaning.ParseImperative(r.Tokens); err != nil {
@@ -251,31 +248,24 @@ func (p *Parser) Parse(text string, ctx *Context) (*ParseResult, error) {
 		}
 
 		preds := p.action.PredictAll(r.Meaning)
-		first := true
 		for i, pred := range preds {
-			if i > 9 && !first {
+			if i > 4 {
 				break
 			}
 
 			fp := &Prediction{
+				Type: typ,
+
 				Action: string(pred.Class),
-				Weight: float64(pred.Weight),
+				Weight: float64(pred.Weight) / 10, // TODO: Weights
 				Vars:   r.Meaning.Vars,
 			}
 			r.Predictions = append(r.Predictions, fp)
-			if r.Prediction != nil && (r.Prediction.Weight-fp.Weight) < 1 {
-				r.Prediction = nil
-			}
 
 			if mschema := p.schema.Get(fp.Action); mschema != nil {
 				vars := p.varPredictor.PredictTokens(r.Tokens, mschema.Action)
 				fp.Vars = append(fp.Vars, vars...)
 				fp.Message = mschema.Apply(fp.Vars)
-
-				if first {
-					first = false
-					r.Prediction = fp
-				}
 			}
 		}
 
@@ -300,12 +290,8 @@ func (p *Parser) ResolvePronouns(ts []*Token, ctx *Context) {
 	}
 }
 
-func (p *Parser) LearnRule(text string, action string) error {
-	return p.regular.Learn(text, action)
-}
-
 func (p *Parser) ReinforceSentence(text string, action string) error {
-	r, err := p.Parse(text, &Context{})
+	r, err := p.Parse(&Context{Text: text})
 	if err != nil {
 		return err
 	}

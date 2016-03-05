@@ -107,29 +107,32 @@ func (cv *Conversation) HandleClientMessage(msg proto.Message) {
 
 	// Otherwise parse message as normal request.
 	ctx := &natural.Context{
+		Text:      msg.Text,
 		Sender:    "user",
 		Recipient: "stark",
 	}
-	res, err := cv.service.parser.Parse(msg.Text, ctx)
-	if res.Type == "exclamatory" {
+	res, err := cv.service.Parse(ctx)
+	if err != nil || len(res.Predictions) == 0 {
+		cv.handleUnknownUserMessage(msg)
+		return
+	}
+	pred := res.Predictions[0]
+	if pred.Type == "exclamatory" {
 		cv.SendToClient(msg.Reply(proto.Message{
 			Action: "natural/phrase",
 			Text:   cv.service.phrases.Answer(msg.Text),
 		}))
 		return
-	} else if err != nil || res.Prediction == nil || res.Prediction.Weight <= 0 {
-		cv.handleUnknownUserMessage(msg)
-		return
 	}
 
-	if res.Prediction.Message.Text == "" && res.Type != "simple" {
-		res.Prediction.Message.Text = msg.Text
+	if pred.Message.Text == "" && pred.Type != "simple" {
+		pred.Message.Text = msg.Text
 	}
 	cv.LastUserTime = time.Now()
 	cv.LastUserText = msg.Text
-	cv.LastUserMessage = res.Prediction.Message
-	res.Prediction.Message.CorrId = msg.Id
-	cv.PublishForClient(res.Prediction.Message)
+	cv.LastUserMessage = pred.Message
+	pred.Message.CorrId = msg.Id
+	cv.PublishForClient(pred.Message)
 }
 
 func (cv *Conversation) answer(a *schema.Action, text string) (proto.Message, bool) {
@@ -143,12 +146,12 @@ func (cv *Conversation) answer(a *schema.Action, text string) (proto.Message, bo
 
 	t := a.SchemaType
 	if t == "ConfirmAction" || t == "DeleteAction" || t == "CancelAction" {
-		ctx := &natural.Context{ExpectedReply: "affirmative"}
-		r, err := cv.service.parser.Parse(text, ctx)
-		if err != nil {
+		ctx := &natural.Context{Text: text, ExpectedReply: "affirmative"}
+		r, err := cv.service.Parse(ctx)
+		if err != nil || len(r.Predictions) == 0 {
 			return reply, false
 		}
-		if r.Type == "neg" {
+		if r.Predictions[0].Type == "neg" {
 			reply.Action = a.ReplyNegative
 			return reply, reply.Action != ""
 		}

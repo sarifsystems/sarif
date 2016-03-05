@@ -20,6 +20,7 @@ import (
 	"github.com/xconstruct/stark/services/luascripts"
 	"github.com/xconstruct/stark/services/meals"
 	"github.com/xconstruct/stark/services/natural"
+	"github.com/xconstruct/stark/services/nlparser"
 	"github.com/xconstruct/stark/services/reasoner"
 	"github.com/xconstruct/stark/services/scheduler"
 	"github.com/xconstruct/stark/services/statenet"
@@ -46,6 +47,7 @@ func main() {
 	srv.RegisterModule(luascripts.Module)
 	srv.RegisterModule(meals.Module)
 	srv.RegisterModule(natural.Module)
+	srv.RegisterModule(nlparser.Module)
 	srv.RegisterModule(reasoner.Module)
 	srv.RegisterModule(scheduler.Module)
 	srv.RegisterModule(states.Module)
@@ -64,6 +66,7 @@ func main() {
 		"location",
 		"meals",
 		"natural",
+		"nlparser",
 		"reasoner",
 		"scheduler",
 		"states",
