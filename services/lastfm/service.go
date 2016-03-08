@@ -102,7 +102,7 @@ func (s *Service) ImportAll() error {
 	api := NewApi(s.cfg.ApiKey)
 	var last Track
 	err := s.DB.Order("time DESC").First(&last).Error
-	if err != nil && err != gorm.RecordNotFound {
+	if err != nil && err != gorm.ErrRecordNotFound {
 		return err
 	}
 
@@ -186,7 +186,7 @@ func (s *Service) RefreshArtistInfo() {
 			LIMIT 1
 		`).Row().Scan(&name)
 		if err != nil {
-			if err != gorm.RecordNotFound {
+			if err != gorm.ErrRecordNotFound {
 				s.Log.Errorln("[lastfm] refresh artist err:", err)
 			}
 			return

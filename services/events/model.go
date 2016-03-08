@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/jinzhu/gorm"
 )
 
 const (
@@ -30,11 +32,13 @@ type Event struct {
 	MetaRaw []byte                 `json:"-" gorm:"column:meta"`
 }
 
-func (e *Event) BeforeSave() (err error) {
+func (e *Event) BeforeSave(scope *gorm.Scope) (err error) {
 	if e.Time.IsZero() {
 		e.Time = time.Now()
+		scope.SetColumn("Time", e.Time)
 	}
 	e.MetaRaw, err = json.Marshal(e.Meta)
+	scope.SetColumn("MetaRaw", e.MetaRaw)
 	return
 }
 

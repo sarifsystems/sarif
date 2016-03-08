@@ -144,7 +144,7 @@ func (s *Service) handleLocationUpdate(msg proto.Message) {
 	s.Log.Debugln("[location] store update:", loc)
 
 	var last Location
-	if err := s.DB.Order("timestamp DESC").First(&last).Error; err != nil && err != gorm.RecordNotFound {
+	if err := s.DB.Order("timestamp DESC").First(&last).Error; err != nil && err != gorm.ErrRecordNotFound {
 		s.Log.Errorln("[location] retrieve last err", err)
 	}
 	if last.Id != 0 {
@@ -238,7 +238,7 @@ func (s *Service) handleLocationLast(msg proto.Message) {
 
 	var loc Location
 	if err := s.DB.Scopes(applyFilter(pl)).Order("timestamp DESC").First(&loc).Error; err != nil {
-		if err == gorm.RecordNotFound {
+		if err == gorm.ErrRecordNotFound {
 			s.Reply(msg, MsgNotFound)
 			return
 		}
@@ -292,7 +292,7 @@ func (s *Service) handleLocationList(msg proto.Message) {
 
 	var locs []*Location
 	if err := s.DB.Scopes(applyFilter(pl)).Order("timestamp ASC").Limit(300).Find(&locs).Error; err != nil {
-		if err == gorm.RecordNotFound {
+		if err == gorm.ErrRecordNotFound {
 			s.Reply(msg, MsgNotFound)
 			return
 		}
@@ -400,7 +400,7 @@ func (s *Service) handleLocationImport(msg proto.Message) {
 	}
 	var existing []*Location
 	if err := s.DB.Scopes(applyFilter(f)).Order("timestamp ASC").Find(&existing).Error; err != nil {
-		if err != gorm.RecordNotFound {
+		if err != gorm.ErrRecordNotFound {
 			s.ReplyInternalError(msg, err)
 			return
 		}

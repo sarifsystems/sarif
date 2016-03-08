@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/xconstruct/stark/proto"
 )
 
@@ -46,8 +47,9 @@ func (t Task) String() string {
 	)
 }
 
-func (t *Task) BeforeSave() (err error) {
+func (t *Task) BeforeSave(scope *gorm.Scope) (err error) {
 	t.ReplyRaw, err = json.Marshal(t.Reply)
+	scope.SetColumn("ReplyRaw", t.ReplyRaw)
 	return
 }
 

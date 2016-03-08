@@ -84,7 +84,7 @@ func (d *sqlStore) Get(key string) (Document, error) {
 	var doc Document
 	doc.Key = key
 	err := d.DB.Where(&doc).Find(&doc).Error
-	if err == gorm.RecordNotFound {
+	if err == gorm.ErrRecordNotFound {
 		err = ErrNoResult
 	}
 	return doc, err

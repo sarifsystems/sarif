@@ -170,7 +170,7 @@ func (s *Scheduler) recalculateTimer() {
 	var err error
 	s.nextTask, err = s.GetNextTask()
 	if err != nil {
-		if err != gorm.RecordNotFound {
+		if err != gorm.ErrRecordNotFound {
 			s.Log.Errorln("[scheduler] recalculate:", err)
 		}
 		return

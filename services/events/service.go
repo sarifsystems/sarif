@@ -152,7 +152,7 @@ func (s *Service) handleEventLast(msg proto.Message) {
 	s.Log.Infoln("[events] get last by filter:", filter)
 	var last Event
 	if err := s.DB.Scopes(applyFilter(filter)).Order("time desc").First(&last).Error; err != nil {
-		if err == gorm.RecordNotFound {
+		if err == gorm.ErrRecordNotFound {
 			s.Reply(msg, MessageEventNotFound)
 			return
 		}
@@ -219,6 +219,9 @@ func (s *Service) handleEventList(msg proto.Message) {
 	if err := msg.DecodePayload(&filter); err != nil {
 		s.ReplyBadRequest(msg, err)
 		return
+	}
+	if filter.After.IsZero() && filter.Before.IsZero() {
+		filter.After = time.Now().Add(-24 * time.Hour)
 	}
 
 	s.Log.Infoln("[events] list by filter:", filter)

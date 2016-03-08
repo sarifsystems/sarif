@@ -52,7 +52,7 @@ func OpenDatabase(cfg DatabaseConfig) (*Orm, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Orm{driver, &sdb}, nil
+	return &Orm{driver, sdb}, nil
 }
 
 func OpenDatabaseInMemory() *Orm {
@@ -60,5 +60,5 @@ func OpenDatabaseInMemory() *Orm {
 	if err != nil {
 		panic(err)
 	}
-	return &Orm{"sqlite3", &sdb}
+	return &Orm{"sqlite3", sdb}
 }
