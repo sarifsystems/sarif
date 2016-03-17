@@ -107,3 +107,8 @@ func FormatMessage(msg *proto.Message) {
 
 	msg.Text = reTimeIso.ReplaceAllStringFunc(msg.Text, formatTime)
 }
+
+func SplitWords(s string) []string {
+	s = strings.TrimRight(s, ".!? ")
+	return strings.Split(s, " ")
+}

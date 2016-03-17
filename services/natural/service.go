@@ -138,7 +138,7 @@ func (s *Service) handleNaturalParse(msg proto.Message) {
 		return
 	}
 	action := "natural/parsed"
-	if len(res.Predictions) == 0 || res.Predictions[0].Weight <= 0 {
+	if len(res.Intents) == 0 || res.Intents[0].Weight <= 0 {
 		action = "err/natural/parsed"
 	}
 
@@ -251,9 +251,9 @@ func ParseSimple(ctx *natural.Context) (*natural.ParseResult, error) {
 	}
 
 	if msg, ok := natural.ParseSimple(ctx.Text); ok {
-		r.Predictions = []*natural.Prediction{{
+		r.Intents = []*natural.Intent{{
 			Type:    "simple",
-			Action:  msg.Action,
+			Intent:  msg.Action,
 			Message: msg,
 			Weight:  1,
 		}}
@@ -267,9 +267,9 @@ func (s *Service) ParseRegular(ctx *natural.Context) (*natural.ParseResult, erro
 	}
 
 	if msg, ok := s.regular.Parse(ctx.Text); ok {
-		r.Predictions = []*natural.Prediction{{
+		r.Intents = []*natural.Intent{{
 			Type:    "regular",
-			Action:  msg.Action,
+			Intent:  msg.Action,
 			Message: msg,
 			Weight:  1,
 		}}

@@ -3,19 +3,18 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package natural
+package nlp
 
 import (
 	"compress/gzip"
 	"encoding/json"
-	"fmt"
 	"os"
-	"sort"
 	"strings"
 
 	"github.com/xconstruct/stark/pkg/datasets/commands"
 	"github.com/xconstruct/stark/pkg/datasets/twpos"
 	"github.com/xconstruct/stark/pkg/mlearning"
+	"github.com/xconstruct/stark/pkg/natural"
 	"github.com/xconstruct/stark/proto"
 )
 
@@ -112,19 +111,19 @@ func (p *Parser) TrainModel() error {
 }
 
 type ParseResult struct {
-	Text    string   `json:"text"`
+	Text    string            `json:"text"`
+	Intents []*natural.Intent `json:"intents"`
+
 	Meaning *Meaning `json:"meaning"`
 	Tokens  []*Token `json:"tokens"`
-
-	Predictions []*Prediction `json:"predictions"`
 }
 
 func (r ParseResult) String() string {
 	s := "Interpretation: " + r.Text
-	if len(r.Predictions) > 0 {
+	if len(r.Intents) > 0 {
 		s += "\n"
-		for _, pred := range r.Predictions {
-			s += "\n" + pred.String()
+		for _, intent := range r.Intents {
+			s += "\n" + intent.String()
 		}
 	} else if r.Meaning != nil {
 		for _, v := range r.Meaning.Vars {
@@ -134,57 +133,9 @@ func (r ParseResult) String() string {
 	return s
 }
 
-type predByWeight []*Prediction
-
-func (a predByWeight) Len() int           { return len(a) }
-func (a predByWeight) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a predByWeight) Less(i, j int) bool { return a[i].Weight > a[j].Weight }
-
-func (r *ParseResult) Merge(other *ParseResult, weight float64) {
-	if other.Predictions != nil {
-		for _, pred := range other.Predictions {
-			pred.Weight *= weight
-
-			r.Predictions = append(r.Predictions, pred)
-		}
-		sort.Sort(predByWeight(r.Predictions))
-	}
-}
-
-type Context struct {
-	Text          string
-	ExpectedReply string
-	Sender        string
-	Recipient     string
-}
-
-type Prediction struct {
-	Type string `json:"type"`
-
-	Action  string        `json:"action"`
-	Vars    []*Var        `json:"vars"`
-	Message proto.Message `json:"msg"`
-	Weight  float64       `json:"weight"`
-}
-
-func (p Prediction) String() string {
-	s := "Intent: " + p.Message.Action
-	v := make(map[string]string)
-	p.Message.DecodePayload(&v)
-	for name, val := range v {
-		s += " " + name + "=" + val
-	}
-	s += "\n       "
-	for _, v := range p.Vars {
-		s += " " + v.String()
-	}
-	s += fmt.Sprintf(" [type: %s] [weight: %g]", p.Type, p.Weight)
-	return s
-}
-
-func (p *Parser) Parse(ctx *Context) (*ParseResult, error) {
+func (p *Parser) Parse(ctx *natural.Context) (*ParseResult, error) {
 	if ctx == nil {
-		ctx = &Context{}
+		ctx = &natural.Context{}
 	}
 	r := &ParseResult{
 		Text: ctx.Text,
@@ -197,7 +148,7 @@ func (p *Parser) Parse(ctx *Context) (*ParseResult, error) {
 
 	if ctx.ExpectedReply == "affirmative" {
 		typ, w := AnalyzeAffirmativeSentiment(r.Tokens)
-		r.Predictions = []*Prediction{{Type: typ, Weight: w}}
+		r.Intents = []*natural.Intent{{Type: typ, Weight: w}}
 		return r, nil
 	}
 
@@ -214,17 +165,17 @@ func (p *Parser) Parse(ctx *Context) (*ParseResult, error) {
 		}
 		action := "event"
 		msg, err = p.InventMessageForMeaning(action, r.Meaning)
-		r.Predictions = []*Prediction{{
-			Type: typ,
+		r.Intents = []*natural.Intent{{
+			Intent: msg.Action,
+			Type:   typ,
+			Weight: 1, // TODO
 
-			Action:  msg.Action,
-			Message: msg,
-			Vars:    r.Meaning.Vars,
-			Weight:  1, // TODO
+			Message:   msg,
+			ExtraInfo: r.Meaning.Vars,
 		}}
 
 	case "exclamatory":
-		r.Predictions = []*Prediction{{
+		r.Intents = []*natural.Intent{{
 			Type:   typ,
 			Weight: 1,
 		}}
@@ -233,13 +184,13 @@ func (p *Parser) Parse(ctx *Context) (*ParseResult, error) {
 			return r, err
 		}
 		msg, err = p.InventMessageForMeaning("concepts/query", r.Meaning)
-		r.Predictions = []*Prediction{{
-			Type: typ,
+		r.Intents = []*natural.Intent{{
+			Intent: msg.Action,
+			Type:   typ,
+			Weight: 1, // TODO
 
-			Action:  msg.Action,
-			Message: msg,
-			Vars:    r.Meaning.Vars,
-			Weight:  1, // TODO
+			Message:   msg,
+			ExtraInfo: r.Meaning.Vars,
 		}}
 
 	case "imperative":
@@ -253,19 +204,18 @@ func (p *Parser) Parse(ctx *Context) (*ParseResult, error) {
 				break
 			}
 
-			fp := &Prediction{
-				Type: typ,
-
-				Action: string(pred.Class),
+			fp := &natural.Intent{
+				Intent: string(pred.Class),
+				Type:   typ,
 				Weight: float64(pred.Weight) / 10, // TODO: Weights
-				Vars:   r.Meaning.Vars,
 			}
-			r.Predictions = append(r.Predictions, fp)
+			r.Intents = append(r.Intents, fp)
 
-			if mschema := p.schema.Get(fp.Action); mschema != nil {
+			if mschema := p.schema.Get(fp.Intent); mschema != nil {
 				vars := p.varPredictor.PredictTokens(r.Tokens, mschema.Action)
-				fp.Vars = append(fp.Vars, vars...)
-				fp.Message = mschema.Apply(fp.Vars)
+				vars = append(vars, r.Meaning.Vars...)
+				fp.Message = mschema.Apply(vars)
+				fp.ExtraInfo = vars
 			}
 		}
 
@@ -275,7 +225,7 @@ func (p *Parser) Parse(ctx *Context) (*ParseResult, error) {
 	return r, nil
 }
 
-func (p *Parser) ResolvePronouns(ts []*Token, ctx *Context) {
+func (p *Parser) ResolvePronouns(ts []*Token, ctx *natural.Context) {
 	for _, t := range ts {
 		if t.Is("O") {
 			switch t.Lemma {
@@ -291,7 +241,7 @@ func (p *Parser) ResolvePronouns(ts []*Token, ctx *Context) {
 }
 
 func (p *Parser) ReinforceSentence(text string, action string) error {
-	r, err := p.Parse(&Context{Text: text})
+	r, err := p.Parse(&natural.Context{Text: text})
 	if err != nil {
 		return err
 	}

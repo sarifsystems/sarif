@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/xconstruct/stark/pkg/natural"
+	"github.com/xconstruct/stark/pkg/natural/nlp"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -36,7 +37,7 @@ type Service struct {
 	Log    proto.Logger
 	*proto.Client
 
-	parser *natural.Parser
+	parser *nlp.Parser
 }
 
 func NewService(deps *Dependencies) *Service {
@@ -46,7 +47,7 @@ func NewService(deps *Dependencies) *Service {
 		deps.Log,
 		deps.Client,
 
-		natural.NewParser(),
+		nlp.NewParser(),
 	}
 }
 
@@ -127,5 +128,5 @@ func (s *Service) handleNaturalReinforce(msg proto.Message) {
 	s.parser.ReinforceSentence(p.Sentence, p.Action)
 
 	parsed, _ := s.parser.Parse(&natural.Context{Text: p.Sentence})
-	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearn{p.Sentence, parsed.Predictions[0].Message.Action}))
+	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearn{p.Sentence, parsed.Intents[0].Message.Action}))
 }

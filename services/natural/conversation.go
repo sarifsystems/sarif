@@ -112,11 +112,11 @@ func (cv *Conversation) HandleClientMessage(msg proto.Message) {
 		Recipient: "stark",
 	}
 	res, err := cv.service.Parse(ctx)
-	if err != nil || len(res.Predictions) == 0 {
+	if err != nil || len(res.Intents) == 0 {
 		cv.handleUnknownUserMessage(msg)
 		return
 	}
-	pred := res.Predictions[0]
+	pred := res.Intents[0]
 	if pred.Type == "exclamatory" {
 		cv.SendToClient(msg.Reply(proto.Message{
 			Action: "natural/phrase",
@@ -148,10 +148,10 @@ func (cv *Conversation) answer(a *schema.Action, text string) (proto.Message, bo
 	if t == "ConfirmAction" || t == "DeleteAction" || t == "CancelAction" {
 		ctx := &natural.Context{Text: text, ExpectedReply: "affirmative"}
 		r, err := cv.service.Parse(ctx)
-		if err != nil || len(r.Predictions) == 0 {
+		if err != nil || len(r.Intents) == 0 {
 			return reply, false
 		}
-		if r.Predictions[0].Type == "neg" {
+		if r.Intents[0].Type == "neg" {
 			reply.Action = a.ReplyNegative
 			return reply, reply.Action != ""
 		}

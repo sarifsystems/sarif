@@ -3,7 +3,9 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package natural
+package nlp
+
+import "github.com/xconstruct/stark/pkg/datasets/en"
 
 func AnalyzeSentenceFunction(tokens []*Token) string {
 	if len(tokens) == 0 {
@@ -14,7 +16,7 @@ func AnalyzeSentenceFunction(tokens []*Token) string {
 	var subject, predicate bool
 	for _, t := range tokens {
 		if first {
-			if inStringSlice(t.Lemma, Interrogatives) {
+			if inStringSlice(t.Lemma, en.Interrogatives) {
 				return "interrogative"
 			}
 			if t.Is("!") || t.Is("D") {
@@ -45,15 +47,4 @@ func AnalyzeSentenceFunction(tokens []*Token) string {
 	}
 
 	return "imperative"
-}
-
-var Interrogatives = []string{
-	"which",
-	"what",
-	"who",
-	"whom",
-	"where",
-	"when",
-	"how",
-	"why",
 }

@@ -3,46 +3,25 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package natural
+// Package en contains a dataset of english words and phrases.
+package en
 
-func AnalyzeAffirmativeSentiment(tokens []*Token) (string, float64) {
-	inverse := false
-	var pos, neg int
+var Contractions = map[string]string{
+	"you're": "you are",
+	"I'm":    "I am",
+	"I've":   "I have",
+	"you've": "you have",
+}
 
-	for _, t := range tokens {
-		tag := AffirmativeSentiment[t.Lemma]
-		switch tag {
-		case "cancel":
-			return "cancel", 0
-		case "pos":
-			if inverse {
-				neg++
-			} else {
-				pos++
-			}
-			inverse = false
-		case "neg":
-			if inverse {
-				pos++
-			} else {
-				neg++
-			}
-			inverse = false
-		case "inv":
-			inverse = !inverse
-		}
-	}
-	if inverse {
-		neg++
-	}
-
-	w := float64(pos - neg)
-	if w > 0 {
-		return "pos", w
-	} else if w < 0 {
-		return "neg", w
-	}
-	return "", w
+var Interrogatives = []string{
+	"which",
+	"what",
+	"who",
+	"whom",
+	"where",
+	"when",
+	"how",
+	"why",
 }
 
 var AffirmativeSentiment = map[string]string{

@@ -3,9 +3,22 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package natural
+package nlp
 
-import "strings"
+type Token struct {
+	Value string              `json:"value,omitempty"`
+	Lemma string              `json:"lemma,omitempty"`
+	Tags  map[string]struct{} `json:"tags,omitempty"`
+}
+
+func (t Token) Is(tag string) bool {
+	_, ok := t.Tags[tag]
+	return ok
+}
+
+func (t *Token) Tag(tag string) {
+	t.Tags[tag] = struct{}{}
+}
 
 type tokenIterator struct {
 	tokens []*Token
@@ -44,9 +57,4 @@ func JoinTokens(ts []*Token) string {
 		s += t.Value
 	}
 	return s
-}
-
-func SplitWords(s string) []string {
-	s = strings.TrimRight(s, ".!? ")
-	return strings.Split(s, " ")
 }

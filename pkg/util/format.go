@@ -18,7 +18,7 @@ func FuzzyTime(t time.Time) string {
 	if ty == ny && tm == nm && td == nd {
 		return t.Format("15:04:05")
 	}
-	if d := n.YearDay() - t.YearDay(); d > -8 && d < 8 {
+	if d := n.YearDay() - t.YearDay(); ny == ty && d > -8 && d < 8 {
 		return t.Format("02 Jan 06 at 15:04")
 	}
 

@@ -3,30 +3,17 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package natural
+package nlp
 
 import (
 	"bufio"
 	"io"
 	"strings"
+
+	"github.com/xconstruct/stark/pkg/natural"
 )
 
 type Sentence []*Token
-
-type Token struct {
-	Value string              `json:"value,omitempty"`
-	Lemma string              `json:"lemma,omitempty"`
-	Tags  map[string]struct{} `json:"tags,omitempty"`
-}
-
-func (t Token) Is(tag string) bool {
-	_, ok := t.Tags[tag]
-	return ok
-}
-
-func (t *Token) Tag(tag string) {
-	t.Tags[tag] = struct{}{}
-}
 
 type Tokenizer struct {
 	SplitQuoted bool
@@ -45,7 +32,7 @@ func (t *Tokenizer) Tokenize(s string) []*Token {
 
 	var words []string
 	if t.SplitQuoted {
-		words, _ = SplitQuoted(s, " ")
+		words, _ = natural.SplitQuoted(s, " ")
 	} else {
 		words = strings.Split(s, " ")
 	}
@@ -53,8 +40,8 @@ func (t *Tokenizer) Tokenize(s string) []*Token {
 	tokens := make([]*Token, 0, len(words))
 	for _, w := range words {
 		tok := &Token{
-			Value: TrimQuotes(w),
-			Lemma: strings.ToLower(TrimQuotes(w)),
+			Value: natural.TrimQuotes(w),
+			Lemma: strings.ToLower(natural.TrimQuotes(w)),
 			Tags:  make(map[string]struct{}),
 		}
 		if inStringSlice(w, t.StopWords) {
