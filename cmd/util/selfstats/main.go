@@ -40,12 +40,12 @@ func main() {
 		var clicks []selfspy.Click
 		after := before.Add(-interval)
 		if err := db.Where("created_at BETWEEN ? AND ?", after, before).Find(&keys).Error; err != nil {
-			if err != gorm.RecordNotFound {
+			if err != gorm.ErrRecordNotFound {
 				app.Log.Fatal(err)
 			}
 		}
 		if err := db.Where("created_at BETWEEN ? AND ?", after, before).Find(&clicks).Error; err != nil {
-			if err != gorm.RecordNotFound {
+			if err != gorm.ErrRecordNotFound {
 				app.Log.Fatal(err)
 			}
 		}

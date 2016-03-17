@@ -28,12 +28,16 @@ type Service struct {
 	Session *dbus.Conn
 	System  *dbus.Conn
 	*proto.Client
+
+	Players map[string]*MprisPlayer
 }
 
 func NewService(deps *Dependencies) *Service {
 	s := &Service{
 		Log:    deps.Log,
 		Client: deps.Client,
+
+		Players: make(map[string]*MprisPlayer),
 	}
 	return s
 }
@@ -51,7 +55,8 @@ func (s *Service) Enable() (err error) {
 
 	s.Subscribe("notify", "", s.handleNotify)
 	s.Subscribe("poweroff", "", s.handlePowerOff)
-	return nil
+
+	return s.setupSignals()
 }
 
 func (s *Service) handleNotify(msg proto.Message) {
@@ -66,4 +71,51 @@ func (s *Service) handlePowerOff(msg proto.Message) {
 	if err := o.PowerOff(); err != nil {
 		s.Log.Errorln("[dbus] poweroff err:", err)
 	}
+}
+
+func (s *Service) setupSignals() error {
+	c := s.Session.BusObject().Call("org.freedesktop.DBus.AddMatch", 0, "type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',path='/org/mpris/MediaPlayer2'")
+	if c.Err != nil {
+		return c.Err
+	}
+
+	ch := make(chan *dbus.Signal, 10)
+	s.Session.Signal(ch)
+	go s.handleSignals(ch)
+	return nil
+}
+
+func (s *Service) handleSignals(ch chan *dbus.Signal) {
+	for v := range ch {
+		switch v.Name {
+		case "org.freedesktop.DBus.Properties.PropertiesChanged":
+			props := v.Body[1].(map[string]dbus.Variant)
+			p := s.getPlayer(v.Sender)
+			p.UpdateProperties(props)
+		}
+	}
+}
+
+func (s *Service) getPlayer(id string) *MprisPlayer {
+	p, ok := s.Players[id]
+	if !ok {
+		p = &MprisPlayer{Id: id}
+		s.Players[id] = p
+
+		obj := s.Session.Object(id, "/org/mpris/MediaPlayer2")
+		v, err := obj.GetProperty("org.mpris.MediaPlayer2.Identity")
+		if err != nil {
+			s.Log.Errorln(err)
+		} else {
+			p.Identity = v.Value().(string)
+		}
+		v, err = obj.GetProperty("org.mpris.MediaPlayer2.DesktopEntry")
+		if err != nil {
+			s.Log.Errorln(err)
+		} else {
+			p.Name = v.Value().(string)
+		}
+	}
+
+	return p
 }
