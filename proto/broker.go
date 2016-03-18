@@ -8,11 +8,13 @@ package proto
 import (
 	"encoding/json"
 	"io"
+	"sync"
 )
 
 // Broker dispatches messages to connections based on their subscriptions.
 type Broker struct {
 	subs     *subTree
+	subsLock sync.RWMutex
 	dups     []string
 	dupIndex int
 	Log      Logger
@@ -23,6 +25,7 @@ type Broker struct {
 func NewBroker() *Broker {
 	return &Broker{
 		newSubtree(),
+		sync.RWMutex{},
 		make([]string, 128),
 		0,
 		defaultLog,
@@ -112,7 +115,10 @@ func (b *Broker) ListenOnBridge(conn Conn) error {
 // transmitting all local messages to the gateway, but receiving only subscribed
 // messages in return.
 func (b *Broker) ListenOnGateway(conn Conn) error {
+	b.subsLock.RLock()
 	topics := b.subs.GetTopics("", []string{})
+	b.subsLock.RUnlock()
+
 	if len(topics) > 0 {
 		subs := make([]subscription, len(topics))
 		for i, t := range topics {
@@ -178,12 +184,16 @@ func (b *Broker) publish(msg Message) {
 	}
 
 	topic := getTopic(msg.Action, msg.Destination)
+	b.subsLock.RLock()
 	b.subs.Call(topicParts(topic), func(c writer) {
 		go c.Write(msg)
 	})
+	b.subsLock.RUnlock()
 }
 
 func (b *Broker) PrintSubtree(w io.Writer) error {
+	b.subsLock.RLock()
+	defer b.subsLock.RUnlock()
 	return b.subs.Print(w, 0)
 }
 
@@ -211,6 +221,8 @@ func (c *brokerConn) Read() (Message, error) {
 }
 
 func (c *brokerConn) Close() error {
+	c.broker.subsLock.Lock()
+	defer c.broker.subsLock.Unlock()
 	c.broker.subs.Unsubscribe(nil, c)
 	return c.Conn.Close()
 }
@@ -227,10 +239,14 @@ func (c *brokerConn) ListenLoop() {
 }
 
 func (c *brokerConn) Subscribe(topic string) {
+	c.broker.subsLock.Lock()
+	defer c.broker.subsLock.Unlock()
 	c.broker.subs.Subscribe(topicParts(topic), c)
 }
 
 func (c *brokerConn) Unsubscribe(topic string) {
+	c.broker.subsLock.Lock()
+	defer c.broker.subsLock.Unlock()
 	c.broker.subs.Unsubscribe(topicParts(topic), c)
 }
 

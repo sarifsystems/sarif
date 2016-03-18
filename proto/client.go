@@ -19,7 +19,7 @@ type Client struct {
 
 	conn                    Conn
 	handler                 func(Message)
-	log                     Logger
+	Log                     Logger
 	subs                    []subscription
 	onConnectionLostHandler func(error)
 
@@ -33,7 +33,7 @@ func NewClient(deviceId string) *Client {
 		RequestTimeout:   30 * time.Second,
 		HandleConcurrent: true,
 
-		log:  defaultLog,
+		Log:  defaultLog,
 		subs: make([]subscription, 0),
 
 		reqMutex: &sync.Mutex{},
@@ -80,7 +80,7 @@ func (c *Client) listen(conn Conn) error {
 		msg, err := conn.Read()
 		if err != nil {
 			c.conn = nil
-			c.log.Errorln("[client] read:", err)
+			c.Log.Errorln("[client] read:", err)
 			if c.onConnectionLostHandler != nil {
 				c.onConnectionLostHandler(err)
 			}
@@ -95,7 +95,7 @@ func (c *Client) listen(conn Conn) error {
 }
 
 func (c *Client) SetLogger(l Logger) {
-	c.log = l
+	c.Log = l
 }
 
 func (c *Client) fillMessage(msg *Message) {
@@ -114,11 +114,11 @@ func (c *Client) Publish(msg Message) error {
 	c.fillMessage(&msg)
 	if c.conn == nil {
 		err := errors.New("not connected")
-		c.log.Errorf("[client %s] publish error: ", c.DeviceId, err)
+		c.Log.Errorf("[client %s] publish error: ", c.DeviceId, err)
 		return err
 	}
 	if err := c.conn.Write(msg); err != nil {
-		c.log.Errorf("[client %s] publish error: %v", c.DeviceId, err)
+		c.Log.Errorf("[client %s] publish error: %v", c.DeviceId, err)
 		return err
 	}
 	return nil
@@ -137,7 +137,7 @@ func (c *Client) handle(msg Message) {
 }
 
 func (c *Client) handlePing(msg Message) {
-	c.log.Debugf("%s got ping", c.DeviceId)
+	c.Log.Debugf("%s got ping", c.DeviceId)
 	c.Reply(msg, CreateMessage("ack", nil))
 }
 
@@ -174,13 +174,13 @@ func (c *Client) Reply(orig, reply Message) error {
 }
 
 func (c *Client) ReplyBadRequest(orig Message, err error) error {
-	c.log.Warnf("[client %s] bad request: %v, %v", c.DeviceId, orig, err)
+	c.Log.Warnf("[client %s] bad request: %v, %v", c.DeviceId, orig, err)
 	reply := orig.Reply(BadRequest(err))
 	return c.Publish(reply)
 }
 
 func (c *Client) ReplyInternalError(orig Message, err error) error {
-	c.log.Errorf("[client %s] internal error: %v, %v", c.DeviceId, orig, err)
+	c.Log.Errorf("[client %s] internal error: %v, %v", c.DeviceId, orig, err)
 	reply := orig.Reply(InternalError(err))
 	return c.Publish(reply)
 }
