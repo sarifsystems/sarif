@@ -27,14 +27,12 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Log    proto.Logger
 	Client *proto.Client
 }
 
 type Service struct {
 	Config services.Config
 	Cfg    Config
-	Log    proto.Logger
 	*proto.Client
 
 	parser *nlp.Parser
@@ -44,7 +42,6 @@ func NewService(deps *Dependencies) *Service {
 	return &Service{
 		deps.Config,
 		Config{},
-		deps.Log,
 		deps.Client,
 
 		nlp.NewParser(),
@@ -58,23 +55,22 @@ func (s *Service) Enable() error {
 	s.Cfg.ModelPath = s.Config.Dir() + "/" + "natural.json.gz"
 	s.Config.Get(&s.Cfg)
 
-	if err := s.loadModel(); err != nil {
-		return err
+	// TODO: Use a more idiomatic config way to disable filesystem access
+	if s.Config.Dir() != "" {
+		if err := s.loadModel(); err != nil {
+			return err
+		}
+		go s.saveModelLoop()
 	}
-	go s.saveModelLoop()
 	return nil
 }
 func (s *Service) saveModelLoop() {
 	time.Sleep(1 * time.Minute)
-	if err := s.saveModel(); err != nil {
-		s.Log.Errorln("[nlparser] error saving model:", err)
-		return
-	}
-	c := time.Tick(time.Hour)
-	for n := range c {
+	for {
 		if err := s.saveModel(); err != nil {
-			s.Log.Errorln("[nlparser] error saving model:", err, n)
+			s.Log.Errorln("[nlparser] error saving model:", err)
 		}
+		time.Sleep(time.Hour)
 	}
 }
 

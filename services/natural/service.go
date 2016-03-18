@@ -32,14 +32,12 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Log    proto.Logger
 	Client *proto.Client
 }
 
 type Service struct {
 	Config services.Config
 	Cfg    Config
-	Log    proto.Logger
 	*proto.Client
 
 	ParserKeepAlive time.Duration
@@ -54,7 +52,6 @@ func NewService(deps *Dependencies) *Service {
 	return &Service{
 		deps.Config,
 		Config{},
-		deps.Log,
 		deps.Client,
 
 		30 * time.Minute,
