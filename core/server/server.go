@@ -20,10 +20,9 @@ type Server struct {
 	*core.App
 	ServerConfig Config
 
-	Broker    *proto.Broker
-	Orm       *core.Orm
-	Modules   map[string]*services.Module
-	Instances map[string]interface{}
+	Broker *proto.Broker
+	Orm    *core.Orm
+	*services.ModuleManager
 }
 
 type Config struct {
@@ -40,10 +39,9 @@ func New(appName, moduleName string) *Server {
 	}
 	app := core.NewApp(appName, moduleName)
 	s := &Server{
-		App:       app,
-		Modules:   make(map[string]*services.Module),
-		Instances: make(map[string]interface{}),
+		App: app,
 	}
+	s.ModuleManager = services.NewModuleManager(s.instantiate)
 	if n, err := os.Hostname(); err == nil {
 		s.ServerConfig.Name = n
 	}
@@ -196,72 +194,8 @@ func (s *Server) InitModules() error {
 	return nil
 }
 
-func (s *Server) EnableModule(name string) error {
-	i, ok := s.Instances[name]
-	if ok {
-		return nil
-	}
-
-	m, err := s.GetModule(name)
-	if err != nil {
-		return err
-	}
-
+func (s *Server) instantiate(m *services.Module) (interface{}, error) {
 	inj := inject.NewInjector()
-	s.SetupInjector(inj, name)
-	i, err = inj.Create(m.NewInstance)
-	if err != nil {
-		return err
-	}
-	s.Instances[name] = i
-	s.Log.Infof("[core] module '%s' enabled", name)
-
-	if i, ok := i.(enabler); ok {
-		return i.Enable()
-	}
-	return nil
-}
-
-func (s *Server) DisableModule(name string) error {
-	i, ok := s.Instances[name]
-	if !ok {
-		return nil
-	}
-	s.Instances[name] = nil
-	s.Log.Infof("[core] module '%s' disabled", name)
-	if i, ok := i.(disabler); ok {
-		if err := i.Disable(); err != nil {
-			return err
-		}
-	}
-	delete(s.Instances, name)
-	return nil
-}
-
-type ErrModuleNotFound struct {
-	Module string
-}
-
-func (e ErrModuleNotFound) Error() string {
-	return "module '" + e.Module + "' not found'"
-}
-
-func (s *Server) RegisterModule(mod *services.Module) {
-	s.Modules[mod.Name] = mod
-}
-
-func (s *Server) GetModule(name string) (*services.Module, error) {
-	m, ok := s.Modules[name]
-	if !ok {
-		return m, ErrModuleNotFound{name}
-	}
-	return m, nil
-}
-
-type enabler interface {
-	Enable() error
-}
-
-type disabler interface {
-	Disable() error
+	s.SetupInjector(inj, m.Name)
+	return inj.Create(m.NewInstance)
 }
