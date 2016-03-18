@@ -8,5 +8,5 @@ env:
 script: go test ./...
 deploy:
   provider: script
-  script: ./deploy
+  script: ./deploy.sh
   skip_cleanup: true
