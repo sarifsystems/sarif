@@ -6,12 +6,11 @@
 package store
 
 import (
-	"crypto/rand"
+	"bytes"
 	"errors"
-	"strings"
-	"time"
+	"strconv"
 
-	"github.com/jinzhu/gorm"
+	"github.com/boltdb/bolt"
 )
 
 var (
@@ -19,14 +18,9 @@ var (
 )
 
 type Document struct {
-	Id    int64     `json:"-"`
-	Key   string    `json:"key" sql:"index" gorm:"column:dkey"`
-	Value []byte    `json:"value,omitempty"`
-	Time  time.Time `json:"time" sql:"index"`
-}
-
-func (Document) TableName() string {
-	return "store"
+	Collection string `json:"collection"`
+	Key        string `json:"key"`
+	Value      []byte `json:"value,omitempty"`
 }
 
 func (doc Document) String() string {
@@ -34,75 +28,152 @@ func (doc Document) String() string {
 }
 
 type Store interface {
-	Setup() error
-	Put(doc Document) (Document, error)
-	Get(key string) (Document, error)
-	Del(key string) error
-	Scan(prefix, start, end string) ([]string, error)
+	Put(*Document) (*Document, error)
+	Get(collection, key string) (*Document, error)
+	Del(collection, key string) error
+	Scan(collection, min, max string, reverse bool) (Cursor, error)
 }
 
-type sqlStore struct {
-	DB *gorm.DB
+type Cursor interface {
+	Next() *Document
+	Close() error
 }
 
-func (d *sqlStore) Setup() error {
-	return d.DB.AutoMigrate(&Document{}).Error
+type BoltStore struct {
+	DB *bolt.DB
 }
 
-func generateId() string {
-	const alphanum = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-	var bytes = make([]byte, 12)
-	rand.Read(bytes)
-	for i, b := range bytes {
-		bytes[i] = alphanum[b%byte(len(alphanum))]
+func OpenBolt(path string) (*BoltStore, error) {
+	db, err := bolt.Open(path, 0600, nil)
+	return &BoltStore{db}, err
+}
+
+func (s *BoltStore) Put(doc *Document) (*Document, error) {
+	err := s.DB.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte(doc.Collection))
+		if err != nil {
+			return err
+		}
+		if doc.Key == "" {
+			id, _ := b.NextSequence()
+			doc.Key = "id/" + strconv.FormatUint(id, 36)
+		}
+		return b.Put([]byte(doc.Key), doc.Value)
+	})
+	return doc, err
+}
+
+func (s *BoltStore) Del(collection, key string) error {
+	err := s.DB.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(collection))
+		if b == nil {
+			return nil
+		}
+		return b.Delete([]byte(key))
+	})
+	return err
+}
+
+func (s *BoltStore) Get(collection, key string) (*Document, error) {
+	var doc *Document
+	err := s.DB.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(collection))
+		if b == nil {
+			return nil
+		}
+
+		v := b.Get([]byte(key))
+		if v == nil {
+			return nil
+		}
+
+		doc = &Document{
+			Collection: collection,
+			Key:        key,
+			Value:      v,
+		}
+		return nil
+	})
+	return doc, err
+}
+
+type boltCursor struct {
+	Collection string
+	First      bool
+	Reverse    bool
+	Min        []byte
+	Max        []byte
+
+	Tx     *bolt.Tx
+	Cursor *bolt.Cursor
+}
+
+func (s *BoltStore) Scan(collection, min, max string, reverse bool) (Cursor, error) {
+	var err error
+	c := &boltCursor{
+		Collection: collection,
+		First:      true,
+		Reverse:    reverse,
+		Min:        []byte(min),
+		Max:        []byte(max),
 	}
-	return string(bytes)
+
+	c.Tx, err = s.DB.Begin(false)
+	if err != nil {
+		return nil, err
+	}
+	b := c.Tx.Bucket([]byte(collection))
+	if b == nil {
+		c.Tx.Rollback()
+		return nil, ErrNoResult
+	}
+	c.Cursor = b.Cursor()
+	return c, nil
 }
 
-func (d *sqlStore) Put(doc Document) (Document, error) {
-	if doc.Key == "" {
-		doc.Key = generateId()
-	} else if strings.HasSuffix(doc.Key, "$") {
-		doc.Key = strings.TrimSuffix(doc.Key, "$")
-		doc.Key += generateId()
+func (c *boltCursor) Next() (doc *Document) {
+	var k, v []byte
+	if c.First {
+		c.First = false
+		if c.Reverse {
+			if len(c.Max) > 0 {
+				k, v = c.Cursor.Seek(c.Max)
+			}
+			if k == nil {
+				k, v = c.Cursor.Last()
+			}
+		} else {
+			k, v = c.Cursor.Seek(c.Min)
+		}
 	} else {
-		if err := d.Del(doc.Key); err != nil {
-			return doc, err
+		if c.Reverse {
+			k, v = c.Cursor.Prev()
+		} else {
+			k, v = c.Cursor.Next()
 		}
 	}
-	doc.Time = time.Now()
+	if k == nil {
+		return nil
+	}
+	if c.Reverse {
+		if len(c.Min) > 0 && bytes.Compare(k, c.Min) < 0 {
+			return nil
+		}
+	} else {
+		if len(c.Max) > 0 && bytes.Compare(k, c.Max) > 0 {
+			return nil
+		}
+	}
 
-	err := d.DB.Save(&doc).Error
-	return doc, err
+	return &Document{
+		Collection: c.Collection,
+		Key:        string(k),
+		Value:      v,
+	}
 }
 
-func (d *sqlStore) Del(key string) error {
-	return d.DB.Where(&Document{Key: key}).Delete(&Document{}).Error
-}
-
-func (d *sqlStore) Get(key string) (Document, error) {
-	var doc Document
-	doc.Key = key
-	err := d.DB.Where(&doc).Find(&doc).Error
-	if err == gorm.ErrRecordNotFound {
-		err = ErrNoResult
-	}
-	return doc, err
-}
-
-func (d *sqlStore) Scan(prefix, start, end string) ([]string, error) {
-	var keys []string
-	db := d.DB.Model(&Document{})
-	if prefix != "" {
-		db = db.Where("dkey LIKE ?", prefix+"%")
-	}
-	if start != "" {
-		db = db.Where("dkey > ?", start)
-	}
-	if end != "" {
-		db = db.Where("dkey < ?", end)
-	}
-
-	err := db.Pluck("dkey", &keys).Error
-	return keys, err
+func (c *boltCursor) Close() error {
+	err := c.Tx.Rollback()
+	c.Tx = nil
+	return err
 }

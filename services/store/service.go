@@ -11,7 +11,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/jinzhu/gorm"
+	"github.com/xconstruct/stark/pkg/mapq"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -22,30 +22,38 @@ var Module = &services.Module{
 	NewInstance: NewService,
 }
 
+type Config struct {
+	Path string
+}
+
 type Dependencies struct {
-	DB     *gorm.DB
-	Log    proto.Logger
+	Config services.Config
 	Client *proto.Client
 }
 
 type Service struct {
-	Store Store
-	Log   proto.Logger
+	Config services.Config
+	Cfg    Config
+	Store  Store
 	*proto.Client
 }
 
 func NewService(deps *Dependencies) *Service {
-	return &Service{
-		Store:  &sqlStore{deps.DB},
-		Log:    deps.Log,
+	s := &Service{
+		Config: deps.Config,
 		Client: deps.Client,
 	}
+	return s
 }
 
-func (s *Service) Enable() error {
-	if err := s.Store.Setup(); err != nil {
+func (s *Service) Enable() (err error) {
+	s.Cfg.Path = s.Config.Dir() + "/" + "store.bolt.db"
+	s.Config.Get(&s.Cfg)
+
+	if s.Store, err = OpenBolt(s.Cfg.Path); err != nil {
 		return err
 	}
+
 	s.Subscribe("store/put", "", s.handlePut)
 	s.Subscribe("store/get", "", s.handleGet)
 	s.Subscribe("store/del", "", s.handleDel)
@@ -55,116 +63,163 @@ func (s *Service) Enable() error {
 
 func (s *Service) Disable() error { return nil }
 
+func parseAction(prefix, action string) (col, key string) {
+	if !strings.HasPrefix(action, prefix) {
+		return "", ""
+	}
+	colkey := strings.TrimPrefix(action, prefix)
+	parts := strings.SplitN(colkey, "/", 2)
+	if len(parts) == 1 {
+		return parts[0], ""
+	}
+	return parts[0], parts[1]
+}
+
 func (s *Service) handlePut(msg proto.Message) {
-	key := ""
-	if strings.HasPrefix(msg.Action, "store/put/") {
-		key = strings.TrimPrefix(msg.Action, "store/put/")
+	collection, key := parseAction("store/put/", msg.Action)
+	if collection == "" {
+		s.ReplyBadRequest(msg, errors.New("No collection specified."))
+		return
 	}
 
-	var value json.RawMessage
 	if len(msg.Payload.Raw) == 0 && msg.Text != "" {
 		v, _ := json.Marshal(msg.Text)
-		value = json.RawMessage(v)
+		msg.Payload.Raw = json.RawMessage(v)
 	}
-	if err := msg.DecodePayload(&value); err != nil {
-		s.Log.Warnln("[store] received bad payload:", err)
+	var p interface{}
+	if err := msg.DecodePayload(&p); err != nil {
 		s.ReplyBadRequest(msg, err)
 		return
 	}
-	doc, err := s.Store.Put(Document{
-		Key:   key,
-		Value: []byte(value),
+	// TODO: maybe a JSON payload consistency check
+	doc, err := s.Store.Put(&Document{
+		Collection: collection,
+		Key:        key,
+		Value:      msg.Payload.Raw,
 	})
 	if err != nil {
-		s.Log.Errorln("[store] could not store:", err)
 		s.ReplyInternalError(msg, err)
 		return
 	}
 
-	replydoc := doc
-	replydoc.Value = nil
-	reply := proto.CreateMessage("store/updated/"+doc.Key, replydoc)
+	doc.Value = nil
+	reply := proto.CreateMessage("store/updated/"+doc.Collection+"/"+doc.Key, doc)
 	s.Reply(msg, reply)
 
-	pub := proto.CreateMessage("store/updated/"+doc.Key, doc.Value)
-	pub.Text = "Document " + doc.Key + "."
+	pub := proto.CreateMessage("store/updated/"+doc.Collection+"/"+doc.Key, doc)
 	s.Publish(pub)
 }
 
 func (s *Service) handleGet(msg proto.Message) {
-	key := ""
-	if strings.HasPrefix(msg.Action, "store/get/") {
-		key = strings.TrimPrefix(msg.Action, "store/get/")
-	}
-	if key == "" {
-		s.ReplyBadRequest(msg, errors.New("No key specified."))
+	collection, key := parseAction("store/get/", msg.Action)
+	if collection == "" || key == "" {
+		s.ReplyBadRequest(msg, errors.New("No collection or key specified."))
 		return
 	}
 
-	doc, err := s.Store.Get(key)
-	if err == ErrNoResult {
-		s.Publish(msg.Reply(proto.Message{
-			Action: "err/notfound",
-			Text:   "Document " + key + " not found.",
-		}))
-		return
-	} else if err != nil {
-		s.Log.Errorln("[store] could not retrieve:", err)
+	doc, err := s.Store.Get(collection, key)
+	if err != nil {
 		s.ReplyInternalError(msg, err)
+		return
+	} else if doc == nil {
+		s.Reply(msg, proto.Message{
+			Action: "err/notfound",
+			Text:   "Document " + collection + "/" + key + " not found.",
+		})
 		return
 	}
 
 	raw := json.RawMessage(doc.Value)
-	reply := proto.CreateMessage("store/retrieved/"+doc.Key, &raw)
-	reply.Text = "Document " + doc.Key + "."
-	var val string
-	if err := json.Unmarshal(doc.Value, &val); err == nil {
-		if len(val) < 200 {
-			reply.Text = "Document " + doc.Key + `: "` + val + `".`
-		}
-	}
+	reply := proto.CreateMessage("store/retrieved/"+doc.Collection+"/"+doc.Key, nil)
+	reply.Payload.Encode(&raw)
 	s.Reply(msg, reply)
 }
 
 func (s *Service) handleDel(msg proto.Message) {
-	key := ""
-	if strings.HasPrefix(msg.Action, "store/del/") {
-		key = strings.TrimPrefix(msg.Action, "store/del/")
-	}
-	if key == "" {
-		s.ReplyBadRequest(msg, errors.New("No key specified."))
+	collection, key := parseAction("store/del/", msg.Action)
+	if collection == "" || key == "" {
+		s.ReplyBadRequest(msg, errors.New("No collection or key specified."))
 		return
 	}
-	if err := s.Store.Del(key); err != nil {
-		s.Log.Errorln("[store] could not delete:", err)
+	if err := s.Store.Del(collection, key); err != nil {
 		s.ReplyInternalError(msg, err)
 		return
 	}
 
-	s.Reply(msg, proto.CreateMessage("store/deleted/"+key, nil))
-	s.Publish(proto.CreateMessage("store/deleted/"+key, nil))
+	s.Reply(msg, proto.CreateMessage("store/deleted/"+collection+"/"+key, nil))
+	s.Publish(proto.CreateMessage("store/deleted/"+collection+"/"+key, nil))
 }
 
 type scanMessage struct {
-	Prefix string `json:"prefix"`
-	Start  string `json:"start"`
-	End    string `json:"end"`
+	Prefix   string `json:"prefix"`
+	Start    string `json:"start"`
+	End      string `json:"end"`
+	OnlyKeys bool   `json:"only_keys"`
+	Limit    int    `json:"limit"`
+	Reverse  bool   `json:"reverse"`
+
+	Filter map[string]interface{} `json:"filter"`
 }
 
 func (s *Service) handleScan(msg proto.Message) {
+	collection, prefix := parseAction("store/scan/", msg.Action)
+	if collection == "" {
+		s.ReplyBadRequest(msg, errors.New("No collection specified."))
+		return
+	}
+
 	var p scanMessage
 	if err := msg.DecodePayload(&p); err != nil {
 		s.ReplyBadRequest(msg, err)
 		return
 	}
-	if p.Prefix == "" && strings.HasPrefix(msg.Action, "store/scan/") {
-		p.Prefix = strings.TrimPrefix(msg.Action, "store/scan/")
+	if p.Start == "" && p.End == "" {
+		if p.Prefix == "" {
+			p.Prefix = prefix
+		}
+		if p.Prefix != "" {
+			p.Start = prefix
+			p.End = prefix + "~~~~~" // oh god, what a hack
+		}
 	}
-	keys, err := s.Store.Scan(p.Prefix, p.Start, p.End)
+	if p.Limit == 0 {
+		p.Limit = 100
+	}
+
+	cursor, err := s.Store.Scan(collection, p.Start, p.End, p.Reverse)
 	if err != nil {
-		s.Log.Errorln("[store] could not scan:", err)
 		s.ReplyInternalError(msg, err)
 		return
 	}
-	s.Reply(msg, proto.CreateMessage("store/scanned", keys))
+	defer cursor.Close()
+
+	keys := make([]string, 0)
+	docs := make(map[string]*json.RawMessage, 0)
+	for doc := cursor.Next(); doc != nil && p.Limit > 0; doc = cursor.Next() {
+		if p.Filter != nil {
+			var object map[string]interface{}
+			if err := json.Unmarshal(doc.Value, &object); err != nil {
+				continue
+			}
+			if mapq.M(object).MatchesNot(mapq.Filter(p.Filter)) {
+				continue
+			}
+		}
+
+		p.Limit--
+		if p.OnlyKeys {
+			keys = append(keys, doc.Key)
+		} else {
+			raw := json.RawMessage(doc.Value)
+			docs[doc.Key] = &raw
+		}
+	}
+
+	reply := proto.CreateMessage("store/scanned/"+collection, nil)
+	if p.OnlyKeys {
+		reply.Payload.Encode(keys)
+	} else {
+		reply.Payload.Encode(docs)
+	}
+	s.Reply(msg, reply)
 }
