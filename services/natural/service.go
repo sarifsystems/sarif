@@ -296,6 +296,6 @@ func (s *Service) handleNaturalLearn(msg proto.Message) {
 	if err := s.regular.Learn(p.Sentence, p.Action); err != nil {
 		s.ReplyBadRequest(msg, err)
 	}
-	s.Log.Infof("[natural] associating '%s' with %s", p.Sentence, p.Action)
+	s.Log("info", "associating '"+p.Sentence+"' with "+p.Action)
 	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", p))
 }

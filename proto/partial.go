@@ -36,6 +36,13 @@ func (p *Partial) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (p Partial) String() string {
+	if p.Raw == nil {
+		return ""
+	}
+	return string(p.Raw)
+}
+
 func (p *Partial) Decode(v interface{}) error {
 	if p == nil || p.Raw == nil {
 		return nil

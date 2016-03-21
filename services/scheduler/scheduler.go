@@ -119,7 +119,7 @@ func (s *Scheduler) handle(msg proto.Message) {
 	if t.Task.Reply.CorrId == "" {
 		t.Reply.CorrId = msg.Id
 	}
-	s.Log.Infoln("[scheduler] new task:", t)
+	s.Log("info", "new task:", t)
 
 	if _, err := s.Store.Put(t.Task.Key(), &t.Task); err != nil {
 		s.ReplyInternalError(msg, err)
@@ -148,7 +148,7 @@ func (s *Scheduler) recalculateTimer() {
 		},
 	}, &tasks)
 	if err != nil {
-		s.Log.Errorln("[scheduler] recalculate:", err)
+		s.Log("err/internal", "recalculate: "+err.Error())
 	}
 	if len(tasks) == 0 {
 		return
@@ -156,7 +156,7 @@ func (s *Scheduler) recalculateTimer() {
 	s.nextTask = tasks[0]
 
 	dur := s.nextTask.Time.Sub(time.Now())
-	s.Log.Debugln("[scheduler] next task in", dur)
+	s.Log("debug", "next task in: "+dur.String())
 	if dur < 0 {
 		s.taskFinished()
 		return
@@ -167,10 +167,10 @@ func (s *Scheduler) recalculateTimer() {
 func (s *Scheduler) taskFinished() {
 	t := s.nextTask
 	t.Finished = true
-	s.Log.Infoln("[scheduler] task finished:", t)
+	s.Log("debug", "task finished: ", t)
 
 	if _, err := s.Store.Put(t.Key(), &t); err != nil {
-		s.Log.Errorln("[scheduler] could not store finished task: ", err)
+		s.Log("err/internal", "could not store finished task: "+err.Error())
 	}
 	s.Publish(s.nextTask.Reply)
 	go s.recalculateTimer()

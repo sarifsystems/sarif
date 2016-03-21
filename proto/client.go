@@ -19,7 +19,7 @@ type Client struct {
 
 	conn                    Conn
 	handler                 func(Message)
-	Log                     Logger
+	log                     Logger
 	subs                    []subscription
 	onConnectionLostHandler func(error)
 
@@ -33,7 +33,7 @@ func NewClient(deviceId string) *Client {
 		RequestTimeout:   30 * time.Second,
 		HandleConcurrent: true,
 
-		Log:  defaultLog,
+		log:  defaultLog,
 		subs: make([]subscription, 0),
 
 		reqMutex: &sync.Mutex{},
@@ -80,7 +80,7 @@ func (c *Client) listen(conn Conn) error {
 		msg, err := conn.Read()
 		if err != nil {
 			c.conn = nil
-			c.Log.Errorln("[client] read:", err)
+			c.log.Errorln("[client] read:", err)
 			if c.onConnectionLostHandler != nil {
 				c.onConnectionLostHandler(err)
 			}
@@ -95,7 +95,7 @@ func (c *Client) listen(conn Conn) error {
 }
 
 func (c *Client) SetLogger(l Logger) {
-	c.Log = l
+	c.log = l
 }
 
 func (c *Client) fillMessage(msg *Message) {
@@ -114,11 +114,11 @@ func (c *Client) Publish(msg Message) error {
 	c.fillMessage(&msg)
 	if c.conn == nil {
 		err := errors.New("not connected")
-		c.Log.Errorf("[client %s] publish error: ", c.DeviceId, err)
+		c.log.Errorf("[client %s] publish error: %v", c.DeviceId, err)
 		return err
 	}
 	if err := c.conn.Write(msg); err != nil {
-		c.Log.Errorf("[client %s] publish error: %v", c.DeviceId, err)
+		c.log.Errorf("[client %s] publish error: %v", c.DeviceId, err)
 		return err
 	}
 	return nil
@@ -137,7 +137,6 @@ func (c *Client) handle(msg Message) {
 }
 
 func (c *Client) handlePing(msg Message) {
-	c.Log.Debugf("%s got ping", c.DeviceId)
 	c.Reply(msg, CreateMessage("ack", nil))
 }
 
@@ -174,15 +173,13 @@ func (c *Client) Reply(orig, reply Message) error {
 }
 
 func (c *Client) ReplyBadRequest(orig Message, err error) error {
-	c.Log.Warnf("[client %s] bad request: %v, %v", c.DeviceId, orig, err)
-	reply := orig.Reply(BadRequest(err))
-	return c.Publish(reply)
+	c.Log("err/badrequest", "Bad Request: "+err.Error(), orig)
+	return c.Reply(orig, BadRequest(err))
 }
 
 func (c *Client) ReplyInternalError(orig Message, err error) error {
-	c.Log.Errorf("[client %s] internal error: %v, %v", c.DeviceId, orig, err)
-	reply := orig.Reply(InternalError(err))
-	return c.Publish(reply)
+	c.Log("err/internal", "Internal Error: "+err.Error(), orig)
+	return c.Reply(orig, InternalError(err))
 }
 
 func (c *Client) Request(msg Message) <-chan Message {
@@ -227,4 +224,14 @@ func (c *Client) resolveRequest(id string, msg Message) bool {
 
 func (c *Client) Discover(action string) <-chan Message {
 	return c.Request(CreateMessage("proto/discover/"+action, nil))
+}
+
+func (c *Client) Log(typ, text string, args ...interface{}) error {
+	var pl interface{}
+	if len(args) > 0 {
+		pl = args[0]
+	}
+	msg := CreateMessage("proto/log/"+typ, pl)
+	msg.Text = text
+	return c.Publish(msg)
 }

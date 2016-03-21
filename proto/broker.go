@@ -282,6 +282,12 @@ func (c *brokerConn) Publish(msg Message) {
 			}
 		}
 		return // TODO: unsub propagation
+	case msg.IsAction("proto/log"):
+		if msg.IsAction("proto/log/err") {
+			c.broker.Log.Errorf("[%s] %s - %s", msg.Source, msg.Text, msg.Payload)
+		} else {
+			c.broker.Log.Infof("[%s] %s - %s", msg.Source, msg.Text, msg.Payload)
+		}
 	}
 
 	c.broker.publish(msg)

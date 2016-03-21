@@ -68,19 +68,19 @@ func (s *Service) saveModelLoop() {
 	time.Sleep(1 * time.Minute)
 	for {
 		if err := s.saveModel(); err != nil {
-			s.Log.Errorln("[nlparser] error saving model:", err)
+			s.Log("err/internal", "error saving model: "+err.Error())
 		}
 		time.Sleep(time.Hour)
 	}
 }
 
 func (s *Service) loadModel() error {
-	s.Log.Debugln("[nlparser] loading model from", s.Cfg.ModelPath)
+	s.Log("debug", "loading model from "+s.Cfg.ModelPath)
 	return s.parser.LoadModel(s.Cfg.ModelPath)
 }
 
 func (s *Service) saveModel() error {
-	s.Log.Debugln("[nlparser] saving model to", s.Cfg.ModelPath)
+	s.Log("debug", "saving model to "+s.Cfg.ModelPath)
 	return s.parser.SaveModel(s.Cfg.ModelPath)
 }
 
@@ -120,7 +120,7 @@ func (s *Service) handleNaturalReinforce(msg proto.Message) {
 		return
 	}
 
-	s.Log.Infof("[natural] reinforcing: '%s' with %s", p.Sentence, p.Action)
+	s.Log("info", "reinforcing '"+p.Sentence+"' with "+p.Action)
 	s.parser.ReinforceSentence(p.Sentence, p.Action)
 
 	parsed, _ := s.parser.Parse(&natural.Context{Text: p.Sentence})
