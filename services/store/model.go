@@ -123,15 +123,17 @@ func (s *BoltStore) Scan(collection, min, max string, reverse bool) (Cursor, err
 		return nil, err
 	}
 	b := c.Tx.Bucket([]byte(collection))
-	if b == nil {
-		c.Tx.Rollback()
-		return nil, ErrNoResult
+	if b != nil {
+		c.Cursor = b.Cursor()
 	}
-	c.Cursor = b.Cursor()
 	return c, nil
 }
 
 func (c *boltCursor) Next() (doc *Document) {
+	if c.Cursor == nil {
+		return nil
+	}
+
 	var k, v []byte
 	if c.First {
 		c.First = false

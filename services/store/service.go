@@ -151,12 +151,12 @@ func (s *Service) handleDel(msg proto.Message) {
 }
 
 type scanMessage struct {
-	Prefix   string `json:"prefix"`
-	Start    string `json:"start"`
-	End      string `json:"end"`
-	OnlyKeys bool   `json:"only_keys"`
-	Limit    int    `json:"limit"`
-	Reverse  bool   `json:"reverse"`
+	Prefix  string `json:"prefix"`
+	Start   string `json:"start"`
+	End     string `json:"end"`
+	Only    string `json:"only"`
+	Limit   int    `json:"limit"`
+	Reverse bool   `json:"reverse"`
 
 	Filter map[string]interface{} `json:"filter"`
 }
@@ -194,7 +194,8 @@ func (s *Service) handleScan(msg proto.Message) {
 	defer cursor.Close()
 
 	keys := make([]string, 0)
-	docs := make(map[string]*json.RawMessage, 0)
+	docs := make(map[string]*json.RawMessage)
+	values := make([]*json.RawMessage, 0)
 	for doc := cursor.Next(); doc != nil && p.Limit > 0; doc = cursor.Next() {
 		if p.Filter != nil {
 			var object map[string]interface{}
@@ -207,8 +208,11 @@ func (s *Service) handleScan(msg proto.Message) {
 		}
 
 		p.Limit--
-		if p.OnlyKeys {
+		if p.Only == "keys" {
 			keys = append(keys, doc.Key)
+		} else if p.Only == "values" {
+			raw := json.RawMessage(doc.Value)
+			values = append(values, &raw)
 		} else {
 			raw := json.RawMessage(doc.Value)
 			docs[doc.Key] = &raw
@@ -216,8 +220,10 @@ func (s *Service) handleScan(msg proto.Message) {
 	}
 
 	reply := proto.CreateMessage("store/scanned/"+collection, nil)
-	if p.OnlyKeys {
+	if p.Only == "keys" {
 		reply.Payload.Encode(keys)
+	} else if p.Only == "values" {
+		reply.Payload.Encode(values)
 	} else {
 		reply.Payload.Encode(docs)
 	}
