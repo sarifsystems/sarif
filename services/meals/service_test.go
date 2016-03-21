@@ -106,6 +106,7 @@ func TestService(t *testing.T) {
 			}))
 
 			st.ExpectAction("err/badrequest")
+			st.ExpectAction("proto/log/err/badrequest")
 		})
 
 		st.It("should record text only", func() {
