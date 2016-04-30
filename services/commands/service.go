@@ -71,7 +71,8 @@ func (s *Service) handleQR(msg proto.Message) {
 
 	qr := "https://chart.googleapis.com/chart?chs=178x178&cht=qr&chl=" + url.QueryEscape(msg.Text)
 	reply := proto.CreateMessage("ack", map[string]string{
-		"url": qr,
+		"url":  qr,
+		"type": "image/png",
 	})
 	reply.Text = qr
 	s.Reply(msg, reply)

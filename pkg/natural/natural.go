@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,8 +38,8 @@ func ParseSimple(text string) (proto.Message, bool) {
 		}
 	}
 
-	if strings.HasPrefix(text, ".") || strings.HasPrefix(text, "!") {
-		text = strings.TrimLeft(text, ".!/ ")
+	if strings.HasPrefix(text, ".") || strings.HasPrefix(text, "/") {
+		text = strings.TrimLeft(text, "./ ")
 		parts, _ := SplitQuoted(text, " ")
 		if parts[0] == "" {
 			return msg, false
@@ -58,14 +59,20 @@ func ParseSimple(text string) (proto.Message, bool) {
 			}
 
 			k := TrimQuotes(keyval[0])
-			v := TrimQuotes(strings.Join(keyval[1:], "="))
+			vtext := strings.Join(keyval[1:], "=")
+			quoted := strings.ContainsAny(vtext, "\"`")
+			vtext = TrimQuotes(vtext)
+			var v interface{} = vtext
+			if !quoted {
+				v = parseValue(vtext)
+			}
 			switch k {
 			case "text":
-				msg.Text = v
+				msg.Text = vtext
 			case "device":
 				fallthrough
 			case "destination":
-				msg.Destination = v
+				msg.Destination = vtext
 			default:
 				payload[k] = v
 			}
@@ -77,6 +84,19 @@ func ParseSimple(text string) (proto.Message, bool) {
 	}
 
 	return msg, false
+}
+
+func parseValue(v string) interface{} {
+	if b, err := strconv.ParseBool(v); err == nil {
+		return b
+	}
+	if f, err := strconv.ParseFloat(v, 64); err == nil {
+		return f
+	}
+	if t := util.ParseTime(v, time.Now()); !t.IsZero() {
+		return t
+	}
+	return v
 }
 
 func FormatSimple(msg proto.Message) string {

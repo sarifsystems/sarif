@@ -33,8 +33,8 @@ func (m M) Matches(filter Filter) bool {
 }
 
 func (m M) MatchesNot(filter Filter) bool {
-	if filter == nil {
-		return true
+	if filter == nil || len(filter) == 0 {
+		return false
 	}
 	for k, v := range filter {
 		key, op := splitQueryOp(k)
@@ -153,6 +153,8 @@ func (c Collection) Aggregate(key string, op string) float64 {
 			continue
 		}
 		switch op {
+		case "count":
+			f += 1
 		case "sum":
 			f += v
 		case "mean":
@@ -173,6 +175,13 @@ func (c Collection) Aggregate(key string, op string) float64 {
 		f /= float64(len(c))
 	}
 	return f
+}
+
+func (c Collection) Each(f func(m M) M) Collection {
+	for k, m := range c {
+		c[k] = f(M(m)).Map()
+	}
+	return c
 }
 
 func (g Group) Each(f func(c Collection) Collection) Group {

@@ -273,6 +273,9 @@ func (s *Service) handleLocationList(msg proto.Message) {
 		s.ReplyBadRequest(msg, err)
 		return
 	}
+	if pl.After.IsZero() && pl.Before.IsZero() {
+		pl.After = time.Now().Add(-24 * time.Hour)
+	}
 	s.Log.Debugln("[location] list loc request:", pl)
 
 	if pl.Address != "" {
