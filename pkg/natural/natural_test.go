@@ -35,7 +35,7 @@ func TestParseSimple(t *testing.T) {
 			Text:   "some text",
 		}, nil},
 
-		simple{"!ping some text", true, proto.Message{
+		simple{"/ping some text", true, proto.Message{
 			Action: "ping",
 			Text:   "some text",
 		}, nil},
