@@ -66,9 +66,7 @@ func main() {
 		"nlparser",
 		"reasoner",
 		"scheduler",
-		"states",
 		"store",
-		"trigger",
 		"vdir",
 		"web",
 	}
