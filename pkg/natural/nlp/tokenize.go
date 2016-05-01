@@ -28,6 +28,7 @@ func NewTokenizer() *Tokenizer {
 }
 
 func (t *Tokenizer) Tokenize(s string) []*Token {
+	// TODO: Handle punctuation correctly
 	s = strings.TrimRight(s, ".!? ")
 
 	var words []string
@@ -43,6 +44,9 @@ func (t *Tokenizer) Tokenize(s string) []*Token {
 			Value: natural.TrimQuotes(w),
 			Lemma: strings.ToLower(natural.TrimQuotes(w)),
 			Tags:  make(map[string]struct{}),
+		}
+		if tok.Lemma == "" {
+			continue
 		}
 		if inStringSlice(w, t.StopWords) {
 			tok.Tags["STOPWORD"] = struct{}{}

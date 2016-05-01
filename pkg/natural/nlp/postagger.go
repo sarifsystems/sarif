@@ -55,6 +55,9 @@ func (s *sentenceSet) Next() bool {
 	if s.CurrSentence == -1 || s.CurrWord >= len(s.Sentences[s.CurrSentence]) {
 		s.CurrWord = 0
 		s.CurrSentence++
+		for s.CurrSentence < len(s.Sentences) && len(s.Sentences[s.CurrSentence]) == 0 {
+			s.CurrSentence++
+		}
 
 		if s.CurrSentence >= len(s.Sentences) {
 			return false
@@ -82,6 +85,9 @@ func (s *sentenceSet) Class() mlearning.Class {
 func (s *sentenceSet) Features() []mlearning.Feature {
 	i := s.CurrWord
 	word := s.Sentences[s.CurrSentence][s.CurrWord].Lemma
+	if word == "" {
+		return make([]mlearning.Feature, 0)
+	}
 	wprev1, wprev2 := sget(s.Context, i-1), sget(s.Context, i-2)
 	wnext1, wnext2 := sget(s.Context, i+1), sget(s.Context, i+2)
 	fs := map[string]struct{}{}
