@@ -43,7 +43,7 @@ Stark provides:
 	> .ping
 	> remind me in 10 seconds that this thing works
 	> .full
-	> !catfacts
+	> .cmd/catfacts
 
 And take a look at `cmd/examples/starkping`.
 

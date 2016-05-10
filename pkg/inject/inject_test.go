@@ -59,7 +59,7 @@ func TestInject(t *testing.T) {
 	}
 	instance, ok := intf.(*instance)
 	if !ok {
-		t.Fatal("Could not convert %t to instance", intf)
+		t.Fatalf("Could not convert %t to instance", intf)
 	}
 	if instance.Type == nil {
 		t.Error("Expected testType instance")

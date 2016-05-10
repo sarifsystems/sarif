@@ -161,7 +161,6 @@ func (cv *Conversation) answer(a *schema.Action, text string) (proto.Message, bo
 		reply.EncodePayload(a.Payload)
 	}
 	return reply, true
-	return reply, false
 }
 
 func (cv *Conversation) handleUnknownUserMessage(msg proto.Message) {

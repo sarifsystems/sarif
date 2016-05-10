@@ -31,7 +31,7 @@ func TestSimpleMatches(t *testing.T) {
 	}
 	for i, test := range tests {
 		if Matches(test.A, test.Op, test.B) != test.Result {
-			t.Errorf(`Test %i failed: "%v" %s "%v" is %v`,
+			t.Errorf(`Test %d failed: "%v" %s "%v" is %v`,
 				i, test.A, test.Op, test.B, !test.Result)
 		}
 	}

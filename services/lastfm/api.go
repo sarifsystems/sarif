@@ -105,7 +105,7 @@ func (a *Api) authDo(method string, args url.Values, result interface{}) error {
 	if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 		return err
 	}
-	if r, ok := result.(iserrorer); ok && r.IsError != nil {
+	if r, ok := result.(iserrorer); ok && r.IsError() != nil {
 		return r.IsError()
 	}
 	return nil

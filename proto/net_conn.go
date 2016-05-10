@@ -41,7 +41,6 @@ func (c *netConn) KeepaliveLoop(ka time.Duration) error {
 			return err
 		}
 	}
-	return nil
 }
 
 func (c *netConn) Read() (Message, error) {

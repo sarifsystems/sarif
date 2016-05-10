@@ -353,10 +353,10 @@ type importPayload struct {
 type importedPayload struct {
 	StartTime   time.Time `json:"start_time,omitempty"`
 	EndTime     time.Time `json:"end_time,omitempty"`
-	NumImported int       `json:"num_imported`
-	NumIgnored  int       `json:"num_ignored`
-	NumExisting int       `json:"num_existing`
-	NumTotal    int       `json:"num_total`
+	NumImported int       `json:"num_imported"`
+	NumIgnored  int       `json:"num_ignored"`
+	NumExisting int       `json:"num_existing"`
+	NumTotal    int       `json:"num_total"`
 }
 
 func (p importedPayload) Text() string {

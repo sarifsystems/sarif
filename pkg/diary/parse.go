@@ -23,7 +23,7 @@ type Entry struct {
 	Nutshell     string   `yaml:"nutshell,omitempty"`
 	Music        string   `yaml:"music,omitempty"`
 
-	Version string `yaml:v,omitempty"`
+	Version string `yaml:"v,omitempty"`
 
 	Text     string `yaml:"-"`
 	FileName string `yaml:"-"`

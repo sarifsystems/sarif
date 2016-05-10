@@ -41,7 +41,7 @@ type Name struct {
 	GivenName         []string `json:"given-name,omitempty"`
 	AdditionalNames   []string `json:"additional-name,omitempty"`
 	HonorificNames    []string `json:"honorific-prefix,omitempty"`
-	honorificSuffixes []string `json:"honorific-suffix,omitempty"`
+	HonorificSuffixes []string `json:"honorific-suffix,omitempty"`
 }
 
 type Address struct {
