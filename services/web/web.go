@@ -7,16 +7,14 @@
 package web
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"crypto/rand"
-
-	"golang.org/x/net/websocket"
-
+	"github.com/gorilla/websocket"
 	"github.com/xconstruct/stark/proto"
 	"github.com/xconstruct/stark/services"
 )
@@ -39,17 +37,16 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Log    proto.Logger
 	Broker *proto.Broker
 	Client *proto.Client
 }
 
 type Server struct {
 	cfg        Config
-	Log        proto.Logger
 	Broker     *proto.Broker
 	apiClients map[string]*proto.Client
 	Client     *proto.Client
+	websocket  websocket.Upgrader
 }
 
 func GenerateApiKey() (string, error) {
@@ -70,11 +67,11 @@ func New(deps *Dependencies) *Server {
 		deps.Config.Get(&cfg)
 	} else {
 		cfg.ApiKeys = make(map[string]string)
-		cfg.ApiKeys["unprivileged"] = ""
 		for i := 1; i < 6; i++ {
 			key, err := GenerateApiKey()
 			if err != nil {
-				deps.Log.Fatalln(err)
+				deps.Client.Log("err", err.Error())
+				continue
 			}
 			cfg.ApiKeys["exampleclient"+strconv.Itoa(i)] = key
 		}
@@ -83,11 +80,15 @@ func New(deps *Dependencies) *Server {
 	}
 
 	s := &Server{
-		cfg,
-		deps.Log,
-		deps.Broker,
-		make(map[string]*proto.Client),
-		deps.Client,
+		cfg:        cfg,
+		Broker:     deps.Broker,
+		apiClients: make(map[string]*proto.Client),
+		Client:     deps.Client,
+		websocket: websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 2014,
+			CheckOrigin:     func(r *http.Request) bool { return true },
+		},
 	}
 	return s
 }
@@ -95,36 +96,20 @@ func New(deps *Dependencies) *Server {
 func (s *Server) Enable() error {
 	http.Handle("/", http.FileServer(http.Dir("assets/web")))
 	http.HandleFunc(REST_URL, s.handleRestPublish)
-	http.Handle("/stream/stark", websocket.Handler(s.handleStreamStark))
+	http.HandleFunc("/stream/stark", s.handleStreamStark)
 
 	s.Client.Subscribe("json", "", s.handleJson)
 
 	go func() {
-		s.Log.Infof("[web] listening on %s", s.cfg.Interface)
+		s.Client.Log("info", "listening on "+s.cfg.Interface)
 		err := http.ListenAndServe(s.cfg.Interface, nil)
-		s.Log.Warnln(err)
+		s.Client.Log("err", "http listen error: "+err.Error())
 	}()
 	return nil
 }
 
 func (s *Server) Disable() error {
 	return nil
-}
-
-func (s *Server) handleStreamStark(ws *websocket.Conn) {
-	defer ws.Close()
-	s.Log.Infoln("[web] new websocket connection")
-
-	// Check authentication.
-	name := s.checkAuthentication(ws.Request())
-	if name == "" {
-		ws.WriteClose(401)
-		return
-	}
-
-	webtp := proto.NewByteConn(ws)
-	err := s.Broker.ListenOnConn(webtp)
-	s.Log.Errorln("[web] websocket closed:", err)
 }
 
 func parseAuthorizationHeader(h string) string {
@@ -169,11 +154,9 @@ func (s *Server) checkAuthentication(req *http.Request) string {
 	// Find client to API key.
 	for name, stored := range s.cfg.ApiKeys {
 		if token == stored {
-			s.Log.Debugf("[web] authenticated for '%s'", name)
 			return name
 		}
 	}
-	s.Log.Warnln("[web] authentication failed")
 	return ""
 }
 
@@ -192,11 +175,11 @@ func (s *Server) clientIsAllowed(client string, msg proto.Message) bool {
 
 func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
-	s.Log.Debugln("[web] new REST request:", req.URL.Path)
+	s.Client.Log("debug", "new REST request: "+req.URL.Path)
 
 	// Parse form values.
 	if err := req.ParseForm(); err != nil {
-		s.Log.Warnln("[web] REST bad request:", err)
+		s.Client.Log("warn", "REST bad request: "+err.Error())
 		w.WriteHeader(400)
 		fmt.Fprintln(w, "Bad request:", err)
 		return
@@ -207,8 +190,10 @@ func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
 	if name == "" {
 		w.WriteHeader(401)
 		fmt.Fprintln(w, "Not authorized")
+		s.Client.Log("info", "authentication failed for "+req.RemoteAddr)
 		return
 	}
+	s.Client.Log("info", "authenticated "+req.RemoteAddr+" for "+name)
 	client := s.getApiClientByName(name)
 
 	// Create message from form values.
@@ -239,13 +224,13 @@ func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
 	if !s.clientIsAllowed(name, msg) {
 		w.WriteHeader(401)
 		fmt.Fprintf(w, "'%s' is not authorized to publish '%s'", name, msg.Action)
-		s.Log.Warnf("[web] REST '%s' is not authorized to publish on '%s'", name, msg.Action)
+		s.Client.Log("warn", "REST '"+name+"' is not authorized to publish on "+msg.Action)
 		return
 	}
 
 	// Publish message.
 	if err := client.Publish(msg); err != nil {
-		s.Log.Warnln("[web] REST bad request:", err)
+		s.Client.Log("warn", "REST bad request: "+err.Error())
 		w.WriteHeader(400)
 		fmt.Fprintln(w, "Bad Request:", err)
 		return

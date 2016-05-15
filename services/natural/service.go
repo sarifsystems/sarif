@@ -115,6 +115,7 @@ func (s *Service) getConversation(device string) *Conversation {
 		}
 		s.conversations[device] = cv
 		s.Subscribe("", s.DeviceId+"/"+device, s.handleNetworkMessage)
+		cv.PublishForClient(proto.CreateMessage("natural/client/new", nil))
 	}
 	return cv
 }
