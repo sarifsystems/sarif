@@ -1,4 +1,4 @@
-local stark = require "stark"
+local sarif = require "sarif"
 
 local ExpSampling = {}
 
@@ -168,10 +168,10 @@ function ExpSampling:askSimple(msg, question, reply_action)
 		},
 	}
 	if msg then
-		stark.reply(msg, r)
+		sarif.reply(msg, r)
 	else
 		r.dest = "user"
-		stark.publish(r)
+		sarif.publish(r)
 	end
 end
 
@@ -211,10 +211,10 @@ end
 
 function ExpSampling:recordMood(msg)
 	local score, primary, secondary = analyze(msg.text)
-	stark.publish{action = "mood/general/" .. primary .. "/" .. secondary .. "/" .. score, text = msg.text}
+	sarif.publish{action = "mood/general/" .. primary .. "/" .. secondary .. "/" .. score, text = msg.text}
 
 	for name, scale in pairs(scales) do
-		stark.publish{action = "mood/scale/" .. name .. "/" .. score_scale(scale, primary, secondary)}
+		sarif.publish{action = "mood/scale/" .. name .. "/" .. score_scale(scale, primary, secondary)}
 	end
 
 	--self:askSimple(msg, "How happy do you feel?", "xp/happiness")
@@ -223,7 +223,7 @@ end
 
 function ExpSampling:analyze(msg)
 	local score, primary, secondary = analyze(msg.text)
-	stark.reply(msg, {action = "xp/analyzed",
+	sarif.reply(msg, {action = "xp/analyzed",
 		text = score .. " " .. primary .. " " .. secondary,
 		p = {
 			score = score,
@@ -236,37 +236,37 @@ end
 function ExpSampling:recordHappiness(msg)
 	self:askSimple(msg, "How relaxed do you feel?", "xp/relaxation")
 
-	stark.publish{action = "mood/happiness/" .. msg.text}
+	sarif.publish{action = "mood/happiness/" .. msg.text}
 end
 
 function ExpSampling:recordRelaxation(msg)
 	self:askSimple(msg, "How motivated are you?", "xp/motivation")
 
-	stark.publish{action = "mood/relaxation/" .. msg.text}
+	sarif.publish{action = "mood/relaxation/" .. msg.text}
 end
 
 function ExpSampling:recordMotivation(msg)
 	self:askSimple(msg, "What are you doing?", "xp/activity")
 
-	stark.publish{action = "mood/motivation/" .. msg.text}
+	sarif.publish{action = "mood/motivation/" .. msg.text}
 end
 
 function ExpSampling:recordActivity(msg)
-	local facts = stark.request{action = "cmd/catfacts"}
+	local facts = sarif.request{action = "cmd/catfacts"}
 	if facts then
 		facts = "\nHere's a cat fact: " .. facts.text
 	end
-	stark.reply(msg, {action = "xp/done", text = "Thanks!" .. (facts or " ")})
+	sarif.reply(msg, {action = "xp/done", text = "Thanks!" .. (facts or " ")})
 
 
-	stark.publish{action = "activity", text = msg.text}
+	sarif.publish{action = "activity", text = msg.text}
 end
 
 function ExpSampling:scheduleToday()
 	local currhour = os.date("*t").hour
 	for _, t in ipairs(self.Times) do
 		if t[1] < 5 or t[1] > currhour then
-			stark.publish{
+			sarif.publish{
 				action = "schedule",
 				p = {
 					reply = {action = "xp/start"},
@@ -278,14 +278,14 @@ function ExpSampling:scheduleToday()
 	end
 end
 
-stark.subscribe("xp/start",  "", function(msg) ExpSampling:startAsking() end)
-stark.subscribe("xp/analyze",  "", function(msg) ExpSampling:analyze(msg) end)
-stark.subscribe("cmd/mood",  "", function(msg) ExpSampling:analyze(msg) end)
-stark.subscribe("xp/ask", "", function(msg) ExpSampling:startAsking(msg) end)
-stark.subscribe("xp/mood", "", function(msg) ExpSampling:recordMood(msg) end)
-stark.subscribe("xp/happiness", "", function(msg) ExpSampling:recordHappiness(msg) end)
-stark.subscribe("xp/relaxation",  "", function(msg) ExpSampling:recordRelaxation(msg) end)
-stark.subscribe("xp/motivation",  "", function(msg) ExpSampling:recordMotivation(msg) end)
-stark.subscribe("xp/activity",  "", function(msg) ExpSampling:recordActivity(msg) end)
+sarif.subscribe("xp/start",  "", function(msg) ExpSampling:startAsking() end)
+sarif.subscribe("xp/analyze",  "", function(msg) ExpSampling:analyze(msg) end)
+sarif.subscribe("cmd/mood",  "", function(msg) ExpSampling:analyze(msg) end)
+sarif.subscribe("xp/ask", "", function(msg) ExpSampling:startAsking(msg) end)
+sarif.subscribe("xp/mood", "", function(msg) ExpSampling:recordMood(msg) end)
+sarif.subscribe("xp/happiness", "", function(msg) ExpSampling:recordHappiness(msg) end)
+sarif.subscribe("xp/relaxation",  "", function(msg) ExpSampling:recordRelaxation(msg) end)
+sarif.subscribe("xp/motivation",  "", function(msg) ExpSampling:recordMotivation(msg) end)
+sarif.subscribe("xp/activity",  "", function(msg) ExpSampling:recordActivity(msg) end)
 
-stark.subscribe("cron/05h",  "", function(msg) ExpSampling:scheduleToday() end)
+sarif.subscribe("cron/05h",  "", function(msg) ExpSampling:scheduleToday() end)

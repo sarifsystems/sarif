@@ -966,4 +966,12 @@ Show last location.
 Show last location with address Berlin. [address=Berlin]
 Show last location at Baker Street. [address=Baker Street]
 When did I last visit Berlin? [address=Berlin]
+
+Was it raining in Seattle three Thursdays ago?
+Will it be warmer than 70 degrees near the Golden gate Bridge after 5 PM the day after tomorrow
+Send Adam 20 bucks for the drinks last night
+Send my mom some flowers for her birthday
+- What about tulips?
+Give me a nice room in Palm Springs for labor Day weekend
+I need a ride for six people from my office to Madison Square Garden
 `

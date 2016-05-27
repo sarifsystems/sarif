@@ -8,7 +8,7 @@ package meals
 import (
 	"time"
 
-	"github.com/xconstruct/stark/pkg/fddb"
+	"github.com/sarifsystems/sarif/pkg/fddb"
 )
 
 func (s *Service) FddbLoop() {

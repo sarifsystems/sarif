@@ -3,7 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-// Service xmpp provides access to the stark network over XMPP.
+// Service xmpp provides access to the sarif network over XMPP.
 package xmpp
 
 import (
@@ -11,10 +11,9 @@ import (
 	"time"
 
 	"github.com/agl/xmpp-client/xmpp"
-
-	"github.com/xconstruct/stark/pkg/natural"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/pkg/natural"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var Module = &services.Module{
@@ -25,8 +24,8 @@ var Module = &services.Module{
 
 type Dependencies struct {
 	Config services.Config
-	Log    proto.Logger
-	Broker *proto.Broker
+	Log    sarif.Logger
+	Broker *sarif.Broker
 }
 
 type Config struct {
@@ -38,14 +37,14 @@ type Config struct {
 
 type conversation struct {
 	Remote string
-	Proto  *proto.Client
+	Proto  *sarif.Client
 	Xmpp   *Client
 }
 
 type Client struct {
 	cfg           Config
-	Log           proto.Logger
-	Broker        *proto.Broker
+	Log           sarif.Logger
+	Broker        *sarif.Broker
 	xmpp          *xmpp.Conn
 	conversations map[string]*conversation
 }
@@ -85,7 +84,7 @@ func (c *Client) reconnectLoop() {
 	}
 }
 
-func (cv *conversation) handleProtoMessage(msg proto.Message) {
+func (cv *conversation) handleProtoMessage(msg sarif.Message) {
 	text := natural.FormatSimple(msg)
 	cv.Xmpp.Log.Debugf("[xmpp] send '%s' to '%s'", text, cv.Remote)
 	if err := cv.Xmpp.xmpp.Send(cv.Remote, text); err != nil {
@@ -112,7 +111,7 @@ func (c *Client) listen() {
 
 func (c *Client) newConversation(remote string) *conversation {
 	user := xmpp.RemoveResourceFromJid(remote)
-	client := proto.NewClient("xmpp/" + user)
+	client := sarif.NewClient("xmpp/" + user)
 	client.Connect(c.Broker.NewLocalConn())
 	cv := &conversation{
 		Remote: remote,
@@ -150,7 +149,7 @@ func (c *Client) handleChatMessage(chat *xmpp.ClientMessage) {
 		return
 	}
 
-	cv.Proto.Publish(proto.Message{
+	cv.Proto.Publish(sarif.Message{
 		Action: "natural/handle",
 		Text:   chat.Body,
 	})

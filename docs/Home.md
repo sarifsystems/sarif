@@ -1,3 +1,3 @@
-Welcome to the stark wiki!
+Welcome to the sarif wiki!
 
 * [[Roadmap]]

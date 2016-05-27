@@ -3,7 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-// Service luascripts provides Lua scripting for the stark network.
+// Service luascripts provides Lua scripting for the sarif network.
 package luascripts
 
 import (
@@ -12,8 +12,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var Module = &services.Module{
@@ -28,16 +28,16 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Log    proto.Logger
-	Client *proto.Client
-	Broker *proto.Broker
+	Log    sarif.Logger
+	Client *sarif.Client
+	Broker *sarif.Broker
 }
 
 type Service struct {
 	cfg    Config
-	Log    proto.Logger
-	Broker *proto.Broker
-	*proto.Client
+	Log    sarif.Logger
+	Broker *sarif.Broker
+	*sarif.Client
 
 	Machines map[string]*Machine
 }
@@ -100,13 +100,13 @@ func (s *Service) createMachineFromScript(f string) (*Machine, error) {
 
 func (s *Service) createMachine(name string) (*Machine, error) {
 	if name == "" {
-		name = proto.GenerateId()
+		name = sarif.GenerateId()
 	}
 	if _, ok := s.Machines[name]; ok {
 		return nil, errors.New("Machine " + name + " already exists")
 	}
 
-	c := proto.NewClient(s.DeviceId + "/" + name)
+	c := sarif.NewClient(s.DeviceId + "/" + name)
 	c.Connect(s.Broker.NewLocalConn())
 
 	m := NewMachine(s.Log, c)
@@ -133,7 +133,7 @@ func (s *Service) getOrCreateMachine(name string) (*Machine, error) {
 	return s.createMachine(name)
 }
 
-func (s *Service) handleLuaDo(msg proto.Message) {
+func (s *Service) handleLuaDo(msg sarif.Message) {
 	machine := strings.TrimLeft(strings.TrimPrefix(msg.Action, "lua/do"), "/")
 	if machine == "" {
 		machine = "default"
@@ -149,7 +149,7 @@ func (s *Service) handleLuaDo(msg proto.Message) {
 		return
 	}
 
-	s.Reply(msg, proto.Message{
+	s.Reply(msg, sarif.Message{
 		Action: "lua/done",
 		Text:   out,
 	})
@@ -169,7 +169,7 @@ func (p MsgMachineStatus) String() string {
 	return s
 }
 
-func (s *Service) handleLuaStart(msg proto.Message) {
+func (s *Service) handleLuaStart(msg sarif.Message) {
 	name := strings.TrimPrefix(strings.TrimPrefix(msg.Action, "lua/start"), "/")
 	if name == "" {
 		s.ReplyBadRequest(msg, errors.New("No machine name given!"))
@@ -182,14 +182,14 @@ func (s *Service) handleLuaStart(msg proto.Message) {
 		return
 	}
 
-	s.Reply(msg, proto.CreateMessage("lua/started", &MsgMachineStatus{
+	s.Reply(msg, sarif.CreateMessage("lua/started", &MsgMachineStatus{
 		name,
 		"up",
 		m.FlushOut(),
 	}))
 }
 
-func (s *Service) handleLuaStop(msg proto.Message) {
+func (s *Service) handleLuaStop(msg sarif.Message) {
 	name := strings.TrimPrefix(strings.TrimPrefix(msg.Action, "lua/stop"), "/")
 	if name == "" {
 		s.ReplyBadRequest(msg, errors.New("No machine name given!"))
@@ -201,18 +201,18 @@ func (s *Service) handleLuaStop(msg proto.Message) {
 		return
 	}
 
-	s.Reply(msg, proto.CreateMessage("lua/stopped", &MsgMachineStatus{
+	s.Reply(msg, sarif.CreateMessage("lua/stopped", &MsgMachineStatus{
 		name,
 		"down",
 		"",
 	}))
 }
 
-func (s *Service) handleLuaLoad(msg proto.Message) {
+func (s *Service) handleLuaLoad(msg sarif.Message) {
 	gen := false
 	name := strings.TrimPrefix(strings.TrimPrefix(msg.Action, "lua/load"), "/")
 	if name == "" {
-		name, gen = proto.GenerateId(), true
+		name, gen = sarif.GenerateId(), true
 	}
 	if _, ok := s.Machines[name]; ok {
 		s.destroyMachine(name)
@@ -243,14 +243,14 @@ func (s *Service) handleLuaLoad(msg proto.Message) {
 		}
 	}
 
-	s.Reply(msg, proto.CreateMessage("lua/loaded", &MsgMachineStatus{
+	s.Reply(msg, sarif.CreateMessage("lua/loaded", &MsgMachineStatus{
 		name,
 		"up",
 		out,
 	}))
 }
 
-func (s *Service) handleLuaDump(msg proto.Message) {
+func (s *Service) handleLuaDump(msg sarif.Message) {
 	name := strings.TrimPrefix(strings.TrimPrefix(msg.Action, "lua/dump"), "/")
 	if name == "" {
 		s.ReplyBadRequest(msg, errors.New("No machine name given!"))
@@ -269,7 +269,7 @@ func (s *Service) handleLuaDump(msg proto.Message) {
 		return
 	}
 
-	s.Reply(msg, proto.Message{
+	s.Reply(msg, sarif.Message{
 		Action: "lua/dumped",
 		Text:   string(src),
 	})

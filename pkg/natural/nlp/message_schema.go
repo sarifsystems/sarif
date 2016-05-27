@@ -8,7 +8,7 @@ package nlp
 import (
 	"sort"
 
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 type MessageSchema struct {
@@ -22,8 +22,8 @@ func (a byWeight) Len() int           { return len(a) }
 func (a byWeight) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a byWeight) Less(i, j int) bool { return a[i].Weight > a[j].Weight }
 
-func (r *MessageSchema) Apply(vars []*Var) proto.Message {
-	msg := proto.Message{}
+func (r *MessageSchema) Apply(vars []*Var) sarif.Message {
+	msg := sarif.Message{}
 	msg.Action = r.Action
 	pl := make(map[string]string)
 	sort.Sort(sort.Reverse(byWeight(vars)))
@@ -82,7 +82,7 @@ func (s *MessageSchemaStore) Add(schema *MessageSchema) {
 	}
 }
 
-func (s *MessageSchemaStore) AddMessage(msg *proto.Message) {
+func (s *MessageSchemaStore) AddMessage(msg *sarif.Message) {
 	schema := &MessageSchema{
 		Action: msg.Action,
 		Fields: make(map[string]string),

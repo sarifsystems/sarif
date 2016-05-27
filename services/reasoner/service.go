@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/jinzhu/gorm"
-	"github.com/xconstruct/stark/pkg/sparql"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/pkg/sparql"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var Module = &services.Module{
@@ -24,14 +24,14 @@ var Module = &services.Module{
 
 type Dependencies struct {
 	DB     *gorm.DB
-	Log    proto.Logger
-	Client *proto.Client
+	Log    sarif.Logger
+	Client *sarif.Client
 }
 
 type Service struct {
 	DB  *gorm.DB
-	Log proto.Logger
-	*proto.Client
+	Log sarif.Logger
+	*sarif.Client
 }
 
 func NewService(deps *Dependencies) *Service {
@@ -86,7 +86,7 @@ func (p resultPayload) Text() string {
 	return s
 }
 
-func (s *Service) HandleQuery(msg proto.Message) {
+func (s *Service) HandleQuery(msg sarif.Message) {
 	var f Fact
 	if err := msg.DecodePayload(&f); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -109,7 +109,7 @@ func (s *Service) HandleQuery(msg proto.Message) {
 		return
 	}
 
-	s.Reply(msg, proto.CreateMessage("concepts/result", &resultPayload{
+	s.Reply(msg, sarif.CreateMessage("concepts/result", &resultPayload{
 		ToJsonLd(facts),
 		facts,
 	}))
@@ -151,7 +151,7 @@ func (s *Service) InterpretLiterals(f Fact) (Fact, error) {
 	return f, nil
 }
 
-func (s *Service) HandleStore(msg proto.Message) {
+func (s *Service) HandleStore(msg sarif.Message) {
 	var f Fact
 	if err := msg.DecodePayload(&f); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -170,10 +170,10 @@ func (s *Service) HandleStore(msg proto.Message) {
 		s.ReplyInternalError(msg, err)
 		return
 	}
-	s.Reply(msg, proto.CreateMessage("concepts/stored", &f))
+	s.Reply(msg, sarif.CreateMessage("concepts/stored", &f))
 }
 
-func (s *Service) HandleQueryExternal(msg proto.Message) {
+func (s *Service) HandleQueryExternal(msg sarif.Message) {
 	var f Fact
 	if err := msg.DecodePayload(&f); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -191,7 +191,7 @@ func (s *Service) HandleQueryExternal(msg proto.Message) {
 	}
 
 	result := ApplyBindings(facts, r.Results.Bindings, sparql.CommonPrefixes)
-	s.Reply(msg, proto.CreateMessage("concepts/result", &resultPayload{
+	s.Reply(msg, sarif.CreateMessage("concepts/result", &resultPayload{
 		ToJsonLd(result),
 		result,
 	}))
@@ -293,5 +293,5 @@ func AddNamespacePrefix(s string, ns map[string]string) string {
 }
 
 func CreateURIFromLiteral(s string) string {
-	return "stark:" + strings.Replace(s, " ", "_", -1)
+	return "sarif:" + strings.Replace(s, " ", "_", -1)
 }

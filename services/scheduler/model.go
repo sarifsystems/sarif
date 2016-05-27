@@ -9,14 +9,14 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 type Task struct {
 	Id        int64         `json:"-"`
 	Time      time.Time     `json:"time,omitempty"`
 	Location  string        `json:"location,omitempty"`
-	Reply     proto.Message `json:"reply,omitempty"`
+	Reply     sarif.Message `json:"reply,omitempty"`
 	Finished  bool          `json:"finished"`
 	CreatedAt time.Time     `json:"-"`
 	UpdatedAt time.Time     `json:"-"`

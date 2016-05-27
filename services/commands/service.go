@@ -13,9 +13,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/xconstruct/stark/pkg/schema"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/pkg/schema"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var Module = &services.Module{
@@ -25,13 +25,13 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	Log    proto.Logger
-	Client *proto.Client
+	Log    sarif.Logger
+	Client *sarif.Client
 }
 
 type Service struct {
-	Log proto.Logger
-	*proto.Client
+	Log sarif.Logger
+	*sarif.Client
 }
 
 func NewService(deps *Dependencies) *Service {
@@ -56,21 +56,21 @@ func (s *Service) Enable() error {
 	return nil
 }
 
-func (s *Service) ReplyText(orig proto.Message, text string) error {
-	return s.Reply(orig, proto.Message{
+func (s *Service) ReplyText(orig sarif.Message, text string) error {
+	return s.Reply(orig, sarif.Message{
 		Action: "ack/" + orig.Action,
 		Text:   text,
 	})
 }
 
-func (s *Service) handleQR(msg proto.Message) {
+func (s *Service) handleQR(msg sarif.Message) {
 	if msg.Text == "" {
 		s.ReplyBadRequest(msg, errors.New("No data for QR code specified!"))
 		return
 	}
 
 	qr := "https://chart.googleapis.com/chart?chs=178x178&cht=qr&chl=" + url.QueryEscape(msg.Text)
-	reply := proto.CreateMessage("ack", map[string]string{
+	reply := sarif.CreateMessage("ack", map[string]string{
 		"url":  qr,
 		"type": "image/png",
 	})
@@ -88,7 +88,7 @@ func (c counterMessage) Text() string {
 	return fmt.Sprintf("Counter '%s' has value %d.", c.Name, c.Value)
 }
 
-func (s *Service) handleCounter(msg proto.Message) {
+func (s *Service) handleCounter(msg sarif.Message) {
 	if msg.Text == "" {
 		s.ReplyBadRequest(msg, errors.New("Please specify a counter name!"))
 		return
@@ -111,11 +111,11 @@ func (s *Service) handleCounter(msg proto.Message) {
 			return
 		}
 	}
-	s.Reply(msg, proto.CreateMessage("counter/changed/"+name, &counterMessage{name, newCnt}))
+	s.Reply(msg, sarif.CreateMessage("counter/changed/"+name, &counterMessage{name, newCnt}))
 }
 
 func (s *Service) counterGet(name string) (int, error) {
-	curr, ok := <-s.Request(proto.CreateMessage("store/get/counter/"+name, nil))
+	curr, ok := <-s.Request(sarif.CreateMessage("store/get/counter/"+name, nil))
 	if !ok {
 		return 0, errors.New("Timeout while getting current value")
 	}
@@ -133,7 +133,7 @@ func (s *Service) counterGet(name string) (int, error) {
 }
 
 func (s *Service) counterSet(name string, cnt int) error {
-	ack, ok := <-s.Request(proto.CreateMessage("store/put/counter/"+name, cnt))
+	ack, ok := <-s.Request(sarif.CreateMessage("store/put/counter/"+name, cnt))
 	if !ok {
 		return errors.New("Timeout while setting new value")
 	}
@@ -143,7 +143,7 @@ func (s *Service) counterSet(name string, cnt int) error {
 	return nil
 }
 
-func (s *Service) handleUnknown(msg proto.Message) {
+func (s *Service) handleUnknown(msg sarif.Message) {
 	s.Log.Warnln("received unknown message:", msg)
 }
 
@@ -156,7 +156,7 @@ func (msg questionMessage) Text() string {
 	return msg.Question
 }
 
-func (s *Service) handleAsk(msg proto.Message) {
+func (s *Service) handleAsk(msg sarif.Message) {
 	q := msg.Text
 	if q == "" {
 		q = "What is the answer to life, the universe and everything?"
@@ -169,23 +169,23 @@ func (s *Service) handleAsk(msg proto.Message) {
 			Name:  "Answer this question.",
 		}),
 	})
-	s.Reply(msg, proto.CreateMessage("question", pl))
+	s.Reply(msg, sarif.CreateMessage("question", pl))
 }
 
-func (s *Service) handleQuestionAnswer(msg proto.Message) {
+func (s *Service) handleQuestionAnswer(msg sarif.Message) {
 	if msg.IsAction("question/answer/ultimate") {
 		reply := "Wrong. The answer is 42."
 		if msg.Text == "42" {
 			reply = "Precisely."
 		}
-		s.Reply(msg, proto.Message{
+		s.Reply(msg, sarif.Message{
 			Action: "question/accepted",
 			Text:   reply,
 		})
 		return
 	}
 
-	s.Reply(msg, proto.Message{
+	s.Reply(msg, sarif.Message{
 		Action: "err/question/unknown",
 		Text:   "I can't remember asking you a question.",
 	})
@@ -203,7 +203,7 @@ func (r CatFactsResponse) String() string {
 	return ""
 }
 
-func (s *Service) handleCatFacts(msg proto.Message) {
+func (s *Service) handleCatFacts(msg sarif.Message) {
 	resp, err := http.Get("http://catfacts-api.appspot.com/api/facts")
 	if err != nil {
 		s.ReplyInternalError(msg, err)
@@ -216,5 +216,5 @@ func (s *Service) handleCatFacts(msg proto.Message) {
 		return
 	}
 
-	s.Reply(msg, proto.CreateMessage("catfacts", &r))
+	s.Reply(msg, sarif.CreateMessage("catfacts", &r))
 }

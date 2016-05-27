@@ -10,12 +10,12 @@ import (
 	"log"
 	"strings"
 
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 func (app *App) SingleRequest() {
 	text := strings.Join(flag.Args(), " ")
-	msg, ok := <-app.Client.Request(proto.Message{
+	msg, ok := <-app.Client.Request(sarif.Message{
 		Action: "natural/handle",
 		Text:   text,
 	})

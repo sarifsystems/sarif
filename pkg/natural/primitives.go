@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 type Context struct {
@@ -58,7 +58,7 @@ type Intent struct {
 	Type   string  `json:"type"`
 	Weight float64 `json:"weight"`
 
-	Message   proto.Message `json:"msg"`
+	Message   sarif.Message `json:"msg"`
 	ExtraInfo interface{}   `json:"extra_info"`
 }
 

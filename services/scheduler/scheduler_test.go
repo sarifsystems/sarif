@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/xconstruct/stark/core"
-	"github.com/xconstruct/stark/pkg/testutils"
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/core"
+	"github.com/sarifsystems/sarif/pkg/testutils"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 func TestService(t *testing.T) {
@@ -32,7 +32,7 @@ func TestService(t *testing.T) {
 	st.Describe("Scheduler", func() {
 
 		st.It("should receive simple task", func() {
-			st.When(proto.CreateMessage("schedule/duration", map[string]interface{}{
+			st.When(sarif.CreateMessage("schedule/duration", map[string]interface{}{
 				"duration": "300ms",
 			}))
 
@@ -40,9 +40,9 @@ func TestService(t *testing.T) {
 		})
 
 		st.It("should receive complex task", func() {
-			st.When(proto.CreateMessage("schedule/duration", map[string]interface{}{
+			st.When(sarif.CreateMessage("schedule/duration", map[string]interface{}{
 				"duration": "100ms",
-				"reply": proto.Message{
+				"reply": sarif.Message{
 					Action: "push/text",
 					Text:   "reminder finished",
 				},
@@ -52,7 +52,7 @@ func TestService(t *testing.T) {
 		})
 
 		st.It("should emit both tasks", func() {
-			st.Expect(func(msg proto.Message) {
+			st.Expect(func(msg sarif.Message) {
 				if msg.Action != "push/text" {
 					t.Error("did not receive scheduler reply")
 				}
@@ -61,7 +61,7 @@ func TestService(t *testing.T) {
 				}
 			})
 
-			st.Expect(func(msg proto.Message) {
+			st.Expect(func(msg sarif.Message) {
 				if msg.Action != "schedule/finished" {
 					t.Error("did not receive scheduler reply")
 				}

@@ -14,9 +14,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/xconstruct/stark/pkg/inject"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/pkg/inject"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var verbose = flag.Bool("v", false, "verbose debug output")
@@ -32,7 +32,7 @@ type App struct {
 
 func NewApp(appName, moduleName string) *App {
 	if appName == "" {
-		appName = "stark"
+		appName = "sarif"
 	}
 	if !flag.Parsed() {
 		flag.Parse()
@@ -98,7 +98,7 @@ func (app *App) SetupInjector(inj *inject.Injector, name string) {
 	inj.Factory(func() services.Config {
 		return app.Config.Section(name)
 	})
-	inj.Factory(func() proto.Logger {
+	inj.Factory(func() sarif.Logger {
 		return app.Log
 	})
 }
@@ -109,27 +109,27 @@ func (app *App) Inject(name string, container interface{}) error {
 	return inj.Inject(container)
 }
 
-func (app *App) Dial() proto.Conn {
-	cfg := proto.NetConfig{
-		Address: "tcp://localhost:" + proto.DefaultPort,
+func (app *App) Dial() sarif.Conn {
+	cfg := sarif.NetConfig{
+		Address: "tcp://localhost:" + sarif.DefaultPort,
 	}
 	app.Config.Get("dial", &cfg)
 	app.WriteConfig()
-	conn, err := proto.Dial(&cfg)
+	conn, err := sarif.Dial(&cfg)
 	if err != nil {
 		app.Log.Fatal(err)
 	}
 	return conn
 }
 
-func (app *App) ClientDial(name string) (*proto.Client, error) {
-	cfg := proto.NetConfig{
-		Address: "tcp://localhost:" + proto.DefaultPort,
+func (app *App) ClientDial(name string) (*sarif.Client, error) {
+	cfg := sarif.NetConfig{
+		Address: "tcp://localhost:" + sarif.DefaultPort,
 	}
 	app.Config.Get("dial", &cfg)
 	app.WriteConfig()
 
-	c := proto.NewClient(name)
+	c := sarif.NewClient(name)
 	c.OnConnectionLost(func(err error) {
 		app.Log.Errorln("connection lost:", err)
 		for {

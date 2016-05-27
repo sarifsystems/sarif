@@ -13,7 +13,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 type ContentPayload struct {
@@ -27,7 +27,7 @@ func (app *App) Down() {
 	}
 	action := flag.Arg(1)
 
-	msg, ok := <-app.Client.Request(proto.Message{
+	msg, ok := <-app.Client.Request(sarif.Message{
 		Action: action,
 	})
 	if !ok {
@@ -47,7 +47,7 @@ func (app *App) Up() {
 		app.Log.Fatal(err)
 	}
 
-	msg := proto.Message{
+	msg := sarif.Message{
 		Action: action,
 	}
 	pl := &ContentPayload{

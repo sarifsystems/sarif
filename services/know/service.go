@@ -9,9 +9,9 @@ package know
 import (
 	"strings"
 
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 	"github.com/xconstruct/know"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
 )
 
 var Module = &services.Module{
@@ -26,14 +26,14 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Log    proto.Logger
-	Client *proto.Client
+	Log    sarif.Logger
+	Client *sarif.Client
 }
 
 type Service struct {
 	cfg Config
-	Log proto.Logger
-	*proto.Client
+	Log sarif.Logger
+	*sarif.Client
 }
 
 func NewService(deps *Dependencies) *Service {
@@ -75,7 +75,7 @@ func (m MessageAnswer) String() string {
 	return m.Query + " is " + ans + "."
 }
 
-func (s *Service) handleQuery(msg proto.Message) {
+func (s *Service) handleQuery(msg sarif.Message) {
 	query := msg.Text
 
 	// Query and wait for first answer
@@ -90,7 +90,7 @@ func (s *Service) handleQuery(msg proto.Message) {
 			pl := MessageAnswer{
 				Query: query,
 			}
-			s.Reply(msg, proto.CreateMessage("knowledge/noanswer", pl))
+			s.Reply(msg, sarif.CreateMessage("knowledge/noanswer", pl))
 			return
 		}
 
@@ -105,6 +105,6 @@ func (s *Service) handleQuery(msg proto.Message) {
 		ans.Answer,
 		ans.Provider,
 	}
-	s.Reply(msg, proto.CreateMessage("knowledge/answer", pl))
+	s.Reply(msg, sarif.CreateMessage("knowledge/answer", pl))
 	return
 }

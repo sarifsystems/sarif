@@ -10,7 +10,7 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/xconstruct/stark/pkg/mlearning"
+	"github.com/sarifsystems/sarif/pkg/mlearning"
 )
 
 type PosTagger struct {

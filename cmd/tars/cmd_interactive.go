@@ -14,8 +14,8 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
+	"github.com/sarifsystems/sarif/sarif"
 	"github.com/shiena/ansicolor"
-	"github.com/xconstruct/stark/proto"
 )
 
 var profile = flag.Bool("profile", false, "interactive: print elapsed time for requests")
@@ -36,7 +36,7 @@ func (app *App) Interactive() {
 	pings := make(map[string]time.Time)
 
 	// Subscribe to all replies and print them to stdout
-	app.Client.Subscribe("", "self", func(msg proto.Message) {
+	app.Client.Subscribe("", "self", func(msg sarif.Message) {
 		text := msg.Text
 		if text == "" {
 			text = msg.Action + " from " + msg.Source
@@ -65,8 +65,8 @@ func (app *App) Interactive() {
 		}
 
 		// Publish natural message
-		msg := proto.Message{
-			Id:     proto.GenerateId(),
+		msg := sarif.Message{
+			Id:     sarif.GenerateId(),
 			Action: "natural/handle",
 			Text:   line,
 		}

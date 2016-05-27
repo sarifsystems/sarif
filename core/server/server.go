@@ -3,33 +3,33 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-// Package server provides a broker and modular host for microsservices.
+// Package server provides a broker and modular host for microservices.
 package server
 
 import (
 	"os"
 	"time"
 
-	"github.com/xconstruct/stark/core"
-	"github.com/xconstruct/stark/pkg/inject"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/core"
+	"github.com/sarifsystems/sarif/pkg/inject"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 type Server struct {
 	*core.App
 	ServerConfig Config
 
-	Broker *proto.Broker
+	Broker *sarif.Broker
 	Orm    *core.Orm
 	*services.ModuleManager
 }
 
 type Config struct {
 	Name           string
-	Listen         []*proto.NetConfig
-	Bridges        []*proto.NetConfig
-	Gateways       []*proto.NetConfig
+	Listen         []*sarif.NetConfig
+	Bridges        []*sarif.NetConfig
+	Gateways       []*sarif.NetConfig
 	EnabledModules []string
 }
 
@@ -98,8 +98,8 @@ func (s *Server) InitBroker() error {
 		return nil
 	}
 
-	proto.SetDefaultLogger(s.Log)
-	s.Broker = proto.NewBroker()
+	sarif.SetDefaultLogger(s.Log)
+	s.Broker = sarif.NewBroker()
 	if s.Log.GetLevel() <= core.LogLevelTrace {
 		s.Broker.TraceMessages(true)
 	}
@@ -107,7 +107,7 @@ func (s *Server) InitBroker() error {
 	cfg := &s.ServerConfig
 	if _, ok := s.Config.Get("server", cfg); !ok {
 		if len(cfg.Listen) == 0 {
-			cfg.Listen = append(cfg.Listen, &proto.NetConfig{
+			cfg.Listen = append(cfg.Listen, &sarif.NetConfig{
 				Address: "tcp://localhost:23100",
 			})
 			s.Config.Set("server", cfg)
@@ -116,7 +116,7 @@ func (s *Server) InitBroker() error {
 
 	// Listen on connections
 	for _, cfg := range cfg.Listen {
-		go func(cfg *proto.NetConfig) {
+		go func(cfg *sarif.NetConfig) {
 			s.Log.Infoln("[server] listening on", cfg.Address)
 			s.Must(s.Broker.Listen(cfg))
 		}(cfg)
@@ -124,10 +124,10 @@ func (s *Server) InitBroker() error {
 
 	// Setup bridges
 	for _, cfg := range cfg.Bridges {
-		go func(cfg *proto.NetConfig) {
+		go func(cfg *sarif.NetConfig) {
 			for {
 				s.Log.Infoln("[server] bridging to ", cfg.Address)
-				conn, err := proto.Dial(cfg)
+				conn, err := sarif.Dial(cfg)
 				if err == nil {
 					err = s.Broker.ListenOnBridge(conn)
 				}
@@ -139,10 +139,10 @@ func (s *Server) InitBroker() error {
 
 	// Setup gateways
 	for _, cfg := range cfg.Gateways {
-		go func(cfg *proto.NetConfig) {
+		go func(cfg *sarif.NetConfig) {
 			for {
 				s.Log.Infoln("[server] gateway to ", cfg.Address)
-				conn, err := proto.Dial(cfg)
+				conn, err := sarif.Dial(cfg)
 				if err == nil {
 					err = s.Broker.ListenOnGateway(conn)
 				}
@@ -163,15 +163,15 @@ func (s *Server) SetupInjector(inj *inject.Injector, name string) {
 	}
 	if s.Broker != nil {
 		inj.Instance(s.Broker)
-		inj.Factory(func() proto.Conn {
+		inj.Factory(func() sarif.Conn {
 			return s.Broker.NewLocalConn()
 		})
-		inj.Factory(func() *proto.Client {
+		inj.Factory(func() *sarif.Client {
 			cname := name
 			if s.ServerConfig.Name != "" {
 				cname = s.ServerConfig.Name + "/" + name
 			}
-			c := proto.NewClient(cname)
+			c := sarif.NewClient(cname)
 			c.Connect(s.Broker.NewLocalConn())
 			c.SetLogger(s.Log)
 			return c

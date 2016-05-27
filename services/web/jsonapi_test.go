@@ -54,9 +54,9 @@ func TestParseActionAsURL(t *testing.T) {
 			Url:     "http://catfacts-api.appspot.com/api/facts",
 			Extract: "facts/first",
 		},
-		"json/api.github.com/repos/xconstruct/stark/commits#first/commit/message": {
+		"json/api.github.com/repos/sarifsystems/sarif/commits#first/commit/message": {
 			Method:  "get",
-			Url:     "https://api.github.com/repos/xconstruct/stark/commits",
+			Url:     "https://api.github.com/repos/sarifsystems/sarif/commits",
 			Extract: "first/commit/message",
 		},
 	}

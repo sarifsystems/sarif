@@ -8,7 +8,7 @@ package nlp
 import (
 	"fmt"
 
-	"github.com/xconstruct/stark/pkg/mlearning"
+	"github.com/sarifsystems/sarif/pkg/mlearning"
 )
 
 var DefaultStopWords = []string{

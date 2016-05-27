@@ -9,10 +9,10 @@ import (
 	"errors"
 	"time"
 
-	"github.com/xconstruct/stark/pkg/natural"
-	"github.com/xconstruct/stark/pkg/natural/nlp"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/pkg/natural"
+	"github.com/sarifsystems/sarif/pkg/natural/nlp"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var Module = &services.Module{
@@ -27,13 +27,13 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Client *proto.Client
+	Client *sarif.Client
 }
 
 type Service struct {
 	Config services.Config
 	Cfg    Config
-	*proto.Client
+	*sarif.Client
 
 	parser *nlp.Parser
 }
@@ -84,7 +84,7 @@ func (s *Service) saveModel() error {
 	return s.parser.SaveModel(s.Cfg.ModelPath)
 }
 
-func (s *Service) handleNaturalParse(msg proto.Message) {
+func (s *Service) handleNaturalParse(msg sarif.Message) {
 	ctx := &natural.Context{}
 	msg.DecodePayload(ctx)
 	if ctx.Text == "" {
@@ -97,7 +97,7 @@ func (s *Service) handleNaturalParse(msg proto.Message) {
 		return
 	}
 
-	s.Reply(msg, proto.CreateMessage("natural/parsed", res))
+	s.Reply(msg, sarif.CreateMessage("natural/parsed", res))
 }
 
 type msgLearn struct {
@@ -109,7 +109,7 @@ func (p msgLearn) Text() string {
 	return "I learned to associate '" + p.Sentence + "' with " + p.Action + "."
 }
 
-func (s *Service) handleNaturalReinforce(msg proto.Message) {
+func (s *Service) handleNaturalReinforce(msg sarif.Message) {
 	var p msgLearn
 	if err := msg.DecodePayload(&p); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -124,5 +124,5 @@ func (s *Service) handleNaturalReinforce(msg proto.Message) {
 	s.parser.ReinforceSentence(p.Sentence, p.Action)
 
 	parsed, _ := s.parser.Parse(&natural.Context{Text: p.Sentence})
-	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", &msgLearn{p.Sentence, parsed.Intents[0].Message.Action}))
+	s.Reply(msg, sarif.CreateMessage("natural/learned/meaning", &msgLearn{p.Sentence, parsed.Intents[0].Message.Action}))
 }

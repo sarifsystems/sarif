@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xconstruct/stark/pkg/natural"
-	"github.com/xconstruct/stark/pkg/schema"
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/pkg/natural"
+	"github.com/sarifsystems/sarif/pkg/schema"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 type Conversation struct {
@@ -20,12 +20,12 @@ type Conversation struct {
 
 	Device            string
 	LastTime          time.Time
-	LastMessage       proto.Message
+	LastMessage       sarif.Message
 	LastMessageAction Actionable
 
 	LastUserTime    time.Time
 	LastUserText    string
-	LastUserMessage proto.Message
+	LastUserMessage sarif.Message
 }
 
 type MsgErrNatural struct {
@@ -57,12 +57,12 @@ func (pl MsgErrNatural) String() string {
 	return "I didn't understand your message."
 }
 
-func (cv *Conversation) PublishForClient(msg proto.Message) {
+func (cv *Conversation) PublishForClient(msg sarif.Message) {
 	msg.Source = cv.service.DeviceId + "/" + cv.Device
 	cv.service.Publish(msg)
 }
 
-func (cv *Conversation) SendToClient(msg proto.Message) {
+func (cv *Conversation) SendToClient(msg sarif.Message) {
 	// Save conversation.
 	cv.LastTime = time.Now()
 	cv.LastMessage = msg
@@ -72,20 +72,20 @@ func (cv *Conversation) SendToClient(msg proto.Message) {
 	msg.DecodePayload(&cv.LastMessageAction)
 
 	// Forward response to client.
-	msg.Id = proto.GenerateId()
+	msg.Id = sarif.GenerateId()
 	msg.Destination = cv.Device
 	natural.FormatMessage(&msg)
 	msg.Text = cv.service.TransformReply(msg.Text)
 	cv.service.Publish(msg)
 }
 
-func (cv *Conversation) HandleClientMessage(msg proto.Message) {
+func (cv *Conversation) HandleClientMessage(msg sarif.Message) {
 	if msg.Text == ".full" {
 		text, err := json.MarshalIndent(cv.LastMessage, "", "    ")
 		if err != nil {
 			panic(err)
 		}
-		cv.service.Reply(msg, proto.Message{
+		cv.service.Reply(msg, sarif.Message{
 			Action: "natural/full",
 			Text:   string(text),
 		})
@@ -109,7 +109,7 @@ func (cv *Conversation) HandleClientMessage(msg proto.Message) {
 	ctx := &natural.Context{
 		Text:      msg.Text,
 		Sender:    "user",
-		Recipient: "stark",
+		Recipient: "sarif",
 	}
 	res, err := cv.service.Parse(ctx)
 	if err != nil || len(res.Intents) == 0 {
@@ -118,7 +118,7 @@ func (cv *Conversation) HandleClientMessage(msg proto.Message) {
 	}
 	pred := res.Intents[0]
 	if pred.Type == "exclamatory" {
-		cv.SendToClient(msg.Reply(proto.Message{
+		cv.SendToClient(msg.Reply(sarif.Message{
 			Action: "natural/phrase",
 			Text:   cv.service.phrases.Answer(msg.Text),
 		}))
@@ -135,8 +135,8 @@ func (cv *Conversation) HandleClientMessage(msg proto.Message) {
 	cv.PublishForClient(pred.Message)
 }
 
-func (cv *Conversation) answer(a *schema.Action, text string) (proto.Message, bool) {
-	reply := proto.Message{
+func (cv *Conversation) answer(a *schema.Action, text string) (sarif.Message, bool) {
+	reply := sarif.Message{
 		Action: a.Reply,
 		Text:   text,
 	}
@@ -163,10 +163,10 @@ func (cv *Conversation) answer(a *schema.Action, text string) (proto.Message, bo
 	return reply, true
 }
 
-func (cv *Conversation) handleUnknownUserMessage(msg proto.Message) {
+func (cv *Conversation) handleUnknownUserMessage(msg sarif.Message) {
 	pl := &MsgErrNatural{
 		Original: msg.Text,
 	}
 
-	cv.SendToClient(msg.Reply(proto.CreateMessage("err/natural", pl)))
+	cv.SendToClient(msg.Reply(sarif.CreateMessage("err/natural", pl)))
 }

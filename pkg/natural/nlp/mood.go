@@ -5,7 +5,7 @@
 
 package nlp
 
-import "github.com/xconstruct/stark/pkg/datasets/en"
+import "github.com/sarifsystems/sarif/pkg/datasets/en"
 
 func AnalyzeSentenceFunction(tokens []*Token) string {
 	if len(tokens) == 0 {

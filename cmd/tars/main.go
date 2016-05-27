@@ -12,8 +12,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/xconstruct/stark/core"
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/core"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 func main() {
@@ -33,7 +33,7 @@ type Config struct {
 
 type App struct {
 	*core.App
-	Client   *proto.Client
+	Client   *sarif.Client
 	Commands []Command
 
 	Config Config
@@ -49,10 +49,10 @@ func New() *App {
 	var err error
 	log.SetFlags(0)
 	app := &App{
-		App: core.NewApp("stark", "client"),
+		App: core.NewApp("sarif", "tars"),
 	}
 	app.Init()
-	app.Client, err = app.ClientDial("tars/" + proto.GenerateId())
+	app.Client, err = app.ClientDial("tars/" + sarif.GenerateId())
 	app.Must(err)
 
 	app.Config.HistoryFile = app.App.Config.Dir() + "/tars_history"

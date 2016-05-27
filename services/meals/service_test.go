@@ -8,9 +8,9 @@ package meals
 import (
 	"testing"
 
-	"github.com/xconstruct/stark/core"
-	"github.com/xconstruct/stark/pkg/testutils"
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/core"
+	"github.com/sarifsystems/sarif/pkg/testutils"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 var pizza = Product{
@@ -69,22 +69,22 @@ func TestService(t *testing.T) {
 	st.Describe("Meals service", func() {
 
 		st.It("should store a pizza", func() {
-			st.When(proto.CreateMessage("meal/product/new", pizza))
+			st.When(sarif.CreateMessage("meal/product/new", pizza))
 			st.ExpectAction("meal/product/created")
 		})
 
 		st.It("should store milk", func() {
-			st.When(proto.CreateMessage("meal/product/new", milk))
+			st.When(sarif.CreateMessage("meal/product/new", milk))
 			st.ExpectAction("meal/product/created")
 		})
 
 		st.It("should record a serving", func() {
-			st.When(proto.CreateMessage("meal/record", map[string]interface{}{
+			st.When(sarif.CreateMessage("meal/record", map[string]interface{}{
 				"size": 0.5,
 				"name": "pizza",
 			}))
 
-			st.Expect(func(msg proto.Message) {
+			st.Expect(func(msg sarif.Message) {
 				if !msg.IsAction("meal/serving/recorded") {
 					t.Fatal("unexpected message received")
 				}
@@ -100,7 +100,7 @@ func TestService(t *testing.T) {
 		})
 
 		st.It("should fail when ambiguous", func() {
-			st.When(proto.CreateMessage("meal/record", map[string]interface{}{
+			st.When(sarif.CreateMessage("meal/record", map[string]interface{}{
 				"size": 0.5,
 				"name": "generic",
 			}))
@@ -110,7 +110,7 @@ func TestService(t *testing.T) {
 		})
 
 		st.It("should record text only", func() {
-			st.When(proto.Message{
+			st.When(sarif.Message{
 				Action: "meal/record",
 				Text:   "1 milk",
 			})
@@ -119,9 +119,9 @@ func TestService(t *testing.T) {
 		})
 
 		st.It("should provide daily stats", func() {
-			st.When(proto.CreateMessage("meal/stats", nil))
+			st.When(sarif.CreateMessage("meal/stats", nil))
 
-			st.Expect(func(msg proto.Message) {
+			st.Expect(func(msg sarif.Message) {
 				if !msg.IsAction("meal/stats") {
 					t.Fatal("unexpected message received")
 				}

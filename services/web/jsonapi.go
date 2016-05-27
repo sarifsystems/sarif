@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 type jsonResponse struct {
@@ -31,7 +31,7 @@ func (r jsonResponse) String() string {
 	return ""
 }
 
-func (s *Server) handleJson(msg proto.Message) {
+func (s *Server) handleJson(msg sarif.Message) {
 	req, err := parseActionAsURL(msg.Action)
 	if err != nil {
 		s.Client.ReplyBadRequest(msg, err)
@@ -67,7 +67,7 @@ func (s *Server) handleJson(msg proto.Message) {
 		s.Client.ReplyBadRequest(msg, err)
 		return
 	}
-	s.Client.Reply(msg, proto.CreateMessage("json/done", &jsonResponse{
+	s.Client.Reply(msg, sarif.CreateMessage("json/done", &jsonResponse{
 		Request: req,
 		Result:  x,
 	}))

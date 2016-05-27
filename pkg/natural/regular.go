@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 var reMatchVars = regexp.MustCompile(`\\\[([\w ]+)\\\]`)
@@ -33,14 +33,14 @@ func NewRegularParser() *RegularParser {
 	}
 }
 
-func (p *RegularParser) Parse(s string) (proto.Message, bool) {
+func (p *RegularParser) Parse(s string) (sarif.Message, bool) {
 	s = strings.TrimRight(s, ".?! ")
 	for _, r := range p.rules {
 		if msg, ok := r.Parse(s); ok {
 			return msg, ok
 		}
 	}
-	return proto.Message{}, false
+	return sarif.Message{}, false
 }
 
 func (p *RegularParser) Learn(rule, action string) error {
@@ -118,8 +118,8 @@ func CompileSentenceRule(s, action string) (r *SentenceRule, err error) {
 	return r, nil
 }
 
-func (r *SentenceRule) Parse(s string) (proto.Message, bool) {
-	msg := proto.Message{}
+func (r *SentenceRule) Parse(s string) (sarif.Message, bool) {
+	msg := sarif.Message{}
 	match := r.Regexp.FindStringSubmatch(s)
 	if match == nil {
 		return msg, false

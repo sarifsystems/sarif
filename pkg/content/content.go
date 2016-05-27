@@ -10,7 +10,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/xconstruct/stark/pkg/schema"
+	"github.com/sarifsystems/sarif/pkg/schema"
 )
 
 type Provider interface {

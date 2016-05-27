@@ -11,8 +11,8 @@ import (
 	"github.com/miketheprogrammer/go-thrust/lib/commands"
 	"github.com/miketheprogrammer/go-thrust/lib/connection"
 	"github.com/miketheprogrammer/go-thrust/thrust"
-	"github.com/xconstruct/stark/core"
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/core"
+	"github.com/sarifsystems/sarif/sarif"
 	"golang.org/x/net/websocket"
 )
 
@@ -30,7 +30,7 @@ type WebClient struct {
 }
 
 func New() *WebClient {
-	app := core.NewApp("stark", "client")
+	app := core.NewApp("sarif", "client")
 	return &WebClient{
 		app,
 	}
@@ -38,7 +38,7 @@ func New() *WebClient {
 
 func (c *WebClient) RunBackend() {
 	http.Handle("/", http.FileServer(http.Dir("assets/web")))
-	http.Handle("/stream/stark", websocket.Handler(c.handleStreamStark))
+	http.Handle("/stream/sarif", websocket.Handler(c.handleStreamSarif))
 	err := http.ListenAndServe("localhost:54693", nil)
 	c.Log.Fatal("backend:", err)
 }
@@ -61,13 +61,13 @@ func (c *WebClient) RunFrontend() {
 	<-quit
 }
 
-func (c *WebClient) handleStreamStark(ws *websocket.Conn) {
+func (c *WebClient) handleStreamSarif(ws *websocket.Conn) {
 	defer ws.Close()
 	c.Log.Infoln("[web] new websocket connection")
 
-	webtp := proto.NewByteConn(ws)
+	webtp := sarif.NewByteConn(ws)
 	gateway := c.Dial()
 
-	err := proto.Transmit(webtp, gateway)
+	err := sarif.Transmit(webtp, gateway)
 	c.Log.Errorln("[web] websocket closed:", err)
 }

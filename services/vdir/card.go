@@ -5,7 +5,7 @@
 
 package vdir
 
-import "github.com/xconstruct/stark/pkg/schema"
+import "github.com/sarifsystems/sarif/pkg/schema"
 
 type Card struct {
 	schema.Thing

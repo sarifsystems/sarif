@@ -3,7 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-// Service natural provides a conversational interface to the stark network.
+// Service natural provides a conversational interface to the sarif network.
 package natural
 
 import (
@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xconstruct/stark/pkg/natural"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/pkg/natural"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var Module = &services.Module{
@@ -32,13 +32,13 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Client *proto.Client
+	Client *sarif.Client
 }
 
 type Service struct {
 	Config services.Config
 	Cfg    Config
-	*proto.Client
+	*sarif.Client
 
 	ParserKeepAlive time.Duration
 
@@ -115,21 +115,21 @@ func (s *Service) getConversation(device string) *Conversation {
 		}
 		s.conversations[device] = cv
 		s.Subscribe("", s.DeviceId+"/"+device, s.handleNetworkMessage)
-		cv.PublishForClient(proto.CreateMessage("natural/client/new", nil))
+		cv.PublishForClient(sarif.CreateMessage("natural/client/new", nil))
 	}
 	return cv
 }
 
-func (s *Service) handleNatural(msg proto.Message) {
+func (s *Service) handleNatural(msg sarif.Message) {
 	cv := s.getConversation(msg.Source)
 	cv.HandleClientMessage(msg)
 }
 
-func (s *Service) handleNaturalParse(msg proto.Message) {
+func (s *Service) handleNaturalParse(msg sarif.Message) {
 	res, err := s.Parse(&natural.Context{
 		Text:      msg.Text,
 		Sender:    "user",
-		Recipient: "stark",
+		Recipient: "sarif",
 	})
 	if err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -140,22 +140,22 @@ func (s *Service) handleNaturalParse(msg proto.Message) {
 		action = "err/natural/parsed"
 	}
 
-	s.Reply(msg, proto.CreateMessage(action, res))
+	s.Reply(msg, sarif.CreateMessage(action, res))
 }
 
-func (s *Service) handleNetworkMessage(msg proto.Message) {
+func (s *Service) handleNetworkMessage(msg sarif.Message) {
 	client := strings.TrimPrefix(msg.Destination, s.DeviceId+"/")
 	cv := s.getConversation(client)
 	cv.SendToClient(msg)
 }
 
-func (s *Service) handleUserMessage(msg proto.Message) {
+func (s *Service) handleUserMessage(msg sarif.Message) {
 	for _, cv := range s.conversations {
 		cv.SendToClient(msg)
 	}
 }
 
-func (s *Service) handleNaturalPhrases(msg proto.Message) {
+func (s *Service) handleNaturalPhrases(msg sarif.Message) {
 	ctx := strings.Trim(strings.TrimPrefix(msg.Action, "natural/phrases"), "/")
 	if ctx == "" {
 		s.ReplyBadRequest(msg, errors.New("The context seems to be missing."))
@@ -163,7 +163,7 @@ func (s *Service) handleNaturalPhrases(msg proto.Message) {
 	}
 
 	text := s.phrases.Get(ctx)
-	s.Reply(msg, proto.Message{
+	s.Reply(msg, sarif.Message{
 		Action: "natural/phrase",
 		Text:   text,
 	})
@@ -208,7 +208,7 @@ func (s *Service) Parse(ctx *natural.Context) (*natural.ParseResult, error) {
 		if p.Weight > 0 && (time.Now().Sub(p.LastSeen) < s.ParserKeepAlive) {
 			wg.Add(1)
 			go func() {
-				msg := proto.CreateMessage("natural/parse", ctx)
+				msg := sarif.CreateMessage("natural/parse", ctx)
 				msg.Destination = name
 				reply, ok := <-s.Request(msg)
 				if !ok {
@@ -282,7 +282,7 @@ type msgLearn struct {
 	Action   string `json:"action"`
 }
 
-func (s *Service) handleNaturalLearn(msg proto.Message) {
+func (s *Service) handleNaturalLearn(msg sarif.Message) {
 	var p msgLearn
 	if err := msg.DecodePayload(&p); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -298,5 +298,5 @@ func (s *Service) handleNaturalLearn(msg proto.Message) {
 		s.ReplyBadRequest(msg, err)
 	}
 	s.Log("info", "associating '"+p.Sentence+"' with "+p.Action)
-	s.Reply(msg, proto.CreateMessage("natural/learned/meaning", p))
+	s.Reply(msg, sarif.CreateMessage("natural/learned/meaning", p))
 }

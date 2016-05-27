@@ -11,7 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/xconstruct/stark/pkg/schema"
+	"github.com/sarifsystems/sarif/pkg/schema"
 )
 
 type httpProvider struct{}

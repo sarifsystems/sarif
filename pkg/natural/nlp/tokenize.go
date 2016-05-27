@@ -10,7 +10,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/xconstruct/stark/pkg/natural"
+	"github.com/sarifsystems/sarif/pkg/natural"
 )
 
 type Sentence []*Token

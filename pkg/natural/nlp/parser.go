@@ -11,11 +11,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/xconstruct/stark/pkg/datasets/commands"
-	"github.com/xconstruct/stark/pkg/datasets/twpos"
-	"github.com/xconstruct/stark/pkg/mlearning"
-	"github.com/xconstruct/stark/pkg/natural"
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/pkg/datasets/commands"
+	"github.com/sarifsystems/sarif/pkg/datasets/twpos"
+	"github.com/sarifsystems/sarif/pkg/mlearning"
+	"github.com/sarifsystems/sarif/pkg/natural"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 type model struct {
@@ -156,7 +156,7 @@ func (p *Parser) Parse(ctx *natural.Context) (*ParseResult, error) {
 	p.ResolvePronouns(r.Tokens, ctx)
 
 	typ := AnalyzeSentenceFunction(r.Tokens)
-	var msg proto.Message
+	var msg sarif.Message
 	var err error
 	switch typ {
 	case "declarative":
@@ -249,12 +249,12 @@ func (p *Parser) ReinforceSentence(text string, action string) error {
 	return nil
 }
 
-func (p *Parser) LearnMessage(msg *proto.Message) {
+func (p *Parser) LearnMessage(msg *sarif.Message) {
 	p.schema.AddMessage(msg)
 }
 
-func (p *Parser) InventMessageForMeaning(action string, m *Meaning) (proto.Message, error) {
-	msg := proto.Message{}
+func (p *Parser) InventMessageForMeaning(action string, m *Meaning) (sarif.Message, error) {
+	msg := sarif.Message{}
 
 	if action != "" {
 		msg.Action += "/" + action

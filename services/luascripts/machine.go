@@ -9,20 +9,20 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/sarif"
 	"github.com/yuin/gopher-lua"
 )
 
 type Machine struct {
-	*proto.Client
+	*sarif.Client
 	Lua *lua.LState
-	Log proto.Logger
+	Log sarif.Logger
 
 	StateLock    sync.Mutex
 	OutputBuffer string
 }
 
-func NewMachine(log proto.Logger, c *proto.Client) *Machine {
+func NewMachine(log sarif.Logger, c *sarif.Client) *Machine {
 	return &Machine{
 		Log:    log,
 		Lua:    lua.NewState(),
@@ -37,7 +37,7 @@ func (m *Machine) Enable() error {
 	m.Lua.OpenLibs()
 	m.Lua.SetGlobal("print", m.Lua.NewFunction(m.luaPrint))
 
-	mod := m.Lua.RegisterModule("stark", map[string]lua.LGFunction{
+	mod := m.Lua.RegisterModule("sarif", map[string]lua.LGFunction{
 		"subscribe":   m.luaSubscribe,
 		"publish":     m.luaPublish,
 		"request":     m.luaRequest,
@@ -75,7 +75,7 @@ func (m *Machine) luaSubscribe(L *lua.LState) int {
 	device := L.ToString(2)
 	handler := L.ToFunction(3)
 
-	m.Subscribe(action, device, func(msg proto.Message) {
+	m.Subscribe(action, device, func(msg sarif.Message) {
 		m.luaHandle(msg, handler)
 	})
 	return 0
@@ -107,7 +107,7 @@ func (m *Machine) luaReplyError(L *lua.LState) int {
 	text := L.ToString(3)
 	msg := tableToMessage(m.Lua, L.ToTable(1))
 
-	m.Reply(msg, proto.Message{
+	m.Reply(msg, sarif.Message{
 		Action: "err/" + typ,
 		Text:   text,
 	})
@@ -129,7 +129,7 @@ func (m *Machine) luaRequest(L *lua.LState) int {
 
 func (m *Machine) luaNatural(L *lua.LState) int {
 	L.CheckString(1)
-	msg := proto.Message{
+	msg := sarif.Message{
 		Action: "natural/handle",
 		Text:   L.ToString(1),
 	}
@@ -142,7 +142,7 @@ func (m *Machine) luaNatural(L *lua.LState) int {
 	return 0
 }
 
-func (m *Machine) luaHandle(msg proto.Message, handler *lua.LFunction) {
+func (m *Machine) luaHandle(msg sarif.Message, handler *lua.LFunction) {
 	m.StateLock.Lock()
 	defer m.StateLock.Unlock()
 

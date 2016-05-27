@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 var (
@@ -23,7 +23,7 @@ var (
 )
 
 const usageCat = `Usage: tars [OPTION}... cat [ACTION]...
-Publish and subscribe to messages in the stark network.
+Publish and subscribe to messages in the sarif network.
 Accepts JSON-encoded messages on stdin and prints replies on stdout.
 
 By default, the client only subscribes to messages directed at itself.
@@ -42,7 +42,7 @@ func (app *App) Cat() {
 	received := make(chan bool, 10)
 
 	// Handle replies: print them as readable JSON.
-	handle := func(msg proto.Message) {
+	handle := func(msg sarif.Message) {
 		raw, err := json.MarshalIndent(msg, "", "    ")
 		app.Must(err)
 		log.Println(string(raw))
@@ -72,7 +72,7 @@ func (app *App) Cat() {
 	go func() {
 		dec := json.NewDecoder(os.Stdin)
 		for {
-			var msg proto.Message
+			var msg sarif.Message
 			if err := dec.Decode(&msg); err != nil {
 				if err == io.EOF {
 					break

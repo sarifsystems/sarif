@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
-	"github.com/xconstruct/stark/services/schema/store"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
+	"github.com/sarifsystems/sarif/services/schema/store"
 )
 
 var Module = &services.Module{
@@ -30,12 +30,12 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Client *proto.Client
+	Client *sarif.Client
 }
 
 type Service struct {
 	cfg services.Config
-	*proto.Client
+	*sarif.Client
 	Store *store.Store
 }
 
@@ -76,7 +76,7 @@ func (s *Service) Enable() error {
 	return nil
 }
 
-var MessageEventNotFound = proto.Message{
+var MessageEventNotFound = sarif.Message{
 	Action: "event/notfound",
 	Text:   "No event found.",
 }
@@ -99,7 +99,7 @@ func parseDataFromAction(action, prefix string) (s string, v float64, ok bool) {
 	return strings.Join(parts, "/"), v, true
 }
 
-func (s *Service) handleEventLast(msg proto.Message) {
+func (s *Service) handleEventLast(msg sarif.Message) {
 	filter := make(map[string]interface{})
 	if err := msg.DecodePayload(&filter); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -123,7 +123,7 @@ func (s *Service) handleEventLast(msg proto.Message) {
 	}
 	s.Log("debug", "last - found", events)
 
-	reply := proto.Message{Action: "event/found"}
+	reply := sarif.Message{Action: "event/found"}
 	if err := reply.EncodePayload(events[0]); err != nil {
 		s.ReplyInternalError(msg, err)
 		return
@@ -159,7 +159,7 @@ func hasKey(m map[string]interface{}, key string) bool {
 	return ok
 }
 
-func (s *Service) handleEventList(msg proto.Message) {
+func (s *Service) handleEventList(msg sarif.Message) {
 	filter := make(map[string]interface{})
 	if err := msg.DecodePayload(&filter); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -180,7 +180,7 @@ func (s *Service) handleEventList(msg proto.Message) {
 	}
 	s.Log("debug", "list - found", len(events))
 
-	s.Reply(msg, proto.CreateMessage("events/listed", &aggPayload{
+	s.Reply(msg, sarif.CreateMessage("events/listed", &aggPayload{
 		Type:   "list",
 		Filter: filter,
 		Events: events,
@@ -188,7 +188,7 @@ func (s *Service) handleEventList(msg proto.Message) {
 	}))
 }
 
-func (s *Service) handleEventNew(msg proto.Message) {
+func (s *Service) handleEventNew(msg sarif.Message) {
 	isTargeted := msg.IsAction("event/new")
 
 	var e Event
@@ -217,7 +217,7 @@ func (s *Service) handleEventNew(msg proto.Message) {
 	}
 
 	if isTargeted {
-		reply := proto.Message{Action: "event/created"}
+		reply := sarif.Message{Action: "event/created"}
 		if err := reply.EncodePayload(e); err != nil {
 			s.ReplyInternalError(msg, err)
 			return
@@ -231,7 +231,7 @@ type recordPayload struct {
 	Action string `json:"action"`
 }
 
-func (s *Service) handleEventRecord(msg proto.Message) {
+func (s *Service) handleEventRecord(msg sarif.Message) {
 	var p recordPayload
 	if err := msg.DecodePayload(&p); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -254,5 +254,5 @@ func (s *Service) handleEventRecord(msg proto.Message) {
 	}
 
 	s.Log("debug", "recording action:", p.Action)
-	s.Reply(msg, proto.CreateMessage("event/recording", p))
+	s.Reply(msg, sarif.CreateMessage("event/recording", p))
 }

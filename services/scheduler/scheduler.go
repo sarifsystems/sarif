@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xconstruct/stark/pkg/util"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
-	"github.com/xconstruct/stark/services/schema/store"
+	"github.com/sarifsystems/sarif/pkg/util"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
+	"github.com/sarifsystems/sarif/services/schema/store"
 )
 
 var Module = &services.Module{
@@ -25,11 +25,11 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	Client *proto.Client
+	Client *sarif.Client
 }
 
 type Scheduler struct {
-	*proto.Client
+	*sarif.Client
 	Store *store.Store
 
 	mutex    sync.Mutex
@@ -75,7 +75,7 @@ func futureTime(t time.Time) time.Time {
 	return t
 }
 
-func (s *Scheduler) handle(msg proto.Message) {
+func (s *Scheduler) handle(msg sarif.Message) {
 	var t ScheduleMessage
 	if err := msg.DecodePayload(&t); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -110,7 +110,7 @@ func (s *Scheduler) handle(msg proto.Message) {
 		if text == "" {
 			text = "Reminder from " + time.Now().Format(time.RFC3339) + " finished."
 		}
-		t.Task.Reply = proto.Message{
+		t.Task.Reply = sarif.Message{
 			Action:      "schedule/finished",
 			Destination: msg.Source,
 			Text:        text,
@@ -127,7 +127,7 @@ func (s *Scheduler) handle(msg proto.Message) {
 	}
 
 	go s.recalculateTimer()
-	s.Reply(msg, proto.CreateMessage("schedule/created", t.Task))
+	s.Reply(msg, sarif.CreateMessage("schedule/created", t.Task))
 }
 
 func (s *Scheduler) recalculateTimer() {
@@ -182,6 +182,6 @@ func (s *Scheduler) simpleCron() {
 		nextHour := now.Add(30 * time.Minute).Round(time.Hour)
 		time.Sleep(nextHour.Sub(now))
 		action := strings.ToLower(time.Now().Add(5 * time.Minute).Format("cron/15h/Mon/2d/1m"))
-		s.Publish(proto.CreateMessage(action, nil))
+		s.Publish(sarif.CreateMessage(action, nil))
 	}
 }

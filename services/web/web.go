@@ -3,7 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-// Service web provides a web dashboard and communication between stark and HTTP.
+// Service web provides a web dashboard and communication between sarif and HTTP.
 package web
 
 import (
@@ -15,8 +15,8 @@ import (
 	"strings"
 
 	"github.com/gorilla/websocket"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 const (
@@ -37,15 +37,15 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Broker *proto.Broker
-	Client *proto.Client
+	Broker *sarif.Broker
+	Client *sarif.Client
 }
 
 type Server struct {
 	cfg        Config
-	Broker     *proto.Broker
-	apiClients map[string]*proto.Client
-	Client     *proto.Client
+	Broker     *sarif.Broker
+	apiClients map[string]*sarif.Client
+	Client     *sarif.Client
 	websocket  websocket.Upgrader
 }
 
@@ -82,7 +82,7 @@ func New(deps *Dependencies) *Server {
 	s := &Server{
 		cfg:        cfg,
 		Broker:     deps.Broker,
-		apiClients: make(map[string]*proto.Client),
+		apiClients: make(map[string]*sarif.Client),
 		Client:     deps.Client,
 		websocket: websocket.Upgrader{
 			ReadBufferSize:  1024,
@@ -96,7 +96,7 @@ func New(deps *Dependencies) *Server {
 func (s *Server) Enable() error {
 	http.Handle("/", http.FileServer(http.Dir("assets/web")))
 	http.HandleFunc(REST_URL, s.handleRestPublish)
-	http.HandleFunc("/stream/stark", s.handleStreamStark)
+	http.HandleFunc("/stream/sarif", s.handleStreamSarif)
 
 	s.Client.Subscribe("json", "", s.handleJson)
 
@@ -131,10 +131,10 @@ func parseAuthorizationHeader(h string) string {
 	return ""
 }
 
-func (s *Server) getApiClientByName(name string) *proto.Client {
+func (s *Server) getApiClientByName(name string) *sarif.Client {
 	client, ok := s.apiClients[name]
 	if !ok {
-		client = proto.NewClient("web/" + name)
+		client = sarif.NewClient("web/" + name)
 		client.Connect(s.Broker.NewLocalConn())
 		s.apiClients[name] = client
 	}
@@ -160,7 +160,7 @@ func (s *Server) checkAuthentication(req *http.Request) string {
 	return ""
 }
 
-func (s *Server) clientIsAllowed(client string, msg proto.Message) bool {
+func (s *Server) clientIsAllowed(client string, msg sarif.Message) bool {
 	allowed, ok := s.cfg.AllowedActions[client]
 	if !ok {
 		return true
@@ -197,8 +197,8 @@ func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
 	client := s.getApiClientByName(name)
 
 	// Create message from form values.
-	msg := proto.Message{
-		Id:     proto.GenerateId(),
+	msg := sarif.Message{
+		Id:     sarif.GenerateId(),
 		Source: name,
 	}
 	if strings.HasPrefix(req.URL.Path, REST_URL) {

@@ -7,14 +7,14 @@
 package main
 
 import (
-	"github.com/xconstruct/stark/core/server"
-	"github.com/xconstruct/stark/services/dbus"
-	"github.com/xconstruct/stark/services/mpd"
-	"github.com/xconstruct/stark/services/web"
+	"github.com/sarifsystems/sarif/core/server"
+	"github.com/sarifsystems/sarif/services/dbus"
+	"github.com/sarifsystems/sarif/services/mpd"
+	"github.com/sarifsystems/sarif/services/web"
 )
 
 func main() {
-	srv := server.New("stark", "kipp")
+	srv := server.New("sarif", "kipp")
 
 	srv.RegisterModule(dbus.Module)
 	srv.RegisterModule(mpd.Module)

@@ -8,8 +8,8 @@ package hostscan
 import (
 	"time"
 
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var Module = &services.Module{
@@ -19,14 +19,14 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	Log    proto.Logger
-	Client *proto.Client
+	Log    sarif.Logger
+	Client *sarif.Client
 }
 
 type Service struct {
 	scan *HostScan
-	Log  proto.Logger
-	*proto.Client
+	Log  sarif.Logger
+	*sarif.Client
 }
 
 func NewService(deps *Dependencies) *Service {
@@ -64,7 +64,7 @@ func (s *Service) Update() ([]Host, error) {
 		if name == "" {
 			name = host.Ip
 		}
-		s.Publish(proto.CreateMessage("devices/changed/"+name+"/"+host.Status, &host))
+		s.Publish(sarif.CreateMessage("devices/changed/"+name+"/"+host.Status, &host))
 	}
 	return hosts, nil
 }
@@ -73,16 +73,16 @@ type HostRequest struct {
 	Host string `json:"host"`
 }
 
-func (s *Service) HandleForceUpdate(msg proto.Message) {
+func (s *Service) HandleForceUpdate(msg sarif.Message) {
 	changed, err := s.Update()
 	if err != nil {
 		s.ReplyInternalError(msg, err)
 		return
 	}
-	s.Reply(msg, proto.CreateMessage("devices/changed", changed))
+	s.Reply(msg, sarif.CreateMessage("devices/changed", changed))
 }
 
-func (s *Service) HandleLastStatus(msg proto.Message) {
+func (s *Service) HandleLastStatus(msg sarif.Message) {
 	req := HostRequest{}
 	msg.DecodePayload(&req)
 
@@ -93,7 +93,7 @@ func (s *Service) HandleLastStatus(msg proto.Message) {
 			s.Log.Warnln(err)
 			return
 		}
-		s.Reply(msg, proto.CreateMessage("devices/last_status", host))
+		s.Reply(msg, sarif.CreateMessage("devices/last_status", host))
 		return
 	}
 
@@ -103,5 +103,5 @@ func (s *Service) HandleLastStatus(msg proto.Message) {
 		s.Log.Warnln(err)
 		return
 	}
-	s.Reply(msg, proto.CreateMessage("devices/last_status", hosts))
+	s.Reply(msg, sarif.CreateMessage("devices/last_status", hosts))
 }

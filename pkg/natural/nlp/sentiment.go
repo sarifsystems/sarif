@@ -5,7 +5,7 @@
 
 package nlp
 
-import "github.com/xconstruct/stark/pkg/datasets/en"
+import "github.com/sarifsystems/sarif/pkg/datasets/en"
 
 func AnalyzeAffirmativeSentiment(tokens []*Token) (string, float64) {
 	inverse := false

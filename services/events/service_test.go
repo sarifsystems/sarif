@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/xconstruct/stark/core"
-	"github.com/xconstruct/stark/pkg/testutils"
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/core"
+	"github.com/sarifsystems/sarif/pkg/testutils"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 func TestService(t *testing.T) {
@@ -32,7 +32,7 @@ func TestService(t *testing.T) {
 	st.Describe("Events service", func() {
 
 		st.It("should store a new event", func() {
-			st.When(proto.CreateMessage("event/new", map[string]interface{}{
+			st.When(sarif.CreateMessage("event/new", map[string]interface{}{
 				"action": "user/drink/coffee",
 				"text":   "User drinks coffee.",
 			}))
@@ -41,11 +41,11 @@ func TestService(t *testing.T) {
 		})
 
 		st.It("should return last event", func() {
-			st.When(proto.CreateMessage("event/last", map[string]interface{}{
+			st.When(sarif.CreateMessage("event/last", map[string]interface{}{
 				"action": "user/drink/coffee",
 			}))
 
-			st.Expect(func(msg proto.Message) {
+			st.Expect(func(msg sarif.Message) {
 				st.ExpectAction("event/found")
 				got := Event{}
 				msg.DecodePayload(&got)
@@ -57,28 +57,28 @@ func TestService(t *testing.T) {
 
 		st.It("should count events in a timeframe", func() {
 			// Create test events
-			st.When(proto.CreateMessage("event/new", map[string]interface{}{
+			st.When(sarif.CreateMessage("event/new", map[string]interface{}{
 				"action": "user/sleep/start",
 				"time":   time.Now().Add(-100 * time.Minute),
 			}))
 			st.ExpectAction("event/created")
-			st.When(proto.CreateMessage("event/new", map[string]interface{}{
+			st.When(sarif.CreateMessage("event/new", map[string]interface{}{
 				"action": "user/sleep/end",
 				"time":   time.Now().Add(-10 * time.Minute),
 			}))
 			st.ExpectAction("event/created")
-			st.When(proto.CreateMessage("event/new", map[string]interface{}{
+			st.When(sarif.CreateMessage("event/new", map[string]interface{}{
 				"action": "user/sleep/start",
 				"time":   time.Now().AddDate(0, 0, -5),
 			}))
 			st.ExpectAction("event/created")
 
 			// Count events
-			st.When(proto.CreateMessage("event/count", map[string]interface{}{
+			st.When(sarif.CreateMessage("event/count", map[string]interface{}{
 				"action": "user/sleep",
 				"after":  time.Now().AddDate(0, 0, -3),
 			}))
-			st.Expect(func(msg proto.Message) {
+			st.Expect(func(msg sarif.Message) {
 				count := aggPayload{}
 				msg.DecodePayload(&count)
 				if count.Value != 2 {
@@ -88,21 +88,21 @@ func TestService(t *testing.T) {
 		})
 
 		st.It("should record other messages", func() {
-			st.When(proto.CreateMessage("event/record", map[string]interface{}{
+			st.When(sarif.CreateMessage("event/record", map[string]interface{}{
 				"action": "some/value/changed",
 			}))
 			st.ExpectAction("event/recording")
 
-			st.When(proto.Message{
+			st.When(sarif.Message{
 				Action: "some/value/changed",
 				Text:   "some value has changed",
 			})
 
-			st.When(proto.CreateMessage("event/last", map[string]interface{}{
+			st.When(sarif.CreateMessage("event/last", map[string]interface{}{
 				"action": "some/value/changed",
 			}))
 
-			st.Expect(func(msg proto.Message) {
+			st.Expect(func(msg sarif.Message) {
 				st.ExpectAction("event/found")
 				got := Event{}
 				msg.DecodePayload(&got)

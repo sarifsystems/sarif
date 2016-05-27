@@ -12,7 +12,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/xconstruct/stark/pkg/schema"
+	"github.com/sarifsystems/sarif/pkg/schema"
 )
 
 var ErrInvalidDataURI = errors.New("Invalid data URI")

@@ -1,22 +1,22 @@
-local stark = require "stark"
+local sarif = require "sarif"
 
-stark.subscribe("lua/examples/echo", "", function(msg)
-	stark.reply(msg, {
+sarif.subscribe("lua/examples/echo", "", function(msg)
+	sarif.reply(msg, {
 		action = "echoed",
 		text = msg.text,
 	})
 end)
 
-stark.subscribe("cmd/calc", "", function(msg)
+sarif.subscribe("cmd/calc", "", function(msg)
 	if not msg.text or msg.text == "" then
-		return stark.reply_error(msg, "badrequest", "no expression")
+		return sarif.reply_error(msg, "badrequest", "no expression")
 	end
 
 	local v = loadstring("return " .. msg.text)
 	local ok, ret = pcall(v)
-	if not ok then return stark.reply_error(msg, "badrequest", ret) end
+	if not ok then return sarif.reply_error(msg, "badrequest", ret) end
 
-	return stark.reply(msg, {
+	return sarif.reply(msg, {
 		action = "calculated",
 		text = ret,
 	})

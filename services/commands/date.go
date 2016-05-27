@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/xconstruct/stark/pkg/util"
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/pkg/util"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 func printTime(t time.Time) string {
@@ -19,7 +19,7 @@ func printTime(t time.Time) string {
 		t.Local().Format(time.RFC3339)
 }
 
-func (s *Service) handleDate(msg proto.Message) {
+func (s *Service) handleDate(msg sarif.Message) {
 	text := msg.Text
 	if text == "" {
 		s.ReplyText(msg, printTime(time.Now()))
@@ -39,7 +39,7 @@ func (s *Service) handleDate(msg proto.Message) {
 	s.ReplyText(msg, printTime(time.Now().Add(d)))
 }
 
-func (s *Service) handleUnix(msg proto.Message) {
+func (s *Service) handleUnix(msg sarif.Message) {
 	text := msg.Text
 	if text == "" {
 		s.ReplyText(msg, strconv.FormatInt(time.Now().Unix(), 10))

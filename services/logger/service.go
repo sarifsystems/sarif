@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var Module = &services.Module{
@@ -31,11 +31,11 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Client *proto.Client
+	Client *sarif.Client
 }
 
 type Service struct {
-	*proto.Client
+	*sarif.Client
 	Cfg    Config
 	Config services.Config
 
@@ -79,10 +79,10 @@ func (s *Service) Enable() error {
 
 type LogMessage struct {
 	Time time.Time `json:"time"`
-	proto.Message
+	sarif.Message
 }
 
-func (s *Service) handleLog(msg proto.Message) {
+func (s *Service) handleLog(msg sarif.Message) {
 	targets := make(map[string]struct{})
 	for action, target := range s.Cfg.Actions {
 		if msg.IsAction(action) {

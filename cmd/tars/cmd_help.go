@@ -12,8 +12,8 @@ import (
 
 const Usage = `Usage: tars [OPTION]... [MESSAGE]...
 
-Natural commandline interface to the stark .
-Publishes a natural message on the stark network, prints the response
+Natural commandline interface to the sarif network.
+Publishes a natural message on the sarif network, prints the response
 and returns.
 
 If invoked with no arguments, it starts an interactive session, where

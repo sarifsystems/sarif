@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var Module = &services.Module{
@@ -25,14 +25,14 @@ var Module = &services.Module{
 
 type Dependencies struct {
 	DB     *gorm.DB
-	Log    proto.Logger
-	Client *proto.Client
+	Log    sarif.Logger
+	Client *sarif.Client
 }
 
 type Service struct {
 	DB  *gorm.DB
-	Log proto.Logger
-	*proto.Client
+	Log sarif.Logger
+	*sarif.Client
 
 	Clusters *ClusterGenerator
 }
@@ -118,7 +118,7 @@ func (s *Service) checkGeofences(last, curr Location) {
 		if !fenceInSlice(g, currFences) {
 			s.Log.Debugln("[location] geofence leave:", g)
 			pl := GeofenceEventPayload{curr, g, "leave"}
-			msg := proto.CreateMessage("location/fence/leave/"+g.Name, pl)
+			msg := sarif.CreateMessage("location/fence/leave/"+g.Name, pl)
 			s.Publish(msg)
 		}
 	}
@@ -126,13 +126,13 @@ func (s *Service) checkGeofences(last, curr Location) {
 		if !fenceInSlice(g, lastFences) {
 			s.Log.Debugln("[location] geofence enter:", g)
 			pl := GeofenceEventPayload{curr, g, "enter"}
-			msg := proto.CreateMessage("location/fence/enter/"+g.Name, pl)
+			msg := sarif.CreateMessage("location/fence/enter/"+g.Name, pl)
 			s.Publish(msg)
 		}
 	}
 }
 
-func (s *Service) handleLocationUpdate(msg proto.Message) {
+func (s *Service) handleLocationUpdate(msg sarif.Message) {
 	loc := Location{}
 	if err := msg.DecodePayload(&loc); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -170,7 +170,7 @@ func (s *Service) handleLocationUpdate(msg proto.Message) {
 			c.Address = place.Pretty()
 		}
 
-		s.Publish(proto.CreateMessage("location/cluster/"+status, c))
+		s.Publish(sarif.CreateMessage("location/cluster/"+status, c))
 	}
 
 	if last.Id != 0 {
@@ -203,17 +203,17 @@ func applyFilter(f LocationFilter) func(*gorm.DB) *gorm.DB {
 	}
 }
 
-var MsgNotFound = proto.Message{
+var MsgNotFound = sarif.Message{
 	Action: "err/location/notfound",
 	Text:   "No matching location found.",
 }
 
-var MsgAddressNotFound = proto.Message{
+var MsgAddressNotFound = sarif.Message{
 	Action: "err/location/address/notfound",
 	Text:   "Requested address could not be found",
 }
 
-func (s *Service) handleLocationLast(msg proto.Message) {
+func (s *Service) handleLocationLast(msg sarif.Message) {
 	var pl LocationFilter
 	if err := msg.DecodePayload(&pl); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -255,7 +255,7 @@ func (s *Service) handleLocationLast(msg proto.Message) {
 		}
 	}
 
-	s.Reply(msg, proto.CreateMessage("location/found", loc))
+	s.Reply(msg, sarif.CreateMessage("location/found", loc))
 }
 
 type listPayload struct {
@@ -267,7 +267,7 @@ func (pl listPayload) Text() string {
 	return fmt.Sprintf("Found %d locations.", pl.Count)
 }
 
-func (s *Service) handleLocationList(msg proto.Message) {
+func (s *Service) handleLocationList(msg sarif.Message) {
 	var pl LocationFilter
 	if err := msg.DecodePayload(&pl); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -303,13 +303,13 @@ func (s *Service) handleLocationList(msg proto.Message) {
 		return
 	}
 
-	s.Reply(msg, proto.CreateMessage("location/listed", &listPayload{
+	s.Reply(msg, sarif.CreateMessage("location/listed", &listPayload{
 		len(locs),
 		locs,
 	}))
 }
 
-func (s *Service) handleGeofenceCreate(msg proto.Message) {
+func (s *Service) handleGeofenceCreate(msg sarif.Message) {
 	var g Geofence
 	if err := msg.DecodePayload(&g); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -329,14 +329,14 @@ func (s *Service) handleGeofenceCreate(msg proto.Message) {
 		g.SetBounds(geo[0].BoundingBox)
 	}
 	if g.Name == "" {
-		g.Name = proto.GenerateId()
+		g.Name = sarif.GenerateId()
 	}
 
 	if err := s.DB.Save(&g).Error; err != nil {
 		s.ReplyInternalError(msg, err)
 	}
 
-	reply := proto.Message{Action: "location/fence/created"}
+	reply := sarif.Message{Action: "location/fence/created"}
 	if err := reply.EncodePayload(g); err != nil {
 		s.ReplyInternalError(msg, err)
 		return
@@ -363,7 +363,7 @@ func (p importedPayload) Text() string {
 	return fmt.Sprintf("Imported %d of %d locations.", p.NumImported, p.NumTotal)
 }
 
-func (s *Service) handleLocationImport(msg proto.Message) {
+func (s *Service) handleLocationImport(msg sarif.Message) {
 	p := importPayload{}
 	if err := msg.DecodePayload(&p); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -432,7 +432,7 @@ NEXT_LOC:
 	}
 	tx.Commit()
 
-	s.Reply(msg, proto.CreateMessage("location/imported", &importedPayload{
+	s.Reply(msg, sarif.CreateMessage("location/imported", &importedPayload{
 		StartTime:   minTime,
 		EndTime:     maxTime,
 		NumImported: len(missing),

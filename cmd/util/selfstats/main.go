@@ -11,21 +11,21 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
-	"github.com/xconstruct/stark/core"
-	"github.com/xconstruct/stark/pkg/selfspy"
+	"github.com/sarifsystems/sarif/core"
+	"github.com/sarifsystems/sarif/pkg/selfspy"
 )
 
 var activities = []selfspy.ActivityDef{
 	{"iceweasel", "reddit", "browse/reddit", 1},
 	{"iceweasel", "news.ycombinator.com", "browse/hn", 1},
 	{"iceweasel", "new tab", "browse/nothing", -1},
-	{"terminal", "github.com/xconstruct/stark", "programming/stark", 3},
+	{"terminal", "github.com/sarifsystems/sarif", "programming/sarif", 3},
 	{"terminal", "~/code", "programming", 3},
 	{"vlc", "", "watch", 5},
 }
 
 func main() {
-	app := core.NewApp("stark", "client")
+	app := core.NewApp("sarif", "client")
 	db, err := core.OpenDatabase(core.DatabaseConfig{
 		Driver: "sqlite3",
 		Source: os.Getenv("HOME") + "/.selfspy/selfspy.sqlite",

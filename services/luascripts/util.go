@@ -6,8 +6,8 @@
 package luascripts
 
 import (
-	"github.com/xconstruct/stark/pkg/luareflect"
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/pkg/luareflect"
+	"github.com/sarifsystems/sarif/sarif"
 	"github.com/yuin/gopher-lua"
 )
 
@@ -25,9 +25,9 @@ func tableGetString(t *lua.LTable, key string) string {
 	return s
 }
 
-func messageToTable(L *lua.LState, msg proto.Message) lua.LValue {
+func messageToTable(L *lua.LState, msg sarif.Message) lua.LValue {
 	t := L.NewTable()
-	tableSetString(t, "stark", msg.Version)
+	tableSetString(t, "sarif", msg.Version)
 	tableSetString(t, "id", msg.Id)
 	tableSetString(t, "action", msg.Action)
 	tableSetString(t, "src", msg.Source)
@@ -41,9 +41,9 @@ func messageToTable(L *lua.LState, msg proto.Message) lua.LValue {
 	return t
 }
 
-func tableToMessage(L *lua.LState, t *lua.LTable) proto.Message {
-	msg := proto.Message{}
-	msg.Version = tableGetString(t, "stark")
+func tableToMessage(L *lua.LState, t *lua.LTable) sarif.Message {
+	msg := sarif.Message{}
+	msg.Version = tableGetString(t, "sarif")
 	msg.Id = tableGetString(t, "id")
 	msg.Action = tableGetString(t, "action")
 	msg.Source = tableGetString(t, "src")

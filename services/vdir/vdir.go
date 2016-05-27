@@ -13,8 +13,8 @@ import (
 	"strings"
 
 	"github.com/jinzhu/gorm"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 	"github.com/xconstruct/vdir"
 )
 
@@ -32,15 +32,15 @@ type Config struct {
 type Dependencies struct {
 	DB     *gorm.DB
 	Config services.Config
-	Log    proto.Logger
-	Client *proto.Client
+	Log    sarif.Logger
+	Client *sarif.Client
 }
 
 type Service struct {
 	cfg Config
 	DB  *gorm.DB
-	Log proto.Logger
-	*proto.Client
+	Log sarif.Logger
+	*sarif.Client
 
 	cards map[string]CardInfo
 }
@@ -100,7 +100,7 @@ func (s *Service) loadCard(path string, info os.FileInfo, err error) error {
 
 	card.SchemaContext = "http://www.w3.org/2006/vcard/ns#"
 	card.SchemaType = "Individual"
-	card.SchemaId = "stark://vdir/card/" + card.Uid
+	card.SchemaId = "sarif://vdir/card/" + card.Uid
 	card.SchemaLabel = card.FormattedName
 
 	ci := CardInfo{
@@ -112,7 +112,7 @@ func (s *Service) loadCard(path string, info os.FileInfo, err error) error {
 	return nil
 }
 
-func (s *Service) HandleCard(msg proto.Message) {
+func (s *Service) HandleCard(msg sarif.Message) {
 	uid := strings.TrimPrefix(msg.Action, "vdir/card/")
 	c, ok := s.cards[uid]
 	if !ok {
@@ -120,5 +120,5 @@ func (s *Service) HandleCard(msg proto.Message) {
 		return
 	}
 
-	s.Reply(msg, proto.CreateMessage("vdir/card", c.Card))
+	s.Reply(msg, sarif.CreateMessage("vdir/card", c.Card))
 }

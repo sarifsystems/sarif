@@ -13,19 +13,19 @@ import (
 	"log"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/xconstruct/stark/pkg/inject"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/pkg/inject"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 type Server struct {
-	Broker *proto.Broker
+	Broker *sarif.Broker
 	*services.ModuleManager
 }
 
 func NewServer() *Server {
 	s := &Server{
-		Broker: proto.NewBroker(),
+		Broker: sarif.NewBroker(),
 	}
 	s.ModuleManager = services.NewModuleManager(s.instantiate)
 	return s
@@ -44,11 +44,11 @@ func (s *Server) instantiate(m *services.Module) (interface{}, error) {
 	inj.Factory(func() services.Config {
 		return nullConfig{}
 	})
-	inj.Factory(func() proto.Conn {
+	inj.Factory(func() sarif.Conn {
 		return s.Broker.NewLocalConn()
 	})
-	inj.Factory(func() *proto.Client {
-		c := proto.NewClient("js/" + m.Name)
+	inj.Factory(func() *sarif.Client {
+		c := sarif.NewClient("js/" + m.Name)
 		c.Connect(s.Broker.NewLocalConn())
 		return c
 	})
@@ -56,12 +56,12 @@ func (s *Server) instantiate(m *services.Module) (interface{}, error) {
 }
 
 type Socket struct {
-	conn   proto.Conn
+	conn   sarif.Conn
 	object *js.Object
 }
 
 func (s *Socket) Send(raw string) bool {
-	var msg proto.Message
+	var msg sarif.Message
 	if err := json.Unmarshal([]byte(raw), &msg); err != nil {
 		log.Println(err)
 		return true

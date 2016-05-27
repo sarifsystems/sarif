@@ -9,38 +9,38 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 type simple struct {
 	text            string
 	ok              bool
-	expected        proto.Message
+	expected        sarif.Message
 	expectedPayload map[string]interface{}
 }
 
 func TestParseSimple(t *testing.T) {
 	tests := []simple{
-		simple{".ping", true, proto.Message{
+		simple{".ping", true, sarif.Message{
 			Action: "ping",
 		}, nil},
 
-		simple{".ping device=me", true, proto.Message{
+		simple{".ping device=me", true, sarif.Message{
 			Action:      "ping",
 			Destination: "me",
 		}, nil},
 
-		simple{".ping some text", true, proto.Message{
+		simple{".ping some text", true, sarif.Message{
 			Action: "ping",
 			Text:   "some text",
 		}, nil},
 
-		simple{"/ping some text", true, proto.Message{
+		simple{"/ping some text", true, sarif.Message{
 			Action: "ping",
 			Text:   "some text",
 		}, nil},
 
-		simple{".ping with some device=me host=another things", true, proto.Message{
+		simple{".ping with some device=me host=another things", true, sarif.Message{
 			Action:      "ping",
 			Destination: "me",
 			Text:        "with some things",
@@ -48,15 +48,15 @@ func TestParseSimple(t *testing.T) {
 			"host": "another",
 		}},
 
-		simple{`.ping with "some device=me" host="another things" this`, true, proto.Message{
+		simple{`.ping with "some device=me" host="another things" this`, true, sarif.Message{
 			Action: "ping",
 			Text:   `with some device=me this`,
 		}, map[string]interface{}{
 			"host": "another things",
 		}},
 
-		simple{"ping no", false, proto.Message{}, nil},
-		simple{"", false, proto.Message{}, nil},
+		simple{"ping no", false, sarif.Message{}, nil},
+		simple{"", false, sarif.Message{}, nil},
 	}
 
 	for _, test := range tests {
@@ -78,7 +78,7 @@ func TestParseSimple(t *testing.T) {
 }
 
 func TestFormatMessage(t *testing.T) {
-	msg := proto.Message{
+	msg := sarif.Message{
 		Text: "Hello, the time is 2015-03-14T18:48:10+02:00.",
 	}
 	FormatMessage(&msg)

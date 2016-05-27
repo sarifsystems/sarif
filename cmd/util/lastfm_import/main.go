@@ -6,12 +6,12 @@
 package main
 
 import (
-	"github.com/xconstruct/stark/core/server"
-	"github.com/xconstruct/stark/services/lastfm"
+	"github.com/sarifsystems/sarif/core/server"
+	"github.com/sarifsystems/sarif/services/lastfm"
 )
 
 func main() {
-	app := server.New("stark", "server")
+	app := server.New("sarif", "server")
 	app.Init()
 	defer app.Close()
 

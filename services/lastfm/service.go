@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var Module = &services.Module{
@@ -32,15 +32,15 @@ type Config struct {
 type Dependencies struct {
 	DB     *gorm.DB
 	Config services.Config
-	Log    proto.Logger
-	Client *proto.Client
+	Log    sarif.Logger
+	Client *sarif.Client
 }
 
 type Service struct {
 	cfg Config
 	DB  *gorm.DB
-	Log proto.Logger
-	*proto.Client
+	Log sarif.Logger
+	*sarif.Client
 
 	importing  sync.WaitGroup
 	refreshing bool
@@ -81,7 +81,7 @@ func (s *Service) Enable() error {
 		}()
 	}
 
-	s.Subscribe("lastfm/force_import", "", func(msg proto.Message) {
+	s.Subscribe("lastfm/force_import", "", func(msg sarif.Message) {
 		if err := s.ImportAll(); err != nil {
 			s.ReplyInternalError(msg, err)
 		}
@@ -224,7 +224,7 @@ func (p tagPayload) Text() string {
 	return fmt.Sprintf("%s is genre %s, %s.", p.Artist, p.Genre, p.BroadGenre)
 }
 
-func (s *Service) handleTag(msg proto.Message) {
+func (s *Service) handleTag(msg sarif.Message) {
 	var p tagPayload
 	p.Artist = msg.Text
 	if err := msg.DecodePayload(&p); err != nil {
@@ -244,5 +244,5 @@ func (s *Service) handleTag(msg proto.Message) {
 	for _, t := range tags.TopTags.Tags {
 		p.Tags = append(p.Tags, t.Name)
 	}
-	s.Reply(msg, proto.CreateMessage("lastfm/tagged", p))
+	s.Reply(msg, sarif.CreateMessage("lastfm/tagged", p))
 }

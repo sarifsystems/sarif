@@ -8,8 +8,8 @@ package mpd
 
 import (
 	"github.com/fhs/gompd/mpd"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var Module = &services.Module{
@@ -19,14 +19,14 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	Log    proto.Logger
-	Client *proto.Client
+	Log    sarif.Logger
+	Client *sarif.Client
 }
 
 type Service struct {
-	Log proto.Logger
+	Log sarif.Logger
 	Mpd *mpd.Client
-	*proto.Client
+	*sarif.Client
 }
 
 func NewService(deps *Dependencies) *Service {
@@ -51,13 +51,13 @@ func (s *Service) Enable() (err error) {
 	return nil
 }
 
-func (s *Service) handleSimple(f func() error) func(proto.Message) {
-	return func(msg proto.Message) {
+func (s *Service) handleSimple(f func() error) func(sarif.Message) {
+	return func(msg sarif.Message) {
 		if err := f(); err != nil {
 			s.ReplyInternalError(msg, err)
 			return
 		}
-		s.Reply(msg, proto.CreateMessage("ack/"+msg.Action, nil))
+		s.Reply(msg, sarif.CreateMessage("ack/"+msg.Action, nil))
 	}
 }
 

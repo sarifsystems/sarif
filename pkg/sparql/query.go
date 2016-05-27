@@ -131,7 +131,7 @@ func (q *Query) Exec(result interface{}) error {
 
 var (
 	CommonPrefixes = map[string]string{
-		"stark": "stark://schema/",
+		"sarif": "sarif://schema/",
 
 		"dbpedia":      "http://dbpedia.org/resource/",
 		"dbpedia-owl":  "http://dbpedia.org/ontology/",

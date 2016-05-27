@@ -8,7 +8,7 @@ package store
 import (
 	"errors"
 
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 type Document struct {
@@ -18,14 +18,14 @@ type Document struct {
 }
 
 type Store struct {
-	client *proto.Client
+	client *sarif.Client
 }
 
-func New(c *proto.Client) *Store {
+func New(c *sarif.Client) *Store {
 	return &Store{c}
 }
 
-func checkErr(reply proto.Message, ok bool) error {
+func checkErr(reply sarif.Message, ok bool) error {
 	if !ok {
 		return errors.New("No reply received")
 	}
@@ -37,7 +37,7 @@ func checkErr(reply proto.Message, ok bool) error {
 
 func (s *Store) Put(key string, doc interface{}) (*Document, error) {
 	res := &Document{}
-	reply, ok := <-s.client.Request(proto.CreateMessage("store/put/"+key, doc))
+	reply, ok := <-s.client.Request(sarif.CreateMessage("store/put/"+key, doc))
 	if err := checkErr(reply, ok); err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (s *Store) Put(key string, doc interface{}) (*Document, error) {
 }
 
 func (s *Store) Get(key string, result interface{}) error {
-	reply, ok := <-s.client.Request(proto.CreateMessage("store/get/"+key, nil))
+	reply, ok := <-s.client.Request(sarif.CreateMessage("store/get/"+key, nil))
 	if err := checkErr(reply, ok); err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ type Scan struct {
 }
 
 func (s *Store) Scan(key string, p Scan, result interface{}) error {
-	reply, ok := <-s.client.Request(proto.CreateMessage("store/scan/"+key, &p))
+	reply, ok := <-s.client.Request(sarif.CreateMessage("store/scan/"+key, &p))
 	if err := checkErr(reply, ok); err != nil {
 		return err
 	}

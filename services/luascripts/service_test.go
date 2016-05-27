@@ -8,9 +8,9 @@ package luascripts
 import (
 	"testing"
 
-	"github.com/xconstruct/stark/core"
-	"github.com/xconstruct/stark/pkg/testutils"
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/core"
+	"github.com/sarifsystems/sarif/pkg/testutils"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 func TestService(t *testing.T) {
@@ -31,22 +31,22 @@ func TestService(t *testing.T) {
 	st.Describe("Luascripts service", func() {
 
 		st.It("should execute a simple script", func() {
-			st.When(proto.Message{
+			st.When(sarif.Message{
 				Action: "lua/do",
 				Text:   "print(3 + 5)",
 			})
-			st.Expect(func(msg proto.Message) {
+			st.Expect(func(msg sarif.Message) {
 				st.ExpectAction("lua/done")
 				st.ExpectText("8")
 			})
 		})
 
 		st.It("should react to messages", func() {
-			st.When(proto.Message{
+			st.When(sarif.Message{
 				Action: "lua/do",
 				Text: `
-				stark.subscribe("my/repeat", "", function(msg)
-					stark.publish({
+				sarif.subscribe("my/repeat", "", function(msg)
+					sarif.publish({
 						action = "my/repeated",
 						text = msg.text .. msg.text,
 					})
@@ -55,35 +55,35 @@ func TestService(t *testing.T) {
 			})
 			st.ExpectAction("lua/done")
 
-			st.When(proto.Message{
+			st.When(sarif.Message{
 				Action: "my/repeat",
 				Text:   "mooo",
 			})
-			st.Expect(func(msg proto.Message) {
+			st.Expect(func(msg sarif.Message) {
 				st.ExpectAction("my/repeated")
 				st.ExpectText("mooomooo")
 			})
 		})
 
 		st.It("should request messages", func() {
-			st.When(proto.Message{
+			st.When(sarif.Message{
 				Action: "lua/do",
 				Text: `
-				stark.subscribe("", "self", function() end)
-				local rep = stark.request{
+				sarif.subscribe("", "self", function() end)
+				local rep = sarif.request{
 					action = "my/request",
 					text = "hello from inside",
 				}
-				stark.publish{
+				sarif.publish{
 					action = "got",
 					text = rep.action .. ": " .. rep.text,
 				}
 				`,
 			})
 
-			st.Expect(func(msg proto.Message) {
+			st.Expect(func(msg sarif.Message) {
 				st.ExpectAction("my/request")
-				st.When(proto.Message{
+				st.When(sarif.Message{
 					Action:      "my/response",
 					Destination: msg.Source,
 					Text:        "hello from outside",
@@ -91,7 +91,7 @@ func TestService(t *testing.T) {
 				})
 			})
 
-			st.Expect(func(msg proto.Message) {
+			st.Expect(func(msg sarif.Message) {
 				st.ExpectAction("got")
 				st.ExpectText("my/response: hello from outside")
 			})

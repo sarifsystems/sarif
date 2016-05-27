@@ -1,7 +1,7 @@
-Stark Specification Version 0.5
+Sarif Specification Version 0.5
 =================================
 
-A stark message is a JSON-encoded object with a number of required fields. This message
+A Sarif message is a JSON-encoded object with a number of required fields. This message
 is normally send over TCP/TLS to a broker which dispatches it to the correct client(s).
 There can also be other intermediate delivery methods such as JSON over WebSocket or
 pure text over XMPP, but these are limited and non-standard.
@@ -9,9 +9,9 @@ pure text over XMPP, but these are limited and non-standard.
 Standard message fields
 -----------------------
 
-As defined in [proto.Message](http://godoc.org/github.com/xconstruct/stark/proto#Message).
+As defined in [proto.Message](http://godoc.org/github.com/sarifsystems/sarif/sarif#Message).
 
-* stark: semantic version of the protocol
+* sarif: semantic version of the protocol
 * id: unique ID of this message (normally 8 alphanumeric chars)
 * action: type of the message (delimited by '/', example: 'push/link')
 * src: device ID of the sender (normally "host/name/id")
@@ -27,7 +27,7 @@ Subscribe to all messages directed at our device with name "mydevice/123".
 
 ```json
 {
-	"stark":"0.5",
+	"sarif":"0.5",
 	"id": "1234abcd",
 	"action": "proto/sub",
 	"src": "mydevice/123",
@@ -39,7 +39,7 @@ Publish a `ping` message that prompts all connected devices to respond.
 
 ```json
 {
-	"stark":"0.5",
+	"sarif":"0.5",
 	"id": "789xyz",
 	"action": "ping",
 	"src": "mydevice/123"
@@ -50,7 +50,7 @@ Or ping a specific device.
 
 ```json
 {
-	"stark":"0.5",
+	"sarif":"0.5",
 	"id": "789xyz",
 	"action": "ping",
 	"src": "mydevice/123",
@@ -62,7 +62,7 @@ A possible reply to our `ping` message.
 
 ```json
 {
-	"stark":"0.5",
+	"sarif":"0.5",
 	"id": "asdas125",
 	"action": "ack",
 	"src": "phone/dog",

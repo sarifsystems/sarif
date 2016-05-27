@@ -8,7 +8,7 @@ package schema_test
 import (
 	"testing"
 
-	"github.com/xconstruct/stark/pkg/schema"
+	"github.com/sarifsystems/sarif/pkg/schema"
 )
 
 type MyThing struct {
@@ -24,7 +24,7 @@ type MySpecialThing struct {
 func TestFill(t *testing.T) {
 	my := &MyThing{Value: 3}
 	schema.Fill(my)
-	if my.SchemaType != "http://github.com/xconstruct/stark/pkg/schema_test/MyThing" {
+	if my.SchemaType != "http://github.com/sarifsystems/sarif/pkg/schema_test/MyThing" {
 		t.Error("wrong type:", my.SchemaType)
 	}
 

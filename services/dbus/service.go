@@ -8,8 +8,8 @@ package dbus
 
 import (
 	"github.com/godbus/dbus"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var Module = &services.Module{
@@ -19,15 +19,15 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	Log    proto.Logger
-	Client *proto.Client
+	Log    sarif.Logger
+	Client *sarif.Client
 }
 
 type Service struct {
-	Log     proto.Logger
+	Log     sarif.Logger
 	Session *dbus.Conn
 	System  *dbus.Conn
-	*proto.Client
+	*sarif.Client
 
 	Players map[string]*MprisPlayer
 }
@@ -59,14 +59,14 @@ func (s *Service) Enable() (err error) {
 	return s.setupSignals()
 }
 
-func (s *Service) handleNotify(msg proto.Message) {
+func (s *Service) handleNotify(msg sarif.Message) {
 	n := NewNotificationObject(s.Session)
 	if err := n.Notify(msg.Text, msg.Text); err != nil {
 		s.Log.Errorln("[dbus] notify err:", err)
 	}
 }
 
-func (s *Service) handlePowerOff(msg proto.Message) {
+func (s *Service) handlePowerOff(msg sarif.Message) {
 	o := NewLogindObject(s.System)
 	if err := o.PowerOff(); err != nil {
 		s.Log.Errorln("[dbus] poweroff err:", err)

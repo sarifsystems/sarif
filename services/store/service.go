@@ -3,7 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-// Service store provides a key-value store to the stark network.
+// Service store provides a key-value store to the sarif network.
 package store
 
 import (
@@ -11,9 +11,9 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/xconstruct/stark/pkg/mapq"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/pkg/mapq"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var Module = &services.Module{
@@ -23,19 +23,20 @@ var Module = &services.Module{
 }
 
 type Config struct {
-	Path string
+	Driver string
+	Path   string
 }
 
 type Dependencies struct {
 	Config services.Config
-	Client *proto.Client
+	Client *sarif.Client
 }
 
 type Service struct {
 	Config services.Config
 	Cfg    Config
 	Store  Store
-	*proto.Client
+	*sarif.Client
 }
 
 func NewService(deps *Dependencies) *Service {
@@ -47,10 +48,23 @@ func NewService(deps *Dependencies) *Service {
 }
 
 func (s *Service) Enable() (err error) {
-	s.Cfg.Path = s.Config.Dir() + "/" + "store.bolt.db"
+	if _, ok := drivers["bolt"]; ok {
+		s.Cfg.Driver = "bolt"
+		s.Cfg.Path = s.Config.Dir() + "/" + "store.bolt.db"
+	} else if _, ok := drivers["memory"]; ok {
+		s.Cfg.Driver = "mem"
+	}
 	s.Config.Get(&s.Cfg)
 
-	if s.Store, err = OpenBolt(s.Cfg.Path); err != nil {
+	if s.Cfg.Driver == "" {
+		return errors.New("Store: no database driver set in config!")
+	}
+	drv, ok := drivers[s.Cfg.Driver]
+	if !ok {
+		return errors.New("Store: no driver with name '" + s.Cfg.Driver + "' found!")
+	}
+
+	if s.Store, err = drv.Open(s.Cfg.Path); err != nil {
 		return err
 	}
 
@@ -75,7 +89,7 @@ func parseAction(prefix, action string) (col, key string) {
 	return parts[0], parts[1]
 }
 
-func (s *Service) handlePut(msg proto.Message) {
+func (s *Service) handlePut(msg sarif.Message) {
 	collection, key := parseAction("store/put/", msg.Action)
 	if collection == "" {
 		s.ReplyBadRequest(msg, errors.New("No collection specified."))
@@ -103,14 +117,14 @@ func (s *Service) handlePut(msg proto.Message) {
 	}
 
 	doc.Value = nil
-	reply := proto.CreateMessage("store/updated/"+doc.Collection+"/"+doc.Key, doc)
+	reply := sarif.CreateMessage("store/updated/"+doc.Collection+"/"+doc.Key, doc)
 	s.Reply(msg, reply)
 
-	pub := proto.CreateMessage("store/updated/"+doc.Collection+"/"+doc.Key, doc)
+	pub := sarif.CreateMessage("store/updated/"+doc.Collection+"/"+doc.Key, doc)
 	s.Publish(pub)
 }
 
-func (s *Service) handleGet(msg proto.Message) {
+func (s *Service) handleGet(msg sarif.Message) {
 	collection, key := parseAction("store/get/", msg.Action)
 	if collection == "" || key == "" {
 		s.ReplyBadRequest(msg, errors.New("No collection or key specified."))
@@ -122,7 +136,7 @@ func (s *Service) handleGet(msg proto.Message) {
 		s.ReplyInternalError(msg, err)
 		return
 	} else if doc == nil {
-		s.Reply(msg, proto.Message{
+		s.Reply(msg, sarif.Message{
 			Action: "err/notfound",
 			Text:   "Document " + collection + "/" + key + " not found.",
 		})
@@ -130,12 +144,12 @@ func (s *Service) handleGet(msg proto.Message) {
 	}
 
 	raw := json.RawMessage(doc.Value)
-	reply := proto.CreateMessage("store/retrieved/"+doc.Collection+"/"+doc.Key, nil)
+	reply := sarif.CreateMessage("store/retrieved/"+doc.Collection+"/"+doc.Key, nil)
 	reply.Payload.Encode(&raw)
 	s.Reply(msg, reply)
 }
 
-func (s *Service) handleDel(msg proto.Message) {
+func (s *Service) handleDel(msg sarif.Message) {
 	collection, key := parseAction("store/del/", msg.Action)
 	if collection == "" || key == "" {
 		s.ReplyBadRequest(msg, errors.New("No collection or key specified."))
@@ -146,8 +160,8 @@ func (s *Service) handleDel(msg proto.Message) {
 		return
 	}
 
-	s.Reply(msg, proto.CreateMessage("store/deleted/"+collection+"/"+key, nil))
-	s.Publish(proto.CreateMessage("store/deleted/"+collection+"/"+key, nil))
+	s.Reply(msg, sarif.CreateMessage("store/deleted/"+collection+"/"+key, nil))
+	s.Publish(sarif.CreateMessage("store/deleted/"+collection+"/"+key, nil))
 }
 
 type scanMessage struct {
@@ -161,7 +175,7 @@ type scanMessage struct {
 	Filter map[string]interface{} `json:"filter"`
 }
 
-func (s *Service) handleScan(msg proto.Message) {
+func (s *Service) handleScan(msg sarif.Message) {
 	collection, prefix := parseAction("store/scan/", msg.Action)
 	if collection == "" {
 		s.ReplyBadRequest(msg, errors.New("No collection specified."))
@@ -219,7 +233,7 @@ func (s *Service) handleScan(msg proto.Message) {
 		}
 	}
 
-	reply := proto.CreateMessage("store/scanned/"+collection, nil)
+	reply := sarif.CreateMessage("store/scanned/"+collection, nil)
 	if p.Only == "keys" {
 		reply.Payload.Encode(keys)
 	} else if p.Only == "values" {

@@ -12,8 +12,8 @@ import (
 	"log"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/xconstruct/stark/services/natural"
-	"github.com/xconstruct/stark/services/nlparser"
+	"github.com/sarifsystems/sarif/services/natural"
+	"github.com/sarifsystems/sarif/services/nlparser"
 )
 
 func must(err error) {
@@ -31,5 +31,5 @@ func main() {
 	must(srv.EnableModule("natural"))
 	must(srv.EnableModule("nlparser"))
 
-	js.Global.Set("StarkServer", js.MakeWrapper(srv))
+	js.Global.Set("SarifServer", js.MakeWrapper(srv))
 }

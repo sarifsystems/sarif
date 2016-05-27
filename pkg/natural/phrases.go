@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xconstruct/stark/pkg/datasets/en"
+	"github.com/sarifsystems/sarif/pkg/datasets/en"
 )
 
 type Phrasebook struct {

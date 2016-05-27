@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
-	"github.com/xconstruct/stark/pkg/util"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/pkg/util"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
 var Module = &services.Module{
@@ -36,15 +36,15 @@ type Config struct {
 type Dependencies struct {
 	DB     *gorm.DB
 	Config services.Config
-	Log    proto.Logger
-	Client *proto.Client
+	Log    sarif.Logger
+	Client *sarif.Client
 }
 
 type Service struct {
 	cfg Config
 	DB  *gorm.DB
-	Log proto.Logger
-	*proto.Client
+	Log sarif.Logger
+	*sarif.Client
 }
 
 func NewService(deps *Dependencies) *Service {
@@ -73,7 +73,7 @@ func (s *Service) Enable() error {
 	return nil
 }
 
-func (s *Service) handleProductNew(msg proto.Message) {
+func (s *Service) handleProductNew(msg sarif.Message) {
 	var p Product
 	if err := msg.DecodePayload(&p); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -94,10 +94,10 @@ func (s *Service) handleProductNew(msg proto.Message) {
 		return
 	}
 
-	s.Reply(msg, proto.CreateMessage("meal/product/created", &p))
+	s.Reply(msg, sarif.CreateMessage("meal/product/created", &p))
 }
 
-func (s *Service) handleServingRecord(msg proto.Message) {
+func (s *Service) handleServingRecord(msg sarif.Message) {
 	var sv Serving
 	if err := msg.DecodePayload(&sv); err != nil {
 		s.ReplyBadRequest(msg, err)
@@ -148,7 +148,7 @@ func (s *Service) handleServingRecord(msg proto.Message) {
 		return
 	}
 
-	s.Reply(msg, proto.CreateMessage("meal/serving/recorded", &sv))
+	s.Reply(msg, sarif.CreateMessage("meal/serving/recorded", &sv))
 }
 
 func (s *Service) findProduct(name string) ([]Product, error) {
@@ -204,7 +204,7 @@ func (s ServingStats) String() string {
 	return fmt.Sprintf("%d servings totalling %v.", len(s.Servings), s.Stats.Energy.StringKcal())
 }
 
-func (s *Service) handleStats(msg proto.Message) {
+func (s *Service) handleStats(msg sarif.Message) {
 	f := ServingFilter{
 		After:  time.Now().Truncate(24 * time.Hour).Add(5 * time.Hour),
 		Before: time.Now().Truncate(24 * time.Hour).Add(29 * time.Hour),
@@ -225,7 +225,7 @@ func (s *Service) handleStats(msg proto.Message) {
 	for _, sv := range servings {
 		stats.Add(sv.Stats())
 	}
-	s.Reply(msg, proto.CreateMessage("meal/stats", stats))
+	s.Reply(msg, sarif.CreateMessage("meal/stats", stats))
 }
 
 func applyFilter(f ServingFilter) func(*gorm.DB) *gorm.DB {
@@ -240,7 +240,7 @@ func applyFilter(f ServingFilter) func(*gorm.DB) *gorm.DB {
 	}
 }
 
-func (s *Service) handleFetchFddb(msg proto.Message) {
+func (s *Service) handleFetchFddb(msg sarif.Message) {
 	day := util.ParseTime(msg.Text, time.Now())
 	if err := s.FetchFddb(day); err != nil {
 		s.ReplyInternalError(msg, err)

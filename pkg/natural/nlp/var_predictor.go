@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/xconstruct/stark/pkg/mlearning"
+	"github.com/sarifsystems/sarif/pkg/mlearning"
 )
 
 type VarPredictor struct {

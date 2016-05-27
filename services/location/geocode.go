@@ -115,7 +115,7 @@ func Geocode(query string) ([]GeoPlace, error) {
 	u.RawQuery = v.Encode()
 
 	req, err := http.NewRequest("GET", u.String(), nil)
-	req.Header.Set("User-Agent", "github.com/xconstruct/stark")
+	req.Header.Set("User-Agent", "github.com/sarifsystems/sarif")
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +161,7 @@ func ReverseGeocode(loc Location) (GeoPlace, error) {
 
 	req, err := http.NewRequest("GET", u.String(), nil)
 	fmt.Println(u.String())
-	req.Header.Set("User-Agent", "github.com/xconstruct/stark")
+	req.Header.Set("User-Agent", "github.com/sarifsystems/sarif")
 	if err != nil {
 		return r.GeoPlace, err
 	}

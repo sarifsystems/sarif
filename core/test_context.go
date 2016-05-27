@@ -8,15 +8,15 @@ package core
 import (
 	"log"
 
-	"github.com/xconstruct/stark/pkg/inject"
-	"github.com/xconstruct/stark/proto"
-	"github.com/xconstruct/stark/services"
+	"github.com/sarifsystems/sarif/pkg/inject"
+	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
 
-func InjectTest(container interface{}) proto.Conn {
+func InjectTest(container interface{}) sarif.Conn {
 	orm := OpenDatabaseInMemory()
-	a, b := proto.NewPipe()
-	broker := proto.NewBroker()
+	a, b := sarif.NewPipe()
+	broker := sarif.NewBroker()
 	broker.SetLogger(DefaultLog)
 	go broker.ListenOnBridge(a)
 
@@ -25,16 +25,16 @@ func InjectTest(container interface{}) proto.Conn {
 	inj := inject.NewInjector()
 	inj.Instance(orm.DB)
 	inj.Instance(orm.Database())
-	inj.Instance(proto.Conn(a))
+	inj.Instance(sarif.Conn(a))
 	inj.Instance(broker)
 	inj.Factory(func() services.Config {
 		return NewConfig("").Section("test")
 	})
-	inj.Factory(func() proto.Logger {
+	inj.Factory(func() sarif.Logger {
 		return DefaultLog
 	})
-	inj.Factory(func() *proto.Client {
-		c := proto.NewClient("testclient-" + proto.GenerateId())
+	inj.Factory(func() *sarif.Client {
+		c := sarif.NewClient("testclient-" + sarif.GenerateId())
 		c.Connect(broker.NewLocalConn())
 		c.SetLogger(DefaultLog)
 		return c

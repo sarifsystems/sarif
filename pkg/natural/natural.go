@@ -14,16 +14,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xconstruct/stark/pkg/util"
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/pkg/util"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 const (
 	ThisAlgorithmBecomingSkynetCost = 999999999
 )
 
-func ParseSimple(text string) (proto.Message, bool) {
-	msg := proto.Message{}
+func ParseSimple(text string) (sarif.Message, bool) {
+	msg := sarif.Message{}
 
 	// Raw JSON message
 	if strings.HasPrefix(text, "{") {
@@ -32,8 +32,8 @@ func ParseSimple(text string) (proto.Message, bool) {
 		}
 	}
 
-	if strings.HasPrefix(text, "stark://") {
-		if msg, err := proto.ConvertURL(text); err == nil {
+	if strings.HasPrefix(text, "sarif://") {
+		if msg, err := sarif.ConvertURL(text); err == nil {
 			return msg, true
 		}
 	}
@@ -99,7 +99,7 @@ func parseValue(v string) interface{} {
 	return v
 }
 
-func FormatSimple(msg proto.Message) string {
+func FormatSimple(msg sarif.Message) string {
 	if msg.Text != "" {
 		return msg.Text
 	}
@@ -120,7 +120,7 @@ func formatTime(s string) string {
 	return util.FuzzyTime(t)
 }
 
-func FormatMessage(msg *proto.Message) {
+func FormatMessage(msg *sarif.Message) {
 	if msg.Text == "" {
 		return
 	}

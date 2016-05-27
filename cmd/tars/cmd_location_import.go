@@ -10,7 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 func (app *App) LocationImport() {
@@ -20,7 +20,7 @@ func (app *App) LocationImport() {
 		log.Fatal(err)
 	}
 
-	result, ok := <-app.Client.Request(proto.CreateMessage("location/import", map[string]string{
+	result, ok := <-app.Client.Request(sarif.CreateMessage("location/import", map[string]string{
 		"csv": string(body),
 	}))
 	if !ok {

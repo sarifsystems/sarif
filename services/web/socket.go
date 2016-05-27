@@ -10,14 +10,14 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
-	"github.com/xconstruct/stark/proto"
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 type WebSocketConn struct {
 	conn *websocket.Conn
 }
 
-func (c *WebSocketConn) Write(msg proto.Message) error {
+func (c *WebSocketConn) Write(msg sarif.Message) error {
 	if err := msg.IsValid(); err != nil {
 		return err
 	}
@@ -29,8 +29,8 @@ func (c *WebSocketConn) Write(msg proto.Message) error {
 	return json.NewEncoder(w).Encode(msg)
 }
 
-func (c *WebSocketConn) Read() (proto.Message, error) {
-	var msg proto.Message
+func (c *WebSocketConn) Read() (sarif.Message, error) {
+	var msg sarif.Message
 	_, r, err := c.conn.NextReader()
 	if err != nil {
 		return msg, err
@@ -45,7 +45,7 @@ func (c *WebSocketConn) Close() error {
 	return c.conn.Close()
 }
 
-func (s *Server) handleStreamStark(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleStreamSarif(w http.ResponseWriter, r *http.Request) {
 	// Check authentication.
 	name := s.checkAuthentication(r)
 	if name == "" {
