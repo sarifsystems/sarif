@@ -1,3 +1,5 @@
+<img width="130" align="right" src="https://avatars1.githubusercontent.com/u/19608160?v=3&s=300">
+
 sarif
 =====
 
@@ -5,15 +7,28 @@ sarif
 [![API Documentation](https://img.shields.io/badge/api-GoDoc-blue.svg?style=flat-square)](https://godoc.org/github.com/sarifsystems/sarif)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](http://opensource.org/licenses/MIT)
 
-Sarif is a simple network of microservices to perform tasks across devices for the user.
-Combined with APIs and user-tracking, it serves as a personal assistant.
-This is the message spec and reference implementation, written in Go.
+Sarif is an experimental personal assistant and data analysis platform, bolted onto a distributed network of microservices. Seriously. This project pursues to provide the following things some time in the future:
 
-Since it is currently in a prototype stage, it has a limited set of features out of
-the box and there may be a lot of breaking changes. There is currently no documentation.
+* A very simple network protocol based on JSON (see [SPEC.md](SPEC.md))
+* A network of extensible, interconnected services across devices
+* A natural user interface, via text and/or voice
+* A personal data analysis platform for quantified self tracking
+* Full commandline access and data export, and open source forever!
+* Hopefully in the future something that can be called an AI -- definitely not a *GoogleTwitterWeatherBot*
+
+This is the message spec and reference implementation, written in Go. Since the project is currently
+in a prototype stage, it has a limited set of features out of
+the box and there may be lots of breaking changes. There is currently no documentation.
 Here be dragons. That said, the core functionality is there.
 
-## In Detail ##
+*"A distributed AI with access to all your personal data and computers? What could possibly go wrong?"*
+
+### Check Out The Demo!
+
+Thanks to the awesome [GopherJS](https://github.com/gopherjs/gopherjs), part of this project is continuously
+compiled into an enormous blob of JavaScript. Yeah, I know. This way, you can try the [Web Dashboard](https://sarifsystems.github.io/sarif-web). Currently, only a minimal set of modules is available there. And still no documentation.
+
+### In Detail ##
 
 Sarif aspires to be a personal helper that has access to a range of different
 tools to aid in automating everyday life, an "intranet of apps".  For example,
@@ -25,15 +40,7 @@ A microservice could be anything, e.g. a location publisher on your phone,
 a database server, a media player control, a webservice, a voice assistant / chatbot,
 or your personal context-aware artifical intelligence robot overlord.
 
-Sarif provides:
-
-* A very simple message format based on JSON (see [SPEC.md](SPEC.md))
-* A network of extensible, interconnected services across devices
-* A natural user interface.
-* A data platform for quantified self tracking and context-awareness
-* Hopefully in the future something that can be called an AI
-
-## Getting Started
+### Getting Started
 
 	$ go install github.com/sarifsystems/sarif/cmd/sarifd
 	$ go install github.com/sarifsystems/sarif/cmd/tars
@@ -47,7 +54,7 @@ Sarif provides:
 
 And take a look at `cmd/examples/sarifping`.
 
-## Design Goals ##
+### Design Goals ##
 
 **Interface-agnostic**: Sarif should work "everywhere" and degrade gracefully. If
 you are on your phone, it should react to text messages. If you use your computer,
