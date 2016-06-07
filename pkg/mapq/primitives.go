@@ -43,7 +43,7 @@ func Matches(a interface{}, op string, b interface{}) bool {
 			if op == "==" {
 				return am.Matches(bm)
 			} else if op == "!=" {
-				return am.MatchesNot(bm)
+				return !am.Matches(bm)
 			}
 		}
 		return false

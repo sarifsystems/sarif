@@ -101,6 +101,7 @@ func (cfg *Config) Dir() string {
 
 func OpenConfig(file string, create bool) (*Config, error) {
 	cfg := NewConfig(file)
+
 	f, err := os.Open(file)
 	if err != nil {
 		if !create || !os.IsNotExist(err) {

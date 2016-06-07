@@ -216,7 +216,7 @@ func (s *Service) handleScan(msg sarif.Message) {
 			if err := json.Unmarshal(doc.Value, &object); err != nil {
 				continue
 			}
-			if mapq.M(object).MatchesNot(mapq.Filter(p.Filter)) {
+			if !mapq.M(object).Matches(mapq.Filter(p.Filter)) {
 				continue
 			}
 		}

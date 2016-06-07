@@ -141,7 +141,7 @@ func (s *Scheduler) recalculateTimer() {
 	s.nextTask = Task{}
 	var tasks []Task
 	err := s.Store.Scan("scheduler/task/", store.Scan{
-		Start: time.Now().Add(-24 * time.Hour).UTC().Format(time.RFC3339),
+		Start: time.Now().Add(-24 * time.Hour).UTC().Format(time.RFC3339Nano),
 		Only:  "values",
 		Filter: map[string]interface{}{
 			"finished": false,

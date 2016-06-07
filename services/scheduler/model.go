@@ -23,7 +23,7 @@ type Task struct {
 }
 
 func (t Task) Key() string {
-	return "scheduler/task/" + t.Time.UTC().Format(time.RFC3339)
+	return "scheduler/task/" + t.Time.UTC().Format(time.RFC3339Nano)
 }
 
 func (t Task) String() string {

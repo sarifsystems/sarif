@@ -8,6 +8,7 @@ package core
 
 import (
 	"flag"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -65,7 +66,15 @@ func (app *App) Init() {
 
 func (app *App) initConfig() (err error) {
 	if *configPath == "" {
-		app.Config, err = FindConfig(app.AppName, app.ModuleName)
+		if app.ModuleName == "temp" {
+			dir, err := ioutil.TempDir(os.TempDir(), app.AppName+"-")
+			if err != nil {
+				return err
+			}
+			app.Config = NewConfig(dir + "/config.json")
+		} else {
+			app.Config, err = FindConfig(app.AppName, app.ModuleName)
+		}
 	} else {
 		app.Config, err = OpenConfig(*configPath, true)
 	}
@@ -84,7 +93,11 @@ func (app *App) WriteConfig() {
 }
 
 func (app *App) Close() {
-	app.WriteConfig()
+	if app.ModuleName == "temp" {
+		app.Must(os.RemoveAll(app.Config.Dir()))
+	} else {
+		app.WriteConfig()
+	}
 }
 
 func (app *App) Must(err error) {

@@ -32,20 +32,6 @@ func (m M) Matches(filter Filter) bool {
 	return true
 }
 
-func (m M) MatchesNot(filter Filter) bool {
-	if filter == nil || len(filter) == 0 {
-		return false
-	}
-	for k, v := range filter {
-		key, op := splitQueryOp(k)
-
-		if Matches(m[key], op, v) {
-			return false
-		}
-	}
-	return true
-}
-
 func (m M) stringKey(key string) string {
 	return fmt.Sprintf("%v", m[key])
 }
@@ -91,7 +77,7 @@ func (c Collection) Any(filter Filter) bool {
 
 func (c Collection) All(filter Filter) bool {
 	for _, m := range c {
-		if m == nil || M(m).MatchesNot(filter) {
+		if m == nil || !M(m).Matches(filter) {
 			return false
 		}
 	}
