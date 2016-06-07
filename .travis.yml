@@ -8,7 +8,7 @@ before_install:
   - go get github.com/gopherjs/gopherjs
 script:
   - go test ./...
-  - go test ./tests --tags=integration
+  - go test -v ./tests --tags=integration
 deploy:
   provider: script
   script: ./deploy.sh
