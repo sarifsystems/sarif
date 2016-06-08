@@ -14,6 +14,7 @@ import (
 	"github.com/sarifsystems/sarif/core/server"
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services/events"
+	"github.com/sarifsystems/sarif/services/location"
 	"github.com/sarifsystems/sarif/services/scheduler"
 	"github.com/sarifsystems/sarif/services/store"
 	"github.com/smartystreets/goconvey/convey"
@@ -25,6 +26,7 @@ var runTests = []Test{
 	{"Store Service", ServiceStoreTest},
 	{"Scheduler Service", ServiceSchedulerTest},
 	{"Events Service", ServiceEventsTest},
+	{"Location Service", ServiceLocationTest},
 }
 
 type Test struct {
@@ -37,11 +39,13 @@ func TestSpec(t *testing.T) {
 	srv.Log.SetLevel(core.LogLevelWarn)
 
 	srv.RegisterModule(events.Module)
+	srv.RegisterModule(location.Module)
 	srv.RegisterModule(scheduler.Module)
 	srv.RegisterModule(store.Module)
 
 	srv.ServerConfig.EnabledModules = []string{
 		"events",
+		"location",
 		"scheduler",
 		"store",
 	}

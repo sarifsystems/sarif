@@ -58,10 +58,16 @@ func NewTestRunner(t *testing.T) *TestRunner {
 
 func (t *TestRunner) UseConn(conn sarif.Conn) {
 	t.conn = conn
-	t.conn.Write(sarif.CreateMessage("proto/sub", map[string]string{
+	t.Publish(sarif.CreateMessage("proto/sub", map[string]string{
 		"device": t.Id,
 	}))
 	go t.listen()
+}
+
+func (t *TestRunner) Subscribe(action string) {
+	t.Publish(sarif.CreateMessage("proto/sub", map[string]string{
+		"action": action,
+	}))
 }
 
 func (t *TestRunner) listen() {

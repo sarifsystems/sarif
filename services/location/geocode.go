@@ -8,7 +8,6 @@ package location
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -160,7 +159,6 @@ func ReverseGeocode(loc Location) (GeoPlace, error) {
 	u.RawQuery = v.Encode()
 
 	req, err := http.NewRequest("GET", u.String(), nil)
-	fmt.Println(u.String())
 	req.Header.Set("User-Agent", "github.com/sarifsystems/sarif")
 	if err != nil {
 		return r.GeoPlace, err
