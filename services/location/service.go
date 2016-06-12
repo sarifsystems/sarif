@@ -52,9 +52,9 @@ func (s *Service) Enable() error {
 	return nil
 }
 
-func fenceInSlice(f Geofence, fences []Geofence, loc Location) bool {
+func fenceInSlice(f Geofence, fences []Geofence) bool {
 	for _, ff := range fences {
-		if ff.Name == f.Name && ff.Contains(loc) {
+		if ff.Name == f.Name {
 			return true
 		}
 	}
@@ -72,15 +72,14 @@ func (m GeofenceEventPayload) String() string {
 }
 
 func (s *Service) checkGeofences(last, curr Location) {
-	lastHash := EncodeGeohash(last.Latitude, last.Longitude, 12)
-	currHash := EncodeGeohash(curr.Latitude, curr.Longitude, 12)
-
 	var lastFences, currFences []Geofence
 	err := s.Store.Scan("location_geofences", store.Scan{
 		Only: "values",
 		Filter: map[string]interface{}{
-			"geohash_min <=": lastHash,
-			"geohash_max >=": lastHash,
+			"lat_min <=": last.Latitude,
+			"lat_max >=": last.Latitude,
+			"lng_min <=": last.Longitude,
+			"lng_max >=": last.Longitude,
 		},
 	}, &lastFences)
 	if err != nil {
@@ -89,8 +88,10 @@ func (s *Service) checkGeofences(last, curr Location) {
 	err = s.Store.Scan("location_geofences", store.Scan{
 		Only: "values",
 		Filter: map[string]interface{}{
-			"geohash_min <=": currHash,
-			"geohash_max >=": currHash,
+			"lat_min <=": curr.Latitude,
+			"lat_max >=": curr.Latitude,
+			"lng_min <=": curr.Longitude,
+			"lng_max >=": curr.Longitude,
 		},
 	}, &currFences)
 	if err != nil {
@@ -98,7 +99,7 @@ func (s *Service) checkGeofences(last, curr Location) {
 	}
 
 	for _, g := range lastFences {
-		if g.Contains(last) && !fenceInSlice(g, currFences, curr) {
+		if !fenceInSlice(g, currFences) {
 			s.Log("debug", "geofence leave", g)
 			pl := GeofenceEventPayload{curr, g, "leave"}
 			msg := sarif.CreateMessage("location/fence/leave/"+g.Name, pl)
@@ -106,7 +107,7 @@ func (s *Service) checkGeofences(last, curr Location) {
 		}
 	}
 	for _, g := range currFences {
-		if g.Contains(curr) && !fenceInSlice(g, lastFences, last) {
+		if !fenceInSlice(g, lastFences) {
 			s.Log("debug", "geofence enter", g)
 			pl := GeofenceEventPayload{curr, g, "enter"}
 			msg := sarif.CreateMessage("location/fence/enter/"+g.Name, pl)
@@ -121,8 +122,8 @@ func (s *Service) handleLocationUpdate(msg sarif.Message) {
 		s.ReplyBadRequest(msg, err)
 		return
 	}
-	if loc.Timestamp.IsZero() {
-		loc.Timestamp = time.Now()
+	if loc.Time.IsZero() {
+		loc.Time = time.Now()
 	}
 	loc.Geohash = EncodeGeohash(loc.Latitude, loc.Longitude, 12)
 	s.Log("debug", "store update", loc)
@@ -138,7 +139,7 @@ func (s *Service) handleLocationUpdate(msg sarif.Message) {
 	}
 	if len(last) > 0 {
 		loc.Distance = HaversineDistance(last[0], loc)
-		loc.Speed = loc.Distance / loc.Timestamp.Sub(last[0].Timestamp).Seconds()
+		loc.Speed = loc.Distance / loc.Time.Sub(last[0].Time).Seconds()
 	}
 
 	if _, err := s.Store.Put(loc.Key(), &loc); err != nil {
@@ -207,8 +208,10 @@ func (s *Service) fixFilters(filter map[string]interface{}) error {
 	}
 	// TODO: support for secondary indizes
 	if bounds.LatMin != 0 {
-		filter["geohash >="] = EncodeGeohash(bounds.LatMin, bounds.LngMin, 12)
-		filter["geohash <="] = EncodeGeohash(bounds.LatMax, bounds.LngMax, 12)
+		filter["latitude >="] = bounds.LatMin
+		filter["latitude <="] = bounds.LatMax
+		filter["longitude >="] = bounds.LngMin
+		filter["longitude <="] = bounds.LngMax
 	}
 	return nil
 }
@@ -267,7 +270,7 @@ func (s *Service) handleLocationList(msg sarif.Message) {
 		return
 	}
 	if len(filter) == 0 {
-		filter["timestamp >="] = time.Now().Add(-24 * time.Hour).UTC().Format(time.RFC3339Nano)
+		filter["time >="] = time.Now().Add(-24 * time.Hour).UTC().Format(time.RFC3339Nano)
 	}
 	s.Log("debug", "list loc request", filter)
 
@@ -281,7 +284,6 @@ func (s *Service) handleLocationList(msg sarif.Message) {
 		Reverse: true,
 		Only:    "values",
 		Filter:  filter,
-		Limit:   1,
 	}, &last)
 	if err != nil {
 		s.ReplyInternalError(msg, err)
@@ -376,24 +378,25 @@ func (s *Service) handleLocationImport(msg sarif.Message) {
 
 	var minTime, maxTime time.Time
 	for i, loc := range p.Locations {
-		if loc.Timestamp.IsZero() {
-			s.ReplyBadRequest(msg, errors.New(fmt.Sprintf("Location %d has no timestamp.", i)))
+		if loc.Time.IsZero() {
+			s.ReplyBadRequest(msg, errors.New(fmt.Sprintf("Location %d has no time.", i)))
 			return
 		}
-		if minTime.IsZero() || loc.Timestamp.Before(minTime) {
-			minTime = loc.Timestamp
+		if minTime.IsZero() || loc.Time.Before(minTime) {
+			minTime = loc.Time
 		}
-		if maxTime.IsZero() || loc.Timestamp.After(maxTime) {
-			maxTime = loc.Timestamp
+		if maxTime.IsZero() || loc.Time.After(maxTime) {
+			maxTime = loc.Time
 		}
+		loc.Geohash = EncodeGeohash(loc.Latitude, loc.Longitude, 12)
 	}
 
 	var existing []*Location
 	err := s.Store.Scan("locations", store.Scan{
 		Only: "values",
 		Filter: map[string]interface{}{
-			"timestamp >=": minTime.Add(-time.Minute),
-			"timestamp <=": maxTime.Add(time.Minute),
+			"time >=": minTime.Add(-time.Minute),
+			"time <=": maxTime.Add(time.Minute),
 		},
 		Limit: 500,
 	}, &existing)
@@ -406,7 +409,7 @@ func (s *Service) handleLocationImport(msg sarif.Message) {
 NEXT_LOC:
 	for _, loc := range p.Locations {
 		for _, ex := range existing {
-			d := ex.Timestamp.Sub(loc.Timestamp)
+			d := ex.Time.Sub(loc.Time)
 			if d > -time.Minute && d < time.Minute {
 				continue NEXT_LOC
 			}

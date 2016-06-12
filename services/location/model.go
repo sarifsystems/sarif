@@ -13,7 +13,7 @@ import (
 )
 
 type Location struct {
-	Timestamp time.Time `json:"timestamp"`
+	Time      time.Time `json:"time"`
 	Latitude  float64   `json:"latitude"`
 	Longitude float64   `json:"longitude"`
 	Geohash   string    `json:"geohash"`
@@ -26,7 +26,7 @@ type Location struct {
 }
 
 func (loc Location) Key() string {
-	return "locations/" + loc.Timestamp.UTC().Format(time.RFC3339Nano) + "/" + loc.Geohash
+	return "locations/" + loc.Time.UTC().Format(time.RFC3339Nano) + "/" + loc.Geohash
 }
 
 type BoundingBox struct {
@@ -83,7 +83,7 @@ func (g Geofence) Key() string {
 }
 
 func (l Location) String() string {
-	ts := l.Timestamp.Local().Format(time.RFC3339)
+	ts := l.Time.Local().Format(time.RFC3339)
 	if l.Address != "" {
 		return l.Address + " on " + ts
 	}

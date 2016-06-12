@@ -14,7 +14,7 @@ import (
 )
 
 func (app *App) LocationImport() {
-	fname := flag.Arg(0)
+	fname := flag.Arg(1)
 	body, err := ioutil.ReadFile(fname)
 	if err != nil {
 		log.Fatal(err)

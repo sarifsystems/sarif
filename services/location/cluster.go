@@ -33,10 +33,10 @@ func (c Cluster) Text() string {
 
 	switch c.Status {
 	case ConfirmedCluster:
-		ts := c.Start.Timestamp.Local().Format(time.RFC3339)
+		ts := c.Start.Time.Local().Format(time.RFC3339)
 		return "Entered " + c.Address + " on " + ts
 	case CompletedCluster:
-		ts := c.End.Timestamp.Local().Format(time.RFC3339)
+		ts := c.End.Time.Local().Format(time.RFC3339)
 		return "Left " + c.Address + " on " + ts
 	}
 	return ""
@@ -58,7 +58,7 @@ type ClusterGenerator struct {
 }
 
 func (g *ClusterGenerator) Advance(l Location) bool {
-	if g.current.Start.Timestamp.IsZero() {
+	if g.current.Start.Time.IsZero() {
 		g.current = Cluster{
 			Start:    l,
 			Location: l,
@@ -89,7 +89,7 @@ func (g *ClusterGenerator) Advance(l Location) bool {
 	g.current.Accuracy = (1-w)*l.Accuracy + w*g.current.Accuracy
 
 	g.current.End = l
-	if g.current.Status == UnconfirmedCluster && l.Timestamp.Sub(g.current.Start.Timestamp) >= g.MinInterval {
+	if g.current.Status == UnconfirmedCluster && l.Time.Sub(g.current.Start.Time) >= g.MinInterval {
 		g.current.Status = ConfirmedCluster
 		return true
 	}

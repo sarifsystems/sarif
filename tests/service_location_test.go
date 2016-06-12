@@ -19,7 +19,7 @@ func ServiceLocationTest(tr *TestRunner) {
 
 	Convey("should store a location update", func() {
 		tr.When(sarif.CreateMessage("location/update", map[string]interface{}{
-			"timestamp": time.Now(),
+			"time":      time.Now(),
 			"latitude":  52.3744779,
 			"longitude": 9.7385532,
 			"accuracy":  10,

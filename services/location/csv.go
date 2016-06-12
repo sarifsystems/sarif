@@ -16,7 +16,7 @@ import (
 
 var (
 	ErrWrongNumberOfCols = errors.New("Number of fields and columns differs")
-	ErrNoTimestamp       = errors.New("No timestamp found")
+	ErrNoTimestamp       = errors.New("No time found")
 	ErrNoLatLng          = errors.New("No latitude or longitude found")
 )
 
@@ -32,9 +32,9 @@ var colMappings = map[string]string{
 	"accuracy": "accuracy",
 	"acc":      "accuracy",
 
-	"time":               "timestamp",
-	"timestamp":          "timestamp",
-	"location timestamp": "timestamp",
+	"time":               "time",
+	"timestamp":          "time",
+	"location timestamp": "time",
 }
 
 func parseRow(fields, row []string) (*Location, error) {
@@ -56,8 +56,8 @@ func parseRow(fields, row []string) (*Location, error) {
 			loc.Longitude, err = strconv.ParseFloat(v, 64)
 		case "accuracy":
 			loc.Accuracy, err = strconv.ParseFloat(v, 64)
-		case "timestamp":
-			loc.Timestamp, err = time.Parse(time.RFC3339, v)
+		case "time":
+			loc.Time, err = time.Parse(time.RFC3339, v)
 		}
 		if err != nil {
 			return nil, err
@@ -67,7 +67,7 @@ func parseRow(fields, row []string) (*Location, error) {
 	if !lat || !lng {
 		return nil, ErrNoLatLng
 	}
-	if loc.Timestamp.IsZero() {
+	if loc.Time.IsZero() {
 		return nil, ErrNoTimestamp
 	}
 	return loc, err
