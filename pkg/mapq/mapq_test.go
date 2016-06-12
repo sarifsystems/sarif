@@ -16,6 +16,7 @@ func TestMatches(t *testing.T) {
 			"number": 23,
 		},
 		"relevance": 1337.5443,
+		"geohash":   "u1qcvw7rkwrd",
 	}
 
 	ok := M(example).Matches(Filter{
@@ -67,6 +68,14 @@ func TestMatches(t *testing.T) {
 	})
 	if !ok {
 		t.Error("big filter should match")
+	}
+
+	ok = M(example).Matches(Filter{
+		"geohash >=": "u1nruf39gnw6",
+		"geohash <=": "u1rje83g2uh6",
+	})
+	if !ok {
+		t.Error("String comparison should match")
 	}
 
 	ok = M(example).Matches(Filter{

@@ -84,7 +84,7 @@ func Matches(a interface{}, op string, b interface{}) bool {
 	case ">=":
 		return c >= 0
 	case "<=":
-		return c >= 0
+		return c <= 0
 	}
 
 	return false
