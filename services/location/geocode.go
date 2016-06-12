@@ -15,22 +15,6 @@ import (
 
 const API_URL = "https://nominatim.openstreetmap.org"
 
-type BoundingBox []float64
-
-func (b *BoundingBox) UnmarshalJSON(j []byte) (err error) {
-	nums := []json.Number{}
-	if err := json.Unmarshal(j, &nums); err != nil {
-		return err
-	}
-	*b = make([]float64, len(nums))
-	for i, n := range nums {
-		if (*b)[i], err = n.Float64(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 type GeoAddress struct {
 	HouseNumber  string `json:"house_number"`
 	Building     string `json:"building"`
@@ -54,14 +38,14 @@ type GeoName struct {
 }
 
 type GeoPlace struct {
-	BoundingBox BoundingBox `json:"boundingbox,[]string"`
-	Latitude    float64     `json:"lat,string"`
-	Longitude   float64     `json:"lon,string"`
-	Name        string      `json:"display_name"`
-	Class       string      `json:"class"`
-	Type        string      `json:"type"`
-	Address     GeoAddress  `json:"address"`
-	NameDetails GeoName     `json:"namedetails,omitempty"`
+	BoundingBox BoundingBoxSlice `json:"boundingbox,[]string"`
+	Latitude    float64          `json:"lat,string"`
+	Longitude   float64          `json:"lon,string"`
+	Name        string           `json:"display_name"`
+	Class       string           `json:"class"`
+	Type        string           `json:"type"`
+	Address     GeoAddress       `json:"address"`
+	NameDetails GeoName          `json:"namedetails,omitempty"`
 }
 
 func (p GeoPlace) Pretty() string {

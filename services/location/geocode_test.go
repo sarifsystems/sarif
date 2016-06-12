@@ -15,9 +15,6 @@ func TestGeocode(t *testing.T) {
 
 	first := rs[0]
 	t.Log(first)
-	if len(first.BoundingBox) != 4 {
-		t.Error("bounding box has invalid size")
-	}
 	if first.Type != "city" {
 		t.Error("expected city, not", first.Type)
 	}

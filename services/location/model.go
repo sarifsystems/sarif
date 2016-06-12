@@ -6,16 +6,17 @@
 package location
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"time"
 )
 
 type Location struct {
-	Id        int64     `json:"-"`
 	Timestamp time.Time `json:"timestamp"`
 	Latitude  float64   `json:"latitude"`
 	Longitude float64   `json:"longitude"`
+	Geohash   string    `json:"geohash"`
 	Accuracy  float64   `json:"accuracy"`
 	Source    string    `json:"source,omitempty"`
 	Address   string    `json:"address,omitempty"`
@@ -24,27 +25,61 @@ type Location struct {
 	Speed    float64 `json:"speed,omitempty"`
 }
 
-type Geofence struct {
-	Id      int64   `json:"-"`
-	LatMin  float64 `json:"lat_min"`
-	LatMax  float64 `json:"lat_max"`
-	LngMin  float64 `json:"lng_min"`
-	LngMax  float64 `json:"lng_max"`
-	Name    string  `json:"name,omitempty"`
-	Address string  `json:"address,omitempty"`
+func (loc Location) Key() string {
+	return "locations/" + loc.Timestamp.UTC().Format(time.RFC3339Nano) + "/" + loc.Geohash
 }
 
-func (g Geofence) TableName() string {
-	return "location_geofences"
+type BoundingBox struct {
+	LatMin float64 `json:"lat_min"`
+	LatMax float64 `json:"lat_max"`
+	LngMin float64 `json:"lng_min"`
+	LngMax float64 `json:"lng_max"`
 }
 
-func (g *Geofence) GetBounds() []float64 {
+func (g *BoundingBox) GetBounds() []float64 {
 	return []float64{g.LatMin, g.LatMax, g.LngMin, g.LngMax}
 }
 
-func (g *Geofence) SetBounds(b []float64) {
+func (g *BoundingBox) SetBounds(b []float64) {
 	g.LatMin, g.LatMax = b[0], b[1]
 	g.LngMin, g.LngMax = b[2], b[3]
+}
+
+func (b *BoundingBox) Contains(loc Location) bool {
+	return b.LatMin <= loc.Latitude &&
+		b.LatMax >= loc.Latitude &&
+		b.LngMin <= loc.Longitude &&
+		b.LngMax >= loc.Longitude
+}
+
+type BoundingBoxSlice BoundingBox
+
+func (b *BoundingBoxSlice) UnmarshalJSON(j []byte) (err error) {
+	nums := []json.Number{}
+	if err := json.Unmarshal(j, &nums); err != nil {
+		return err
+	}
+	bs := make([]float64, len(nums))
+	for i, n := range nums {
+		if bs[i], err = n.Float64(); err != nil {
+			return err
+		}
+	}
+	b.LatMin, b.LatMax = bs[0], bs[1]
+	b.LngMin, b.LngMax = bs[2], bs[3]
+	return nil
+}
+
+type Geofence struct {
+	BoundingBox
+	Name       string `json:"name,omitempty"`
+	Address    string `json:"address,omitempty"`
+	GeohashMin string `json:"geohash_min,omitempty"`
+	GeohashMax string `json:"geohash_max,omitempty"`
+}
+
+func (g Geofence) Key() string {
+	return "location_geofences/" + g.Name
 }
 
 func (l Location) String() string {

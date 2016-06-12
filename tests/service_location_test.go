@@ -19,7 +19,7 @@ func ServiceLocationTest(tr *TestRunner) {
 
 	Convey("should store a location update", func() {
 		tr.When(sarif.CreateMessage("location/update", map[string]interface{}{
-			"timestamp": time.Now().Format(time.RFC3339),
+			"timestamp": time.Now(),
 			"latitude":  52.3744779,
 			"longitude": 9.7385532,
 			"accuracy":  10,
@@ -32,6 +32,7 @@ func ServiceLocationTest(tr *TestRunner) {
 		}))
 
 		reply := tr.Expect()
+		So(reply, ShouldBeAction, "location/found")
 		got := struct {
 			Source string
 		}{}
@@ -71,6 +72,7 @@ func ServiceLocationTest(tr *TestRunner) {
 			"longitude": 6.0,
 			"accuracy":  20,
 		}))
+		tr.Wait()
 
 		// inside of the fence
 		tr.When(sarif.CreateMessage("location/update", map[string]interface{}{
@@ -89,6 +91,7 @@ func ServiceLocationTest(tr *TestRunner) {
 			"longitude": 6.2,
 			"accuracy":  20,
 		}))
+		tr.Wait()
 
 		// back outside
 		tr.When(sarif.CreateMessage("location/update", map[string]interface{}{

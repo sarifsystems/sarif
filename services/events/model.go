@@ -29,7 +29,7 @@ type Event struct {
 }
 
 func (e Event) Key() string {
-	return "events/" + e.Time.UTC().Format(time.RFC3339) + "/" + e.Action
+	return "events/" + e.Time.UTC().Format(time.RFC3339Nano) + "/" + e.Action
 }
 
 func (e Event) String() string {
