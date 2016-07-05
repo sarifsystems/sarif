@@ -164,7 +164,12 @@ func (s *Section) Dir() string {
 }
 
 func getDefaultUserDir(name string) string {
-	path := os.Getenv("XDG_CONFIG_HOME")
+	path := os.Getenv("SARIF_HOME")
+	if path != "" {
+		return path
+	}
+
+	path = os.Getenv("XDG_CONFIG_HOME")
 	if path != "" {
 		return path + "/" + name
 	}
