@@ -64,6 +64,7 @@ func (g *ClusterGenerator) Advance(l Location) bool {
 			Location: l,
 			Status:   UnconfirmedCluster,
 		}
+		g.current.Time = time.Time{}
 		return false
 	}
 
@@ -80,6 +81,7 @@ func (g *ClusterGenerator) Advance(l Location) bool {
 			Location: l,
 			Status:   UnconfirmedCluster,
 		}
+		g.current.Time = time.Time{}
 		return changed
 	}
 

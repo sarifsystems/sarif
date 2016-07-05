@@ -13,10 +13,10 @@ import (
 )
 
 type Location struct {
-	Time      time.Time `json:"time"`
+	Time      time.Time `json:"time,omitempty"`
 	Latitude  float64   `json:"latitude"`
 	Longitude float64   `json:"longitude"`
-	Geohash   string    `json:"geohash"`
+	Geohash   string    `json:"geohash,omitempty"`
 	Accuracy  float64   `json:"accuracy"`
 	Source    string    `json:"source,omitempty"`
 	Address   string    `json:"address,omitempty"`
