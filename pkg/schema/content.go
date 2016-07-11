@@ -10,7 +10,7 @@ type Content struct {
 	Url  string `json:"url,omitempty"`
 	Type string `json:"type,omitempty"`
 
-	Data []byte `json:"data,omitempty"`
+	Data []byte `json:"-"`
 }
 
 func (c Content) HasData() bool {

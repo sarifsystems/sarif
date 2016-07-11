@@ -22,6 +22,7 @@ import (
 	"github.com/sarifsystems/sarif/services/logger"
 	"github.com/sarifsystems/sarif/services/luascripts"
 	"github.com/sarifsystems/sarif/services/meals"
+	"github.com/sarifsystems/sarif/services/mock"
 	"github.com/sarifsystems/sarif/services/natural"
 	"github.com/sarifsystems/sarif/services/nlparser"
 	"github.com/sarifsystems/sarif/services/reasoner"
@@ -45,6 +46,7 @@ func main() {
 	srv.RegisterModule(location.Module)
 	srv.RegisterModule(luascripts.Module)
 	srv.RegisterModule(meals.Module)
+	srv.RegisterModule(mock.Module)
 	srv.RegisterModule(natural.Module)
 	srv.RegisterModule(nlparser.Module)
 	srv.RegisterModule(reasoner.Module)
@@ -61,6 +63,7 @@ func main() {
 		"know",
 		"location",
 		"logger",
+		"mock",
 		"meals",
 		"natural",
 		"nlparser",
