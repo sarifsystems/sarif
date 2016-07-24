@@ -65,7 +65,7 @@ func (c *Client) Enable() (err error) {
 
 func (c *Client) connectXmpp() (err error) {
 	cfg := &xmpp.Config{}
-	c.xmpp, err = xmpp.Dial(c.cfg.Server, c.cfg.User, c.cfg.Domain, c.cfg.Password, cfg)
+	c.xmpp, err = xmpp.Dial(c.cfg.Server, c.cfg.User, c.cfg.Domain, c.cfg.Password, "sarif", cfg)
 	if err != nil {
 		return err
 	}
