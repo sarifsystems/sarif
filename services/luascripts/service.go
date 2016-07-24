@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sarifsystems/sarif/pkg/content"
+	"github.com/sarifsystems/sarif/pkg/schema"
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services"
 )
@@ -208,6 +210,14 @@ func (s *Service) handleLuaStop(msg sarif.Message) {
 	}))
 }
 
+type ContentPayload struct {
+	Content schema.Content `json:"content"`
+}
+
+func (p ContentPayload) Text() string {
+	return "This message contains content."
+}
+
 func (s *Service) handleLuaLoad(msg sarif.Message) {
 	gen := false
 	name := strings.TrimPrefix(strings.TrimPrefix(msg.Action, "lua/load"), "/")
@@ -223,7 +233,22 @@ func (s *Service) handleLuaLoad(msg sarif.Message) {
 		s.ReplyInternalError(msg, err)
 		return
 	}
-	out, err := m.Do(msg.Text)
+
+	var ctp ContentPayload
+	if err := msg.DecodePayload(&ctp); err != nil {
+		s.ReplyBadRequest(msg, err)
+		return
+	}
+	text := msg.Text
+	if ctp.Content.Url != "" {
+		ct, err := content.Get(ctp.Content)
+		if err != nil {
+			s.ReplyBadRequest(msg, err)
+		}
+		text = string(ct.Data)
+	}
+
+	out, err := m.Do(text)
 	if err != nil {
 		s.ReplyBadRequest(msg, err)
 		s.destroyMachine(name)
@@ -269,8 +294,8 @@ func (s *Service) handleLuaDump(msg sarif.Message) {
 		return
 	}
 
-	s.Reply(msg, sarif.Message{
-		Action: "lua/dumped",
-		Text:   string(src),
-	})
+	ct := content.PutData([]byte(src))
+	ct.PutAction = "lua/load/" + name
+	ct.Name = name + ".lua"
+	s.Reply(msg, sarif.CreateMessage("lua/dumped", ContentPayload{ct}))
 }

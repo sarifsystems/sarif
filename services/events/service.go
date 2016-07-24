@@ -160,10 +160,13 @@ func hasKey(m map[string]interface{}, key string) bool {
 }
 
 func (s *Service) handleEventList(msg sarif.Message) {
-	filter := make(map[string]interface{})
+	var filter map[string]interface{}
 	if err := msg.DecodePayload(&filter); err != nil {
 		s.ReplyBadRequest(msg, err)
 		return
+	}
+	if filter == nil {
+		filter = make(map[string]interface{})
 	}
 	if len(filter) == 0 {
 		filter["time >="] = time.Now().Add(-24 * time.Hour)

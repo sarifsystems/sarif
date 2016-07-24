@@ -65,6 +65,7 @@ func New() *App {
 		{"cat", app.Cat, usageCat},
 		{"down", app.Down, ""},
 		{"up", app.Up, ""},
+		{"edit", app.Edit, ""},
 	}
 
 	return app

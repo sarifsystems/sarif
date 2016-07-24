@@ -7,8 +7,10 @@ package schema
 
 type Content struct {
 	*Thing
-	Url  string `json:"url,omitempty"`
-	Type string `json:"type,omitempty"`
+	Url       string `json:"url,omitempty"`
+	PutAction string `json:"put_action,omitempty"`
+	Type      string `json:"type,omitempty"`
+	Name      string `json:"name,omitempty"`
 
 	Data []byte `json:"-"`
 }

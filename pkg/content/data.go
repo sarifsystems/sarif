@@ -8,7 +8,6 @@ package content
 import (
 	"encoding/base64"
 	"errors"
-	"net/http"
 	"net/url"
 	"strings"
 
@@ -55,17 +54,31 @@ func (p dataProvider) Get(c schema.Content) (schema.Content, error) {
 
 func (p dataProvider) Put(c schema.Content) (schema.Content, error) {
 	if c.Type == "" {
-		c.Type = http.DetectContentType(c.Data)
+		c.Type = DetectContentType(c.Data)
 	}
 	out := schema.Content{
-		Url:  "data:" + c.Type + ",",
+		Url:  "data:" + c.Type,
 		Type: c.Type,
 	}
-	out.Url += url.QueryEscape(base64.StdEncoding.EncodeToString(c.Data))
+	if strings.HasPrefix(c.Type, "text/") {
+		out.Url += "," + url.QueryEscape(string(c.Data))
+	} else {
+		out.Url += ";base64." + url.QueryEscape(base64.StdEncoding.EncodeToString(c.Data))
+	}
 	return out, nil
 }
 
 var DataProvider = dataProvider{}
+
+func PutData(data []byte) schema.Content {
+	c, err := DataProvider.Put(schema.Content{
+		Data: data,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
 
 func init() {
 	Register("data", DataProvider)

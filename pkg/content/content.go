@@ -8,6 +8,7 @@ package content
 
 import (
 	"errors"
+	"net/http"
 	"strings"
 
 	"github.com/sarifsystems/sarif/pkg/schema"
@@ -61,4 +62,12 @@ func scheme(u string) string {
 		return ""
 	}
 	return u[0:i]
+}
+
+func DetectContentType(data []byte) string {
+	ct := http.DetectContentType(data)
+	if i := strings.Index(ct, ";"); i >= 0 {
+		ct = ct[0:i]
+	}
+	return ct
 }

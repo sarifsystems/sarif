@@ -9,17 +9,12 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"strings"
 
+	"github.com/sarifsystems/sarif/pkg/content"
 	"github.com/sarifsystems/sarif/sarif"
 )
-
-type ContentPayload struct {
-	ContentType string `json:"content_type,omitempty"`
-	Content     []byte `json:"content,omitempty"`
-}
 
 func (app *App) Down() {
 	if flag.NArg() <= 1 {
@@ -50,12 +45,12 @@ func (app *App) Up() {
 	msg := sarif.Message{
 		Action: action,
 	}
-	pl := &ContentPayload{
-		ContentType: http.DetectContentType(in),
-		Content:     in,
+
+	pl := ContentPayload{
+		Content: content.PutData(in),
 	}
-	if strings.HasPrefix(pl.ContentType, "text/plain;") {
-		msg.Text = string(pl.Content)
+	if strings.HasPrefix(pl.Content.Type, "text/") {
+		msg.Text = string(in)
 	}
 	if err := msg.EncodePayload(pl); err != nil {
 		app.Log.Fatal(err)
