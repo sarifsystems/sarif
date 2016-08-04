@@ -168,15 +168,18 @@ func (s *Service) handleEventList(msg sarif.Message) {
 	if filter == nil {
 		filter = make(map[string]interface{})
 	}
+	reverse := false
 	if len(filter) == 0 {
 		filter["time >="] = time.Now().Add(-24 * time.Hour)
+		reverse = true
 	}
 
 	s.Log("debug", "list by filter:", filter)
 	var events []Event
 	err := s.Store.Scan("events", store.Scan{
-		Only:   "values",
-		Filter: filter,
+		Only:    "values",
+		Filter:  filter,
+		Reverse: reverse,
 	}, &events)
 	if err != nil {
 		s.ReplyInternalError(msg, err)
