@@ -258,7 +258,7 @@ func (s *Service) handleLuaLoad(msg sarif.Message) {
 	if !gen {
 		f, err := os.Create(s.cfg.ScriptDir + "/" + name + ".lua")
 		if err == nil {
-			_, err = f.Write([]byte(msg.Text))
+			_, err = f.Write([]byte(text))
 			defer f.Close()
 		}
 		if err != nil {

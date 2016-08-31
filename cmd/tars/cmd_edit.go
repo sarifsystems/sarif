@@ -96,6 +96,8 @@ func (app *App) Edit() {
 		app.Must(err)
 		if lastMod.Before(fi.ModTime()) && putAction != "" {
 			lastMod = fi.ModTime()
+			_, err := f.Seek(0, 0)
+			app.Must(err)
 			data, err := ioutil.ReadAll(f)
 			app.Must(err)
 			ct := content.PutData(data)
