@@ -38,7 +38,7 @@ func NewParser() *Parser {
 	tok := NewTokenizer()
 	return &Parser{
 		NewMessageSchemaStore(),
-		NewTokenizer(),
+		tok,
 		NewActionPredictor(),
 		NewPosTagger(),
 		NewMeaningParser(),
@@ -168,7 +168,7 @@ func (p *Parser) Parse(ctx *natural.Context) (*ParseResult, error) {
 		r.Intents = []*natural.Intent{{
 			Intent: msg.Action,
 			Type:   typ,
-			Weight: 1, // TODO
+			Weight: 0.25, // TODO
 
 			Message:   msg,
 			ExtraInfo: r.Meaning.Vars,
@@ -177,7 +177,7 @@ func (p *Parser) Parse(ctx *natural.Context) (*ParseResult, error) {
 	case "exclamatory":
 		r.Intents = []*natural.Intent{{
 			Type:   typ,
-			Weight: 1,
+			Weight: 0.5,
 		}}
 	case "interrogative":
 		if r.Meaning, err = p.meaning.ParseInterrogative(r.Tokens); err != nil {
@@ -187,7 +187,7 @@ func (p *Parser) Parse(ctx *natural.Context) (*ParseResult, error) {
 		r.Intents = []*natural.Intent{{
 			Intent: msg.Action,
 			Type:   typ,
-			Weight: 1, // TODO
+			Weight: 0.25, // TODO
 
 			Message:   msg,
 			ExtraInfo: r.Meaning.Vars,

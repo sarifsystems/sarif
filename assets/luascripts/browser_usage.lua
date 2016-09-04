@@ -39,7 +39,7 @@ function Analyzer:handleUpdate(msg)
 		if query then
 			self.numGoogles = self.numGoogles + 1
 			query = query:gsub("%%(%x%x)", hex_to_char)
-			queries[#queries+1] = query
+			self.queries[#self.queries+1] = query
 
 			sarif.publish{
 				action = "browser/daily/google",

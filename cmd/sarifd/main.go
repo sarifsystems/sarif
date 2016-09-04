@@ -25,6 +25,7 @@ import (
 	"github.com/sarifsystems/sarif/services/mock"
 	"github.com/sarifsystems/sarif/services/natural"
 	"github.com/sarifsystems/sarif/services/nlparser"
+	"github.com/sarifsystems/sarif/services/nlquery"
 	"github.com/sarifsystems/sarif/services/reasoner"
 	"github.com/sarifsystems/sarif/services/scheduler"
 	"github.com/sarifsystems/sarif/services/store"
@@ -49,6 +50,7 @@ func main() {
 	srv.RegisterModule(mock.Module)
 	srv.RegisterModule(natural.Module)
 	srv.RegisterModule(nlparser.Module)
+	srv.RegisterModule(nlquery.Module)
 	srv.RegisterModule(reasoner.Module)
 	srv.RegisterModule(scheduler.Module)
 	srv.RegisterModule(store.Module)
@@ -67,6 +69,7 @@ func main() {
 		"meals",
 		"natural",
 		"nlparser",
+		"nlquery",
 		"reasoner",
 		"scheduler",
 		"store",

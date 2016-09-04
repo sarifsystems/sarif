@@ -64,7 +64,7 @@ func ParseSimple(text string) (sarif.Message, bool) {
 			vtext = TrimQuotes(vtext)
 			var v interface{} = vtext
 			if !quoted {
-				v = parseValue(vtext)
+				v = ParseValue(vtext)
 			}
 			switch k {
 			case "text":
@@ -86,7 +86,7 @@ func ParseSimple(text string) (sarif.Message, bool) {
 	return msg, false
 }
 
-func parseValue(v string) interface{} {
+func ParseValue(v string) interface{} {
 	if b, err := strconv.ParseBool(v); err == nil {
 		return b
 	}

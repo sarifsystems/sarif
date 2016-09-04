@@ -207,7 +207,7 @@ func (s *Service) Parse(ctx *natural.Context) (*natural.ParseResult, error) {
 	for name, p := range s.Cfg.Parsers {
 		if p.Weight > 0 && (time.Now().Sub(p.LastSeen) < s.ParserKeepAlive) {
 			wg.Add(1)
-			go func() {
+			go func(name string) {
 				msg := sarif.CreateMessage("natural/parse", ctx)
 				msg.Destination = name
 				reply, ok := <-s.Request(msg)
@@ -220,7 +220,7 @@ func (s *Service) Parse(ctx *natural.Context) (*natural.ParseResult, error) {
 				res.Merge(r, 1)
 				resLock.Unlock()
 				wg.Done()
-			}()
+			}(name)
 		}
 	}
 
