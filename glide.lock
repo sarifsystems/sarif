@@ -1,0 +1,126 @@
+hash: fc48925e51ea4397b42ecae8a3964892ae154ed1f163176cd855fba0148f38e0
+updated: 2016-09-04T16:19:49.79527726+02:00
+imports:
+- name: github.com/agl/xmpp-client
+  version: abbf9020393e8caae3e8996a16ce48446e31cf0e
+  subpackages:
+  - xmpp
+- name: github.com/andybalholm/cascadia
+  version: 1c31af6f6c1a7b101ed05aacc7d8a738b43ae86e
+- name: github.com/boltdb/bolt
+  version: ec58b76ba0e6b190fed15db6911036a5760d2145
+- name: github.com/cheggaaa/pb
+  version: 6e9d17711bb763b26b68b3931d47f24c1323abab
+- name: github.com/chzyer/readline
+  version: 31ab3eee0c7232dcb9abeb3876ca2739df53872d
+- name: github.com/davecgh/go-spew
+  version: 6cf5744a041a0022271cefed95ba843f6d87fd51
+  subpackages:
+  - spew
+- name: github.com/fatih/color
+  version: 87d4004f2ab62d0d255e0a38f1680aa534549fe3
+- name: github.com/fhs/gompd
+  version: c2d788706ed8200aec2119b475115be00c0a99f7
+  subpackages:
+  - mpd
+- name: github.com/go-sql-driver/mysql
+  version: 0b58b37b664c21f3010e836f1b931e1d0b0b0685
+- name: github.com/godbus/dbus
+  version: 9998ce8520caaa4a287fa5122ecb5d1ca1aeaede
+- name: github.com/golang/freetype
+  version: 38b4c392adc5eed94207994c4848fff99f4ac234
+  subpackages:
+  - truetype
+  - raster
+- name: github.com/gopherjs/gopherjs
+  version: 45518c130e5bd1525f20110830a4986365a153de
+  subpackages:
+  - js
+- name: github.com/gorilla/websocket
+  version: a69d25be2fe2923a97c2af6849b2f52426f68fc0
+- name: github.com/jinzhu/gorm
+  version: f26fa242cc1bf884f9a4f98849f70fb8e73f441f
+- name: github.com/jinzhu/inflection
+  version: 74387dc39a75e970e7a3ae6a3386b5bd2e5c5cff
+- name: github.com/lib/pq
+  version: 50761b0867bd1d9d069276790bcd4a3bccf2324a
+  subpackages:
+  - oid
+- name: github.com/llgcode/draw2d
+  version: 13548be874707c45a83f9c2c282d76d671c7acf8
+  subpackages:
+  - draw2dimg
+  - draw2dkit
+  - draw2dbase
+- name: github.com/mattn/go-colorable
+  version: ed8eb9e318d7a84ce5915b495b7d35e0cfe7b5a8
+- name: github.com/mattn/go-isatty
+  version: 66b8e73f3f5cda9f96b69efd03dd3d7fc4a5cdb8
+- name: github.com/mattn/go-sqlite3
+  version: e87c35082bf4c56768d8d7ed501396a9c166f0ff
+- name: github.com/miketheprogrammer/go-thrust
+  version: 92e66a5b9de59b0c0e07ced3a964135ddcdeb883
+  subpackages:
+  - lib/commands
+  - lib/connection
+  - thrust
+  - lib/common
+  - lib/bindings/menu
+  - lib/bindings/session
+  - lib/bindings/window
+  - lib/dispatcher
+  - lib/events
+  - lib/spawn
+- name: github.com/PuerkitoBio/goquery
+  version: 152b1a2c8f5d0340f658bb656032a39b94e52958
+- name: github.com/shiena/ansicolor
+  version: a422bbe96644373c5753384a59d678f7d261ff10
+- name: github.com/xconstruct/know
+  version: bed1a63d45e61588cfe0b9f262de5bae586fb311
+- name: github.com/xconstruct/vdir
+  version: c30aee42d4e6d81172427c78259448ad0cce65fb
+- name: github.com/yuin/gopher-lua
+  version: 6a1397dfb6f8e7af08496129dd96f5f62c148f47
+  subpackages:
+  - ast
+  - parse
+  - pm
+- name: golang.org/x/image
+  version: 714f2e47f73aac52208d4f4260e4ba79358a9c28
+  subpackages:
+  - font
+  - math/fixed
+  - draw
+  - math/f64
+- name: golang.org/x/net
+  version: 1358eff22f0dd0c54fc521042cc607f6ff4b531a
+  subpackages:
+  - html/charset
+  - websocket
+  - html
+  - html/atom
+- name: golang.org/x/sys
+  version: a646d33e2ee3172a661fc09bca23bb4889a41bc8
+  subpackages:
+  - unix
+- name: golang.org/x/text
+  version: ceefd2213ed29504fff30155163c8f59827734f3
+  subpackages:
+  - encoding
+  - encoding/charmap
+  - encoding/htmlindex
+  - transform
+  - encoding/internal/identifier
+  - encoding/internal
+  - encoding/japanese
+  - encoding/korean
+  - encoding/simplifiedchinese
+  - encoding/traditionalchinese
+  - encoding/unicode
+  - language
+  - internal/utf8internal
+  - runes
+  - internal/tag
+- name: gopkg.in/yaml.v2
+  version: e4d366fc3c7938e2958e662b4258c7a89e1f0e3e
+devImports: []

@@ -2,3 +2,4 @@
 /old
 *.gob
 /config-dev
+/vendor

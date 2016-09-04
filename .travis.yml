@@ -1,6 +1,6 @@
 language: go
 go:
-  - 1.6
+  - 1.7
 env:
   global:
     - secure: Eq/IyWFiJT9AS1UFW7+kqpLlXTyHffXiVUgctI3Utoc86JwFNGKNsjJsMZAyn84Rh18Pj9GZbn6K53bxEyZsR0ubiMq++wY8O2D97MBVdJPbUVZTmLLGyOLVFAw7CpBeKJfj+CWEUJ7eiY2sYNFWGoX2f5B5NQUQ8pJ7WlbW9E0=
