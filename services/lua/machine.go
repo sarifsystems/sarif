@@ -3,7 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package luascripts
+package lua
 
 import (
 	"strings"
@@ -16,15 +16,13 @@ import (
 type Machine struct {
 	*sarif.Client
 	Lua *lua.LState
-	Log sarif.Logger
 
 	StateLock    sync.Mutex
 	OutputBuffer string
 }
 
-func NewMachine(log sarif.Logger, c *sarif.Client) *Machine {
+func NewMachine(c *sarif.Client) *Machine {
 	return &Machine{
-		Log:    log,
 		Lua:    lua.NewState(),
 		Client: c,
 	}
@@ -153,12 +151,12 @@ func (m *Machine) luaHandle(msg sarif.Message, handler *lua.LFunction) {
 		Protect: true,
 	}, v)
 	if err != nil {
-		m.Log.Warnln("[luascripts] handle err:", err)
+		m.Log("warn", "handle err: "+err.Error())
 	}
 
 	for _, l := range strings.Split(m.FlushOut(), "\n") {
 		if l != "" {
-			m.Log.Infoln("[luascripts] print:", l)
+			m.Log("info", "print: "+l)
 		}
 	}
 }

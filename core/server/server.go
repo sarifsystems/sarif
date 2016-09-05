@@ -24,7 +24,6 @@ type Server struct {
 
 	Broker *sarif.Broker
 	Client *sarif.Client
-	Orm    *core.Orm
 	*services.ModuleManager
 	configStoreInitialized bool
 }
@@ -56,7 +55,6 @@ func New(appName, moduleName string) *Server {
 
 func (s *Server) Init() {
 	s.App.Init()
-	s.Must(s.InitDatabase())
 	s.Must(s.InitBroker())
 	s.Must(s.InitModules())
 	s.WriteConfig()
@@ -74,29 +72,6 @@ func (s *Server) Run() {
 	s.Init()
 	core.WaitUntilInterrupt()
 	defer s.Close()
-}
-
-func (s *Server) InitDatabase() error {
-	if s.Orm != nil {
-		return nil
-	}
-
-	cfg := core.DatabaseConfig{
-		Driver: "sqlite3",
-		Source: s.Config.Dir() + "/" + s.ModuleName + ".db",
-	}
-
-	s.Config.Get("database", &cfg)
-
-	db, err := core.OpenDatabase(cfg)
-	if err != nil {
-		return err
-	}
-	if s.Log.GetLevel() <= core.LogLevelTrace {
-		db.LogMode(true)
-	}
-	s.Orm = db
-	return nil
 }
 
 func (s *Server) InitBroker() error {
@@ -166,36 +141,30 @@ func (s *Server) InitBroker() error {
 }
 
 func (s *Server) SetupInjector(inj *inject.Injector, name string) {
-	if s.Orm != nil {
-		inj.Instance(s.Orm.DB)
-		inj.Instance(s.Orm.Database())
+	cname := name
+	if s.ServerConfig.Name != "" {
+		cname = s.ServerConfig.Name + "/" + name
 	}
-	if s.Broker != nil {
-		cname := name
-		if s.ServerConfig.Name != "" {
-			cname = s.ServerConfig.Name + "/" + name
-		}
-		c := sarif.NewClient(cname)
-		c.Connect(s.Broker.NewLocalConn())
-		c.SetLogger(s.Log)
+	c := sarif.NewClient(cname)
+	c.Connect(s.Broker.NewLocalConn())
+	c.SetLogger(s.Log)
 
-		inj.Instance(s.Broker)
-		inj.Factory(func() sarif.Conn {
-			return s.Broker.NewLocalConn()
-		})
-		inj.Factory(func() *sarif.Client {
-			return c
-		})
-		inj.Factory(func() services.Config {
-			if !s.configStoreInitialized {
-				return s.Config.Section(name)
-			}
-			cfg := config.NewConfigStore(c)
-			cfg.Store.StoreName = s.ServerConfig.ConfigStore
-			cfg.ConfigDir = s.Config.Dir()
-			return cfg
-		})
-	}
+	inj.Instance(s.Broker)
+	inj.Factory(func() sarif.Conn {
+		return s.Broker.NewLocalConn()
+	})
+	inj.Factory(func() *sarif.Client {
+		return c
+	})
+	inj.Factory(func() services.Config {
+		if !s.configStoreInitialized {
+			return s.Config.Section(name)
+		}
+		cfg := config.NewConfigStore(c)
+		cfg.Store.StoreName = s.ServerConfig.ConfigStore
+		cfg.ConfigDir = s.Config.Dir()
+		return cfg
+	})
 }
 
 func (s *Server) Inject(name string, container interface{}) error {

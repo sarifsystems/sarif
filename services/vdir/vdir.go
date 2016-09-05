@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jinzhu/gorm"
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services"
 	"github.com/xconstruct/vdir"
@@ -30,14 +29,12 @@ type Config struct {
 }
 
 type Dependencies struct {
-	DB     *gorm.DB
 	Config services.Config
 	Client *sarif.Client
 }
 
 type Service struct {
 	cfg Config
-	DB  *gorm.DB
 	*sarif.Client
 
 	cards map[string]CardInfo
@@ -45,7 +42,6 @@ type Service struct {
 
 func NewService(deps *Dependencies) *Service {
 	s := &Service{
-		DB:     deps.DB,
 		Client: deps.Client,
 
 		cards: make(map[string]CardInfo),

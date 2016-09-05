@@ -3,8 +3,8 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-// Service luascripts provides Lua scripting for the sarif network.
-package luascripts
+// Service lua provides Lua scripting for the sarif network.
+package lua
 
 import (
 	"errors"
@@ -19,7 +19,7 @@ import (
 )
 
 var Module = &services.Module{
-	Name:        "luascripts",
+	Name:        "lua",
 	Version:     "1.0",
 	NewInstance: NewService,
 }
@@ -30,14 +30,12 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Log    sarif.Logger
 	Client *sarif.Client
 	Broker *sarif.Broker
 }
 
 type Service struct {
 	cfg    Config
-	Log    sarif.Logger
 	Broker *sarif.Broker
 	*sarif.Client
 
@@ -46,12 +44,11 @@ type Service struct {
 
 func NewService(deps *Dependencies) *Service {
 	s := &Service{
-		Log:      deps.Log,
 		Broker:   deps.Broker,
 		Client:   deps.Client,
 		Machines: make(map[string]*Machine),
 	}
-	s.cfg.ScriptDir = deps.Config.Dir() + "/luascripts"
+	s.cfg.ScriptDir = deps.Config.Dir() + "/lua"
 	deps.Config.Get(&s.cfg)
 
 	s.createMachine("default")
@@ -72,7 +69,7 @@ func (s *Service) Enable() error {
 	dir, err := os.Open(s.cfg.ScriptDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			s.Log.Warnln("[luascripts]:", err)
+			s.Log("warn", err.Error())
 			return nil
 		}
 		return err
@@ -91,7 +88,7 @@ func (s *Service) Enable() error {
 }
 
 func (s *Service) createMachineFromScript(f string) (*Machine, error) {
-	s.Log.Infoln("[luascripts] loading ", f)
+	s.Log("info", "loading "+f)
 	m, err := s.createMachine(strings.TrimSuffix(f, ".lua"))
 	if err != nil {
 		return m, err
@@ -111,7 +108,7 @@ func (s *Service) createMachine(name string) (*Machine, error) {
 	c := sarif.NewClient(s.DeviceId + "/" + name)
 	c.Connect(s.Broker.NewLocalConn())
 
-	m := NewMachine(s.Log, c)
+	m := NewMachine(c)
 	s.Machines[name] = m
 	if err := m.Enable(); err != nil {
 		return m, err

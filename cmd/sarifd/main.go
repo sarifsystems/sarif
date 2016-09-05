@@ -20,13 +20,11 @@ import (
 	"github.com/sarifsystems/sarif/services/lastfm"
 	"github.com/sarifsystems/sarif/services/location"
 	"github.com/sarifsystems/sarif/services/logger"
-	"github.com/sarifsystems/sarif/services/luascripts"
-	"github.com/sarifsystems/sarif/services/meals"
+	"github.com/sarifsystems/sarif/services/lua"
 	"github.com/sarifsystems/sarif/services/mock"
 	"github.com/sarifsystems/sarif/services/natural"
 	"github.com/sarifsystems/sarif/services/nlparser"
 	"github.com/sarifsystems/sarif/services/nlquery"
-	"github.com/sarifsystems/sarif/services/reasoner"
 	"github.com/sarifsystems/sarif/services/scheduler"
 	"github.com/sarifsystems/sarif/services/store"
 	_ "github.com/sarifsystems/sarif/services/store/bolt"
@@ -45,13 +43,11 @@ func main() {
 	srv.RegisterModule(lastfm.Module)
 	srv.RegisterModule(logger.Module)
 	srv.RegisterModule(location.Module)
-	srv.RegisterModule(luascripts.Module)
-	srv.RegisterModule(meals.Module)
+	srv.RegisterModule(lua.Module)
 	srv.RegisterModule(mock.Module)
 	srv.RegisterModule(natural.Module)
 	srv.RegisterModule(nlparser.Module)
 	srv.RegisterModule(nlquery.Module)
-	srv.RegisterModule(reasoner.Module)
 	srv.RegisterModule(scheduler.Module)
 	srv.RegisterModule(store.Module)
 	srv.RegisterModule(vdir.Module)
@@ -69,11 +65,9 @@ func main() {
 		"location",
 		"logger",
 		"mock",
-		"meals",
 		"natural",
 		"nlparser",
 		"nlquery",
-		"reasoner",
 		"scheduler",
 		"vdir",
 		"web",
