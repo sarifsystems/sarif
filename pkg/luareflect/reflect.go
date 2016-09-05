@@ -70,6 +70,26 @@ func DecodeToBasic(data lua.LValue) interface{} {
 	case lua.LTString:
 		return lua.LVAsString(data)
 	case lua.LTTable:
+		table := data.(*lua.LTable)
+
+		// First, try treating the table as simple array
+		maxN := table.Len()
+		if maxN > 0 {
+			arr := make([]interface{}, maxN)
+			i := 0
+			table.ForEach(func(key, val lua.LValue) {
+				if key.Type() == lua.LTNumber && i >= 0 && i < maxN {
+					arr[i] = DecodeToBasic(val)
+					i++
+				} else {
+					i = -1
+				}
+			})
+			if i > 0 {
+				return arr
+			}
+		}
+
 		m := make(map[string]interface{})
 		data.(*lua.LTable).ForEach(func(key, val lua.LValue) {
 			if k := lua.LVAsString(key); k != "" {

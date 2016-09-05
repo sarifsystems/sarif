@@ -25,9 +25,10 @@ var Module = &services.Module{
 }
 
 type Config struct {
-	Address string
-	Rules   natural.SentenceRuleSet
-	Parsers map[string]*Parser
+	Address    string
+	Rules      natural.SentenceRuleSet
+	Parsers    map[string]*Parser
+	Annotators map[string]*Annotator
 }
 
 type Dependencies struct {
@@ -50,21 +51,26 @@ type Service struct {
 
 func NewService(deps *Dependencies) *Service {
 	return &Service{
-		deps.Config,
-		Config{},
-		deps.Client,
+		Config: deps.Config,
+		Cfg:    Config{},
+		Client: deps.Client,
 
-		30 * time.Minute,
+		ParserKeepAlive: 30 * time.Minute,
 
-		natural.NewRegularParser(),
-		natural.NewPhrasebook(),
-		make(map[string]*Conversation),
-		rand.New(rand.NewSource(time.Now().UnixNano())),
+		regular:       natural.NewRegularParser(),
+		phrases:       natural.NewPhrasebook(),
+		conversations: make(map[string]*Conversation),
+		rand:          rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
 type Parser struct {
 	Weight   float64
+	LastSeen time.Time `json:"-"`
+}
+
+type Annotator struct {
+	Enabled  bool
 	LastSeen time.Time `json:"-"`
 }
 
@@ -78,6 +84,7 @@ func (s *Service) Enable() error {
 	s.Cfg.Address = "sir"
 	s.Cfg.Rules = natural.DefaultRules
 	s.Cfg.Parsers = make(map[string]*Parser)
+	s.Cfg.Annotators = make(map[string]*Annotator)
 	s.Config.Get(&s.Cfg)
 
 	if err := s.regular.Load(s.Cfg.Rules); err != nil {
@@ -99,6 +106,17 @@ func (s *Service) Enable() error {
 					s.Config.Set(&s.Cfg)
 				}
 				p.LastSeen = time.Now()
+			}
+
+			anns := s.Discover("natural/annotate")
+			for msg := range anns {
+				a, ok := s.Cfg.Annotators[msg.Source]
+				if !ok {
+					a = &Annotator{Enabled: true}
+					s.Cfg.Annotators[msg.Source] = a
+					s.Config.Set(&s.Cfg)
+				}
+				a.LastSeen = time.Now()
 			}
 			time.Sleep(s.ParserKeepAlive / 2)
 		}
@@ -167,6 +185,46 @@ func (s *Service) handleNaturalPhrases(msg sarif.Message) {
 		Action: "natural/phrase",
 		Text:   text,
 	})
+}
+
+func (s *Service) AnnotateReply(msg sarif.Message) sarif.Message {
+	mu := sync.Mutex{}
+	fin := make(chan bool)
+	go func() {
+		for name, a := range s.Cfg.Annotators {
+			if a.Enabled && (time.Now().Sub(a.LastSeen) < s.ParserKeepAlive) {
+				reply, ok := <-s.Request(sarif.Message{
+					Action:      "natural/annotate/" + msg.Action,
+					Destination: name,
+					Text:        msg.Text,
+					Payload:     msg.Payload,
+				})
+				if !ok || reply.IsAction("err") {
+					continue
+				}
+				mu.Lock()
+				if reply.Text != "" {
+					msg.Text = reply.Text
+				}
+				if len(reply.Payload.Raw) > 0 {
+					msg.Payload = reply.Payload
+				}
+				mu.Unlock()
+			}
+		}
+		fin <- true
+	}()
+
+	select {
+	case <-fin:
+	case <-time.After(time.Second):
+	}
+	mu.Lock()
+	defer mu.Unlock()
+
+	natural.FormatMessage(&msg)
+	msg.Text = s.TransformReply(msg.Text)
+	return msg
 }
 
 func (s *Service) TransformReply(text string) string {

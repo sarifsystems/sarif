@@ -64,6 +64,7 @@ func main() {
 		"know",
 		"location",
 		"logger",
+		"lua",
 		"mock",
 		"natural",
 		"nlparser",

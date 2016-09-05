@@ -71,11 +71,11 @@ func (cv *Conversation) SendToClient(msg sarif.Message) {
 	cv.LastMessageAction = Actionable{}
 	msg.DecodePayload(&cv.LastMessageAction)
 
+	msg = cv.service.AnnotateReply(msg)
+
 	// Forward response to client.
 	msg.Id = sarif.GenerateId()
 	msg.Destination = cv.Device
-	natural.FormatMessage(&msg)
-	msg.Text = cv.service.TransformReply(msg.Text)
 	cv.service.Publish(msg)
 }
 

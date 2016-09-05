@@ -127,6 +127,10 @@ func TestTableDecodeToBasic(t *testing.T) {
 		nested = {
 			something = "value",
 		},
+		an_array = {
+			"first",
+			false,
+		},
 	}
 	`
 	if err := L.DoString(v); err != nil {
@@ -139,6 +143,10 @@ func TestTableDecodeToBasic(t *testing.T) {
 		"3":   float64(4),
 		"nested": map[string]interface{}{
 			"something": "value",
+		},
+		"an_array": []interface{}{
+			"first",
+			false,
 		},
 	}
 	if !reflect.DeepEqual(got, expected) {
