@@ -32,14 +32,12 @@ type Config struct {
 type Dependencies struct {
 	DB     *gorm.DB
 	Config services.Config
-	Log    sarif.Logger
 	Client *sarif.Client
 }
 
 type Service struct {
 	cfg Config
 	DB  *gorm.DB
-	Log sarif.Logger
 	*sarif.Client
 
 	cards map[string]CardInfo
@@ -48,7 +46,6 @@ type Service struct {
 func NewService(deps *Dependencies) *Service {
 	s := &Service{
 		DB:     deps.DB,
-		Log:    deps.Log,
 		Client: deps.Client,
 
 		cards: make(map[string]CardInfo),
@@ -60,7 +57,7 @@ func NewService(deps *Dependencies) *Service {
 func (s *Service) Enable() error {
 	s.Subscribe("vdir/card", "", s.HandleCard)
 	if err := s.ReloadFiles(); err != nil {
-		s.Log.Errorln("[vdir] reloading files: ", err)
+		s.Log("err", "[vdir] reloading files: "+err.Error())
 	}
 	return nil
 }

@@ -17,10 +17,10 @@ func (s *Service) FddbLoop() {
 
 		prev := time.Now().Add(-24 * time.Hour)
 		if err := s.FetchFddb(prev); err != nil {
-			s.Log.Errorln("[meals] fddb update failed:", err)
+			s.Log("err", "[meals] fddb update failed: "+err.Error())
 		}
 		if err := s.FetchFddb(time.Now()); err != nil {
-			s.Log.Errorln("[meals] fddb update failed:", err)
+			s.Log("err", "[meals] fddb update failed: "+err.Error())
 		}
 	}
 }

@@ -7,6 +7,7 @@
 package server
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/sarifsystems/sarif/pkg/inject"
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services"
+	"github.com/sarifsystems/sarif/services/schema"
 )
 
 type Server struct {
@@ -21,16 +23,20 @@ type Server struct {
 	ServerConfig Config
 
 	Broker *sarif.Broker
+	Client *sarif.Client
 	Orm    *core.Orm
 	*services.ModuleManager
+	configStoreInitialized bool
 }
 
 type Config struct {
 	Name           string
+	ConfigStore    string
 	Listen         []*sarif.NetConfig
 	Bridges        []*sarif.NetConfig
 	Gateways       []*sarif.NetConfig
 	EnabledModules []string
+	BaseModules    []string
 }
 
 func New(appName, moduleName string) *Server {
@@ -104,6 +110,10 @@ func (s *Server) InitBroker() error {
 		s.Broker.TraceMessages(true)
 	}
 
+	s.Client = sarif.NewClient(s.ServerConfig.Name + "/sarifd")
+	s.Client.Connect(s.Broker.NewLocalConn())
+	s.Client.SetLogger(s.Log)
+
 	cfg := &s.ServerConfig
 	if _, ok := s.Config.Get("server", cfg); !ok {
 		if len(cfg.Listen) == 0 {
@@ -156,25 +166,34 @@ func (s *Server) InitBroker() error {
 }
 
 func (s *Server) SetupInjector(inj *inject.Injector, name string) {
-	s.App.SetupInjector(inj, name)
 	if s.Orm != nil {
 		inj.Instance(s.Orm.DB)
 		inj.Instance(s.Orm.Database())
 	}
 	if s.Broker != nil {
+		cname := name
+		if s.ServerConfig.Name != "" {
+			cname = s.ServerConfig.Name + "/" + name
+		}
+		c := sarif.NewClient(cname)
+		c.Connect(s.Broker.NewLocalConn())
+		c.SetLogger(s.Log)
+
 		inj.Instance(s.Broker)
 		inj.Factory(func() sarif.Conn {
 			return s.Broker.NewLocalConn()
 		})
 		inj.Factory(func() *sarif.Client {
-			cname := name
-			if s.ServerConfig.Name != "" {
-				cname = s.ServerConfig.Name + "/" + name
-			}
-			c := sarif.NewClient(cname)
-			c.Connect(s.Broker.NewLocalConn())
-			c.SetLogger(s.Log)
 			return c
+		})
+		inj.Factory(func() services.Config {
+			if !s.configStoreInitialized {
+				return s.Config.Section(name)
+			}
+			cfg := config.NewConfigStore(c)
+			cfg.Store.StoreName = s.ServerConfig.ConfigStore
+			cfg.ConfigDir = s.Config.Dir()
+			return cfg
 		})
 	}
 }
@@ -186,10 +205,48 @@ func (s *Server) Inject(name string, container interface{}) error {
 }
 
 func (s *Server) InitModules() error {
-	for _, module := range s.ServerConfig.EnabledModules {
+	// We need to initialize some modules before others
+	// TODO: Real dependency support
+	for _, module := range s.ServerConfig.BaseModules {
 		if err := s.EnableModule(module); err != nil {
 			return err
 		}
+	}
+
+	if err := s.findConfigStore(); err != nil {
+		return err
+	}
+
+	for _, module := range s.ServerConfig.EnabledModules {
+		if err := s.EnableModule(module); err != nil {
+			s.Log.Infoln(module)
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Server) findConfigStore() error {
+	time.Sleep(100 * time.Millisecond)
+	for try := 1; try <= 3; try++ {
+		req := s.Client.Request(sarif.Message{
+			Action:      "proto/discover/store/get/config",
+			Destination: s.ServerConfig.ConfigStore,
+		})
+		select {
+		case msg := <-req:
+			if s.ServerConfig.ConfigStore != msg.Source {
+				s.ServerConfig.ConfigStore = msg.Source
+				s.Config.Set("server", &s.ServerConfig)
+			}
+			s.configStoreInitialized = true
+			return nil
+		case <-time.After(500 * time.Duration(try) * time.Millisecond):
+		}
+	}
+
+	if s.ServerConfig.ConfigStore != "" {
+		return fmt.Errorf("Could not connect to store %q", s.ServerConfig.ConfigStore)
 	}
 	return nil
 }

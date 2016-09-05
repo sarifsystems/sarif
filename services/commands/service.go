@@ -25,24 +25,20 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	Log    sarif.Logger
 	Client *sarif.Client
 }
 
 type Service struct {
-	Log sarif.Logger
 	*sarif.Client
 }
 
 func NewService(deps *Dependencies) *Service {
 	return &Service{
-		Log:    deps.Log,
 		Client: deps.Client,
 	}
 }
 
 func (s *Service) Enable() error {
-	s.Subscribe("", "commands", s.handleUnknown)
 	s.Subscribe("question/answer", "commands", s.handleQuestionAnswer)
 	s.Subscribe("cmd/qr", "", s.handleQR)
 	s.Subscribe("cmd/increment", "", s.handleCounter)
@@ -141,10 +137,6 @@ func (s *Service) counterSet(name string, cnt int) error {
 		return errors.New(ack.Text)
 	}
 	return nil
-}
-
-func (s *Service) handleUnknown(msg sarif.Message) {
-	s.Log.Warnln("received unknown message:", msg)
 }
 
 type questionMessage struct {

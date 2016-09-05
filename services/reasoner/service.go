@@ -24,20 +24,17 @@ var Module = &services.Module{
 
 type Dependencies struct {
 	DB     *gorm.DB
-	Log    sarif.Logger
 	Client *sarif.Client
 }
 
 type Service struct {
-	DB  *gorm.DB
-	Log sarif.Logger
+	DB *gorm.DB
 	*sarif.Client
 }
 
 func NewService(deps *Dependencies) *Service {
 	s := &Service{
 		DB:     deps.DB,
-		Log:    deps.Log,
 		Client: deps.Client,
 	}
 	return s
@@ -198,7 +195,7 @@ func (s *Service) HandleQueryExternal(msg sarif.Message) {
 
 	for _, f := range result {
 		if err := s.DB.FirstOrCreate(&f, &f).Error; err != nil {
-			s.Log.Errorln("[reasoner] error updating external fact:", err)
+			s.Log("err", "[reasoner] error updating external fact: "+err.Error())
 		}
 	}
 }

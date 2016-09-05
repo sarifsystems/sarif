@@ -59,6 +59,9 @@ func main() {
 	srv.RegisterModule(xmpp.Module)
 
 	// Default configuration
+	srv.ServerConfig.BaseModules = []string{
+		"store",
+	}
 	srv.ServerConfig.EnabledModules = []string{
 		"commands",
 		"events",
@@ -72,7 +75,6 @@ func main() {
 		"nlquery",
 		"reasoner",
 		"scheduler",
-		"store",
 		"vdir",
 		"web",
 	}

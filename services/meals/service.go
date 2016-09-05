@@ -36,21 +36,18 @@ type Config struct {
 type Dependencies struct {
 	DB     *gorm.DB
 	Config services.Config
-	Log    sarif.Logger
 	Client *sarif.Client
 }
 
 type Service struct {
 	cfg Config
 	DB  *gorm.DB
-	Log sarif.Logger
 	*sarif.Client
 }
 
 func NewService(deps *Dependencies) *Service {
 	s := &Service{
 		DB:     deps.DB,
-		Log:    deps.Log,
 		Client: deps.Client,
 	}
 	deps.Config.Get(&s.cfg)

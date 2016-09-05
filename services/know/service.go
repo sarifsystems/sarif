@@ -26,7 +26,6 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Log    sarif.Logger
 	Client *sarif.Client
 }
 
@@ -38,7 +37,6 @@ type Service struct {
 
 func NewService(deps *Dependencies) *Service {
 	s := &Service{
-		Log:    deps.Log,
 		Client: deps.Client,
 	}
 	deps.Config.Get(&s.cfg)

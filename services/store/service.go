@@ -164,6 +164,64 @@ func (s *Service) handleDel(msg sarif.Message) {
 	s.Publish(sarif.CreateMessage("store/deleted/"+collection+"/"+key, nil))
 }
 
+type BatchCommand struct {
+	Type  string          `json:"type"`
+	Key   string          `json:"key"`
+	Value json.RawMessage `json:"value,omitempty"`
+}
+
+func (s *Service) handleBatch(msg sarif.Message) {
+	cmds := make([]BatchCommand, 0)
+	if err := msg.DecodePayload(&cmds); err != nil {
+		s.ReplyInternalError(msg, err)
+		return
+	}
+	results := make([]interface{}, len(cmds))
+	for i, cmd := range cmds {
+		collection, key := parseAction("", cmd.Key)
+		switch cmd.Type {
+		case "put":
+			doc, err := s.Store.Put(&Document{
+				Collection: collection,
+				Key:        key,
+				Value:      []byte(cmd.Value),
+			})
+			if err != nil {
+				s.ReplyInternalError(msg, err)
+				return
+			}
+			results[i] = doc
+		case "get":
+			doc, err := s.Store.Get(collection, key)
+			if err != nil {
+				s.ReplyInternalError(msg, err)
+				return
+			}
+			results[i] = doc
+		case "del":
+			if err := s.Store.Del(collection, key); err != nil {
+				s.ReplyInternalError(msg, err)
+				return
+			}
+			results[i] = true
+		case "scan":
+			var p scanMessage
+			if err := json.Unmarshal(cmd.Value, &p); err != nil {
+				s.ReplyInternalError(msg, err)
+				return
+			}
+			got, err := s.doScan(collection, p)
+			if err != nil {
+				s.ReplyInternalError(msg, err)
+				return
+			}
+			results[i] = got
+		}
+	}
+
+	s.Reply(msg, sarif.CreateMessage("store/batched/", results))
+}
+
 type scanMessage struct {
 	Prefix  string `json:"prefix"`
 	Start   string `json:"start"`
@@ -191,9 +249,21 @@ func (s *Service) handleScan(msg sarif.Message) {
 		if p.Prefix == "" {
 			p.Prefix = prefix
 		}
+	}
+
+	got, err := s.doScan(collection, p)
+	if err != nil {
+		s.ReplyInternalError(msg, err)
+		return
+	}
+	s.Reply(msg, sarif.CreateMessage("store/scanned/"+collection, got))
+}
+
+func (s *Service) doScan(collection string, p scanMessage) (interface{}, error) {
+	if p.Start == "" && p.End == "" {
 		if p.Prefix != "" {
-			p.Start = prefix
-			p.End = prefix + "~~~~~" // oh god, what a hack
+			p.Start = p.Prefix
+			p.End = p.Prefix + "~~~~~" // oh god, what a hack
 		}
 	}
 	if p.Limit == 0 {
@@ -202,8 +272,7 @@ func (s *Service) handleScan(msg sarif.Message) {
 
 	cursor, err := s.Store.Scan(collection, p.Start, p.End, p.Reverse)
 	if err != nil {
-		s.ReplyInternalError(msg, err)
-		return
+		return nil, err
 	}
 	defer cursor.Close()
 
@@ -233,13 +302,11 @@ func (s *Service) handleScan(msg sarif.Message) {
 		}
 	}
 
-	reply := sarif.CreateMessage("store/scanned/"+collection, nil)
 	if p.Only == "keys" {
-		reply.Payload.Encode(keys)
+		return keys, nil
 	} else if p.Only == "values" {
-		reply.Payload.Encode(values)
+		return values, nil
 	} else {
-		reply.Payload.Encode(docs)
+		return docs, nil
 	}
-	s.Reply(msg, reply)
 }
