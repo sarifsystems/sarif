@@ -37,6 +37,7 @@ func (app *App) Edit() {
 		app.Log.Fatalln(msg.Action + ": " + msg.Text)
 	}
 
+	rawPayload := false
 	var ctp ContentPayload
 	app.Must(msg.DecodePayload(&ctp))
 
@@ -51,6 +52,7 @@ func (app *App) Edit() {
 		msg.DecodePayload(&p)
 		ctp.Content.Data, err = json.MarshalIndent(p, "", "    ")
 		app.Must(err)
+		rawPayload = true
 	} else {
 		ctp.Content.Data = []byte(msg.Text)
 	}
@@ -100,9 +102,20 @@ func (app *App) Edit() {
 			app.Must(err)
 			data, err := ioutil.ReadAll(f)
 			app.Must(err)
-			ct := content.PutData(data)
+
 			lastErr = ""
-			msg, ok := <-app.Client.Request(sarif.CreateMessage(putAction, ContentPayload{ct}))
+			req := sarif.CreateMessage(putAction, nil)
+			if rawPayload {
+				var temp interface{}
+				err := json.Unmarshal(data, &temp)
+				if err == nil {
+					req.Payload.Raw = data
+				}
+			} else {
+				req.EncodePayload(ContentPayload{content.PutData(data)})
+			}
+			msg, ok := <-app.Client.Request(req)
+
 			if !ok {
 				lastErr = "Could not save: no response received at " + ctp.Content.PutAction
 			} else if msg.IsAction("err") {

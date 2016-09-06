@@ -42,6 +42,7 @@ type Dependencies struct {
 }
 
 type Server struct {
+	Config     services.Config
 	cfg        Config
 	Broker     *sarif.Broker
 	apiClients map[string]*sarif.Client
@@ -80,6 +81,7 @@ func New(deps *Dependencies) *Server {
 	}
 
 	s := &Server{
+		Config:     deps.Config,
 		cfg:        cfg,
 		Broker:     deps.Broker,
 		apiClients: make(map[string]*sarif.Client),
@@ -94,7 +96,8 @@ func New(deps *Dependencies) *Server {
 }
 
 func (s *Server) Enable() error {
-	http.Handle("/", http.FileServer(http.Dir("assets/web")))
+	dir := s.Config.Dir() + "/web"
+	http.Handle("/", http.FileServer(http.Dir(dir)))
 	http.HandleFunc(REST_URL, s.handleRestPublish)
 	http.HandleFunc("/stream/sarif", s.handleStreamSarif)
 
