@@ -24,7 +24,7 @@ func TestParsing(t *testing.T) {
 		},
 		{
 			`find contact with age lower than 40`,
-			`list contacts where and age < 40`,
+			`list contacts where age < 40`,
 		},
 		{
 			`show location with address like Berlin`,
