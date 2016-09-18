@@ -6,9 +6,12 @@ env:
     - secure: Eq/IyWFiJT9AS1UFW7+kqpLlXTyHffXiVUgctI3Utoc86JwFNGKNsjJsMZAyn84Rh18Pj9GZbn6K53bxEyZsR0ubiMq++wY8O2D97MBVdJPbUVZTmLLGyOLVFAw7CpBeKJfj+CWEUJ7eiY2sYNFWGoX2f5B5NQUQ8pJ7WlbW9E0=
 before_install:
   - go get github.com/gopherjs/gopherjs
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/mattn/goveralls
 script:
-  - go test ./...
-  - go test -v ./tests --tags=integration
+  - go test --coverprofile=coverage.out --covermode=count $(glide novendor)
+  - go test -v --tags=integration --coverpkg=$(glide novendor | paste -sd ',' -) --coverprofile=coverage.out --covermode=count ./tests
+  - goveralls --coverprofile=coverage.out --service=travis-ci --repotoken 0EFPERGthubMcdbr9f5c4O8Tc1FZpSriH
 deploy:
   provider: script
   script: ./deploy.sh
