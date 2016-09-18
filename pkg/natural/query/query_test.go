@@ -23,8 +23,8 @@ func TestParsing(t *testing.T) {
 			`list events where time >= 5pm`,
 		},
 		{
-			`find contact with name Bob and age lower than 40`,
-			`list contacts where name Bob and age < 40`,
+			`find contact with age lower than 40`,
+			`list contacts where and age < 40`,
 		},
 		{
 			`show location with address like Berlin`,
