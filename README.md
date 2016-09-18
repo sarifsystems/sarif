@@ -4,6 +4,7 @@ sarif
 =====
 
 [![Build](https://img.shields.io/travis/sarifsystems/sarif.svg?style=flat-square)](https://travis-ci.org/sarifsystems/sarif)
+[![Coverage](https://img.shields.io/coveralls/sarifsystems/sarif.svg?style=flat-square)](https://coveralls.io/github/sarifsystems/sarif)
 [![API Documentation](https://img.shields.io/badge/api-GoDoc-blue.svg?style=flat-square)](https://godoc.org/github.com/sarifsystems/sarif)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](http://opensource.org/licenses/MIT)
 
