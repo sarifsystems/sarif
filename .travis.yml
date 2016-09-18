@@ -10,7 +10,7 @@ before_install:
   - go get golang.org/x/tools/cmd/cover
   - go get github.com/mattn/goveralls
 script:
-  - go test --coverprofile=coverage.out --covermode=count $(glide novendor)
+  - go test ./...
   - go test -v --tags=integration --coverpkg=$(glide novendor | paste -sd ',' -) --coverprofile=coverage.out --covermode=count ./tests
   - goveralls --coverprofile=coverage.out --service=travis-ci --repotoken 0EFPERGthubMcdbr9f5c4O8Tc1FZpSriH
 deploy:
