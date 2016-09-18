@@ -44,6 +44,26 @@ func (m *Machine) Enable() error {
 		"reply_error": m.luaReplyError,
 	})
 	m.Lua.SetField(mod, "device_id", lua.LString(m.DeviceId))
+	if err := m.PreloadModuleString("fun", ModFun); err != nil {
+		return err
+	}
+	if err := m.PreloadModuleString("store", ModStore); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Machine) PreloadModuleString(name, source string) error {
+	ls := m.Lua
+	loader, err := ls.LoadString(source)
+	if err != nil {
+		return err
+	}
+	preload := ls.GetField(ls.GetField(ls.Get(lua.EnvironIndex), "package"), "preload")
+	if _, ok := preload.(*lua.LTable); !ok {
+		ls.RaiseError("package.preload must be a table")
+	}
+	ls.SetField(preload, name, loader)
 	return nil
 }
 
@@ -151,7 +171,7 @@ func (m *Machine) luaHandle(msg sarif.Message, handler *lua.LFunction) {
 		Protect: true,
 	}, v)
 	if err != nil {
-		m.Log("warn", "handle err: "+err.Error())
+		m.Log("err", "handle err: "+err.Error())
 	}
 
 	for _, l := range strings.Split(m.FlushOut(), "\n") {

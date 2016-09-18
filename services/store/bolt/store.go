@@ -125,6 +125,15 @@ func (c *boltCursor) Next() (doc *store.Document) {
 		if c.Reverse {
 			if len(c.Max) > 0 {
 				k, v = c.Cursor.Seek(c.Max)
+				if k == nil {
+					k, v = c.Cursor.Last()
+				}
+				if bytes.Compare(k, c.Max) > 0 {
+					k, v = c.Cursor.Prev()
+				}
+				if k == nil || bytes.Compare(k, c.Max) > 0 {
+					return nil
+				}
 			}
 			if k == nil {
 				k, v = c.Cursor.Last()
