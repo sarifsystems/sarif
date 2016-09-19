@@ -24,6 +24,7 @@ func ExampleClient() {
 	broker := sarif.NewBroker()
 	go broker.Listen(&sarif.NetConfig{
 		Address: "tcp://localhost:5698",
+		Auth:    sarif.AuthNone,
 	})
 	time.Sleep(10 * time.Millisecond)
 
