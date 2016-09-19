@@ -5,6 +5,8 @@
 
 package sarif
 
+import "time"
+
 type subscription struct {
 	Action  string        `json:"action,omitempty"`
 	Device  string        `json:"device,omitempty"`
@@ -45,4 +47,11 @@ func InternalError(reason error) Message {
 		Action: "err/internal",
 		Text:   str,
 	}
+}
+
+type ClientInfo struct {
+	Name         string    `json:"name,omitempty"`
+	Auth         string    `json:"auth,omitempty"`
+	Capabilities []string  `json:"capabilities,omitempty"`
+	LastSeen     time.Time `json:"last_seen,omitempty"`
 }

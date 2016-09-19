@@ -135,14 +135,15 @@ func (app *App) Dial() sarif.Conn {
 	return conn
 }
 
-func (app *App) ClientDial(name string) (*sarif.Client, error) {
+func (app *App) ClientDial(ci sarif.ClientInfo) (*sarif.Client, error) {
 	cfg := sarif.NetConfig{
 		Address: "tcp://localhost:" + sarif.DefaultPort,
 	}
 	app.Config.Get("dial", &cfg)
 	app.WriteConfig()
 
-	c := sarif.NewClient(name)
+	c := sarif.NewClient(ci.Name)
+	c.Info = ci
 	c.OnConnectionLost(func(err error) {
 		app.Log.Errorln("connection lost:", err)
 		for {

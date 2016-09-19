@@ -19,8 +19,17 @@ const DefaultPort = "23100"
 const DefaultTlsPort = "23443"
 const DefaultKeepalive = 30 * time.Second
 
+type AuthType string
+
+const (
+	AuthNone        AuthType = "none"
+	AuthChallenge   AuthType = ""
+	AuthCertificate          = "certificate"
+)
+
 type NetConfig struct {
 	Address     string
+	Auth        AuthType
 	Certificate string
 	Key         string
 	Authority   string

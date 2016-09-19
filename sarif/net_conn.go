@@ -6,15 +6,17 @@
 package sarif
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"net"
 	"time"
 )
 
 type netConn struct {
-	conn net.Conn
-	enc  *json.Encoder
-	dec  *json.Decoder
+	conn     net.Conn
+	enc      *json.Encoder
+	dec      *json.Decoder
+	verified bool
 }
 
 func newNetConn(conn net.Conn) *netConn {
@@ -22,6 +24,7 @@ func newNetConn(conn net.Conn) *netConn {
 		conn,
 		json.NewEncoder(conn),
 		json.NewDecoder(conn),
+		false,
 	}
 }
 
@@ -54,4 +57,14 @@ func (c *netConn) Read() (Message, error) {
 
 func (c *netConn) Close() error {
 	return c.conn.Close()
+}
+
+func (c *netConn) IsVerified() bool {
+	if tc, ok := c.conn.(*tls.Conn); ok {
+		if len(tc.ConnectionState().VerifiedChains) > 0 {
+			return true
+		}
+	}
+
+	return false
 }

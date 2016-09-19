@@ -7,29 +7,39 @@ package sarif
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"sync"
+	"time"
 )
+
+type canVerify interface {
+	IsVerified() bool
+}
 
 // Broker dispatches messages to connections based on their subscriptions.
 type Broker struct {
-	subs     *subTree
-	subsLock sync.RWMutex
-	dups     []string
-	dupIndex int
-	Log      Logger
-	trace    bool
+	subs          *subTree
+	subsLock      sync.RWMutex
+	dups          []string
+	dupIndex      int
+	Log           Logger
+	trace         bool
+	halfOpenConns map[string]chan bool
+	clients       map[string]*ClientInfo
 }
 
 // NewBroker returns a new broker that dispatches messages.
 func NewBroker() *Broker {
 	return &Broker{
-		newSubtree(),
-		sync.RWMutex{},
-		make([]string, 128),
-		0,
-		defaultLog,
-		false,
+		subs:          newSubtree(),
+		subsLock:      sync.RWMutex{},
+		dups:          make([]string, 128),
+		dupIndex:      0,
+		Log:           defaultLog,
+		trace:         false,
+		halfOpenConns: make(map[string]chan bool),
+		clients:       make(map[string]*ClientInfo),
 	}
 }
 
@@ -160,12 +170,60 @@ func (b *Broker) Listen(cfg *NetConfig) error {
 		if err != nil {
 			return err
 		}
+
 		go func() {
 			b.Log.Infoln("[broker] connection accepted:", l.Addr())
-			err := b.ListenOnConn(conn)
+			err := b.AuthenticateAndListenOnConn(cfg.Auth, conn)
 			b.Log.Errorln("[broker] connection closed: ", err)
 		}()
 	}
+}
+
+func (b *Broker) AuthenticateAndListenOnConn(auth AuthType, c Conn) error {
+	authed := false
+	if auth == AuthNone {
+		authed = true
+	} else {
+		if v, ok := c.(canVerify); ok {
+			authed = v.IsVerified()
+		}
+	}
+
+	if !authed && auth != AuthCertificate {
+		msg, err := c.Read()
+		if err != nil {
+			return err
+		}
+		if !msg.IsAction("proto/hi") {
+			return errors.New("Authentication failed: unexpected message " + msg.Action)
+		}
+
+		var ci ClientInfo
+		msg.DecodePayload(&ci)
+		ci.Name = msg.Source
+		ci.LastSeen = time.Now()
+		b.clients[ci.Name] = &ci
+		msg.EncodePayload(ci)
+		msg.Id = GenerateId()
+
+		confirm := make(chan bool, 1)
+		b.halfOpenConns[msg.Id] = confirm
+		b.publish(msg)
+
+		select {
+		case <-confirm:
+			authed = true
+		case <-time.After(time.Minute):
+		}
+		delete(b.halfOpenConns, msg.Id)
+	}
+
+	if !authed {
+		c.Close()
+		return errors.New("Authentication failed")
+	}
+
+	return b.ListenOnConn(c)
 }
 
 // Publish publishes a message to all client connections that are subscribed
@@ -282,8 +340,16 @@ func (c *brokerConn) Publish(msg Message) {
 			}
 		}
 		return // TODO: unsub propagation
-	case msg.IsAction("proto/log"):
-		if msg.IsAction("proto/log/err") {
+	case msg.IsAction("proto/reg"):
+		return
+	case msg.IsAction("proto/req"):
+		return
+	case msg.IsAction("proto/allow"):
+		if ch, ok := c.broker.halfOpenConns[msg.CorrId]; ok {
+			ch <- true
+		}
+	case msg.IsAction("log"):
+		if msg.IsAction("log/err") {
 			c.broker.Log.Errorf("[%s] %s - %s", msg.Source, msg.Text, msg.Payload)
 		} else {
 			c.broker.Log.Infof("[%s] %s - %s", msg.Source, msg.Text, msg.Payload)
@@ -291,6 +357,10 @@ func (c *brokerConn) Publish(msg Message) {
 	}
 
 	c.broker.publish(msg)
+
+	if ci, ok := c.broker.clients[msg.Source]; ok {
+		ci.LastSeen = time.Now()
+	}
 }
 
 func (c *brokerConn) String() string {

@@ -14,6 +14,7 @@ import (
 
 type Client struct {
 	DeviceId         string
+	Info             ClientInfo
 	RequestTimeout   time.Duration
 	HandleConcurrent bool
 
@@ -58,6 +59,9 @@ func (c *Client) Dial(cfg *NetConfig) error {
 
 func (c *Client) Connect(conn Conn) error {
 	c.conn = conn
+	if c.Info.Auth != "" {
+		c.Publish(CreateMessage("proto/hi", c.Info))
+	}
 	if err := c.Publish(CreateMessage("proto/subs", c.subs)); err != nil {
 		return err
 	}
@@ -231,7 +235,7 @@ func (c *Client) Log(typ, text string, args ...interface{}) error {
 	if len(args) > 0 {
 		pl = args[0]
 	}
-	msg := CreateMessage("proto/log/"+typ, pl)
+	msg := CreateMessage("log/"+typ, pl)
 	msg.Text = text
 	return c.Publish(msg)
 }

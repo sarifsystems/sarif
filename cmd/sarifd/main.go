@@ -13,6 +13,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	"github.com/sarifsystems/sarif/core/server"
+	"github.com/sarifsystems/sarif/services/auth"
 	"github.com/sarifsystems/sarif/services/commands"
 	"github.com/sarifsystems/sarif/services/events"
 	"github.com/sarifsystems/sarif/services/hostscan"
@@ -36,6 +37,7 @@ import (
 func main() {
 	srv := server.New("sarif", "sarifd")
 
+	srv.RegisterModule(auth.Module)
 	srv.RegisterModule(commands.Module)
 	srv.RegisterModule(events.Module)
 	srv.RegisterModule(hostscan.Module)
@@ -59,6 +61,7 @@ func main() {
 		"store",
 	}
 	srv.ServerConfig.EnabledModules = []string{
+		"auth",
 		"commands",
 		"events",
 		"know",

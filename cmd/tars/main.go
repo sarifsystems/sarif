@@ -16,6 +16,10 @@ import (
 	"github.com/sarifsystems/sarif/sarif"
 )
 
+var (
+	authString = flag.String("auth", "", "authentication DSN")
+)
+
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, Usage)
@@ -52,7 +56,10 @@ func New() *App {
 		App: core.NewApp("sarif", "tars"),
 	}
 	app.Init()
-	app.Client, err = app.ClientDial("tars/" + sarif.GenerateId())
+	app.Client, err = app.ClientDial(sarif.ClientInfo{
+		Name: "tars/" + sarif.GenerateId(),
+		Auth: *authString,
+	})
 	app.Must(err)
 
 	app.Config.HistoryFile = app.App.Config.Dir() + "/tars_history"

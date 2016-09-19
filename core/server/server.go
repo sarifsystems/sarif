@@ -94,6 +94,7 @@ func (s *Server) InitBroker() error {
 		if len(cfg.Listen) == 0 {
 			cfg.Listen = append(cfg.Listen, &sarif.NetConfig{
 				Address: "tcp://localhost:23100",
+				Auth:    sarif.AuthNone,
 			})
 			s.Config.Set("server", cfg)
 		}
