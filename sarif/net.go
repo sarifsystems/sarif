@@ -8,6 +8,7 @@ package sarif
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"io/ioutil"
 	"net"
 	"net/url"
@@ -38,7 +39,7 @@ type NetConfig struct {
 }
 
 func (cfg *NetConfig) loadTlsCertificates(u *url.URL) error {
-	if cfg.Certificate == "" || cfg.Key == "" {
+	if cfg.Tls != nil {
 		return nil
 	}
 
@@ -48,14 +49,16 @@ func (cfg *NetConfig) loadTlsCertificates(u *url.URL) error {
 	}
 
 	cfg.Tls = &tls.Config{
-		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientAuth: tls.VerifyClientCertIfGiven,
 		ServerName: host,
 	}
-	cert, err := tls.LoadX509KeyPair(cfg.Certificate, cfg.Key)
-	if err != nil {
-		return err
+	if cfg.Certificate != "" && cfg.Key != "" {
+		cert, err := tls.LoadX509KeyPair(cfg.Certificate, cfg.Key)
+		if err != nil {
+			return err
+		}
+		cfg.Tls.Certificates = []tls.Certificate{cert}
 	}
-	cfg.Tls.Certificates = []tls.Certificate{cert}
 
 	if cfg.Authority != "" {
 		roots := x509.NewCertPool()
@@ -105,7 +108,11 @@ func Dial(cfg *NetConfig) (Conn, error) {
 	}
 
 	var conn net.Conn
-	if cfg.Tls != nil {
+	if strings.HasSuffix(u.Scheme, "+tls") {
+		u.Scheme = strings.TrimSuffix(u.Scheme, "+tls")
+		if cfg.Tls == nil {
+			return nil, errors.New("expected valid TLS config")
+		}
 		conn, err = tls.Dial(u.Scheme, u.Host, cfg.Tls)
 	} else {
 		conn, err = net.Dial(u.Scheme, u.Host)
@@ -134,14 +141,12 @@ func Listen(cfg *NetConfig) (*NetListener, error) {
 		return nil, err
 	}
 
-	if cfg.Tls == nil {
-		if err := cfg.loadTlsCertificates(u); err != nil {
-			return nil, err
-		}
-	}
-
 	l := &NetListener{cfg, nil}
-	if cfg.Tls != nil {
+	if strings.HasSuffix(u.Scheme, "+tls") {
+		u.Scheme = strings.TrimSuffix(u.Scheme, "+tls")
+		if cfg.Tls == nil {
+			return nil, errors.New("expected valid TLS config")
+		}
 		l.Listener, err = tls.Listen(u.Scheme, u.Host, cfg.Tls)
 	} else {
 		l.Listener, err = net.Listen(u.Scheme, u.Host)
@@ -157,6 +162,11 @@ func (l *NetListener) Accept() (Conn, error) {
 	var conn net.Conn
 	if conn, err = l.Listener.Accept(); err != nil {
 		return nil, err
+	}
+	if tc, ok := conn.(*tls.Conn); ok {
+		if err := tc.Handshake(); err != nil {
+			return nil, err
+		}
 	}
 	return newNetConn(conn), nil
 }
