@@ -142,16 +142,17 @@ func (s *Service) handleLuaDo(msg sarif.Message) {
 		s.ReplyInternalError(msg, err)
 		return
 	}
-	out, err := m.Do(msg.Text)
+	var gp interface{}
+	msg.DecodePayload(&gp)
+	out, err, p := m.Do(msg.Text, gp)
 	if err != nil {
 		s.ReplyBadRequest(msg, err)
 		return
 	}
 
-	s.Reply(msg, sarif.Message{
-		Action: "lua/done",
-		Text:   out,
-	})
+	reply := sarif.CreateMessage("lua/done", p)
+	reply.Text = out
+	s.Reply(msg, reply)
 }
 
 type MsgMachineStatus struct {
@@ -245,7 +246,9 @@ func (s *Service) handleLuaLoad(msg sarif.Message) {
 		text = string(ct.Data)
 	}
 
-	out, err := m.Do(text)
+	var gp interface{}
+	msg.DecodePayload(&gp)
+	out, err, _ := m.Do(text, gp)
 	if err != nil {
 		s.ReplyBadRequest(msg, err)
 		s.destroyMachine(name)

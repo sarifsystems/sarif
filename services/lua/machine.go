@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/sarifsystems/sarif/pkg/luareflect"
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/yuin/gopher-lua"
 )
@@ -187,13 +188,29 @@ func (m *Machine) FlushOut() string {
 	return out
 }
 
-func (m *Machine) Do(code string) (string, error) {
+func (m *Machine) Do(code string, arg interface{}) (string, error, interface{}) {
 	m.StateLock.Lock()
 	defer m.StateLock.Unlock()
 
 	m.FlushOut()
-	err := m.Lua.DoString(code)
+	fn, err := m.Lua.LoadString(code)
+	if err != nil {
+		return "", err, nil
+	}
+	m.Lua.Push(fn)
+	m.Lua.Push(luareflect.ToLua(m.Lua, arg))
+	if err := m.Lua.PCall(1, 1, nil); err != nil {
+		out := m.FlushOut()
+		return out, err, nil
+	}
 	out := m.FlushOut()
+	ret := m.Lua.Get(-1)
+	m.Lua.Pop(1)
 
-	return out, err
+	var rv interface{}
+	if ret != nil && ret != lua.LNil {
+		rv = luareflect.DecodeToBasic(ret)
+	}
+
+	return out, nil, rv
 }

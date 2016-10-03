@@ -80,7 +80,7 @@ func (cv *Conversation) SendToClient(msg sarif.Message) {
 }
 
 func (cv *Conversation) HandleClientMessage(msg sarif.Message) {
-	if msg.Text == ".full" {
+	if msg.Text == ".full" || msg.Text == "/full" {
 		text, err := json.MarshalIndent(cv.LastMessage, "", "    ")
 		if err != nil {
 			panic(err)
