@@ -45,15 +45,7 @@ func (c *WebSocketConn) Close() error {
 	return c.conn.Close()
 }
 
-func (s *Server) handleStreamSarif(w http.ResponseWriter, r *http.Request) {
-	// Check authentication.
-	name := s.checkAuthentication(r)
-	if name == "" {
-		w.WriteHeader(401)
-		s.Client.Log("err", "websocket auth error for "+r.RemoteAddr)
-		return
-	}
-
+func (s *Server) handleSocket(w http.ResponseWriter, r *http.Request) {
 	ws, err := s.websocket.Upgrade(w, r, nil)
 	if err != nil {
 		s.Client.Log("err", "websocket upgrade error: "+err.Error())
@@ -61,9 +53,9 @@ func (s *Server) handleStreamSarif(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer ws.Close()
-	s.Client.Log("info", "new websocket conn from "+r.RemoteAddr+" as "+name)
+	s.Client.Log("info", "new websocket conn from "+r.RemoteAddr)
 
 	c := &WebSocketConn{ws}
-	err = s.Broker.ListenOnConn(c)
+	err = s.Broker.AuthenticateAndListenOnConn(sarif.AuthChallenge, c)
 	s.Client.Log("info", "websocket from "+r.RemoteAddr+" closed: "+err.Error())
 }

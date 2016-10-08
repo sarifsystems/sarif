@@ -99,7 +99,7 @@ func (s *Server) Enable() error {
 	dir := s.Config.Dir() + "/web"
 	http.Handle("/", http.FileServer(http.Dir(dir)))
 	http.HandleFunc(REST_URL, s.handleRestPublish)
-	http.HandleFunc("/stream/sarif", s.handleStreamSarif)
+	http.HandleFunc("/socket", s.handleSocket)
 
 	s.Client.Subscribe("json", "", s.handleJson)
 
