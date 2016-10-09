@@ -39,14 +39,16 @@ type Service struct {
 	Broker *sarif.Broker
 	*sarif.Client
 
-	Machines map[string]*Machine
+	Machines  map[string]*Machine
+	Listeners map[string][]string
 }
 
 func NewService(deps *Dependencies) *Service {
 	s := &Service{
-		Broker:   deps.Broker,
-		Client:   deps.Client,
-		Machines: make(map[string]*Machine),
+		Broker:    deps.Broker,
+		Client:    deps.Client,
+		Machines:  make(map[string]*Machine),
+		Listeners: make(map[string][]string),
 	}
 	s.cfg.ScriptDir = deps.Config.Dir() + "/lua"
 	deps.Config.Get(&s.cfg)
@@ -61,7 +63,7 @@ func (s *Service) Enable() error {
 	s.Subscribe("lua/stop", "", s.handleLuaStop)
 	s.Subscribe("lua/load", "", s.handleLuaLoad)
 	s.Subscribe("lua/dump", "", s.handleLuaDump)
-	s.Subscribe("cmd/lua", "", s.handleLuaDo)
+	s.Subscribe("lua/attach", "", s.handleLuaAttach)
 
 	if s.cfg.ScriptDir == "" {
 		return nil
@@ -110,6 +112,11 @@ func (s *Service) createMachine(name string) (*Machine, error) {
 
 	m := NewMachine(c)
 	s.Machines[name] = m
+	if listeners, ok := s.Listeners[name]; ok {
+		for _, l := range listeners {
+			m.Attach(l)
+		}
+	}
 	if err := m.Enable(); err != nil {
 		return m, err
 	}
@@ -298,4 +305,19 @@ func (s *Service) handleLuaDump(msg sarif.Message) {
 	ct.PutAction = "lua/load/" + name
 	ct.Name = name + ".lua"
 	s.Reply(msg, sarif.CreateMessage("lua/dumped", ContentPayload{ct}))
+}
+
+func (s *Service) handleLuaAttach(msg sarif.Message) {
+	name := strings.TrimPrefix(strings.TrimPrefix(msg.Action, "lua/attach"), "/")
+	if name == "" {
+		s.ReplyBadRequest(msg, errors.New("No machine name given!"))
+		return
+	}
+
+	if m, ok := s.Machines[name]; ok {
+		m.Attach(msg.Source)
+	}
+
+	s.Listeners[name] = append(s.Listeners[name], msg.Source)
+	s.Reply(msg, sarif.CreateMessage("lua/attached", nil))
 }

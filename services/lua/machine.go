@@ -6,6 +6,7 @@
 package lua
 
 import (
+	"encoding/json"
 	"strings"
 	"sync"
 
@@ -20,6 +21,7 @@ type Machine struct {
 
 	StateLock    sync.Mutex
 	OutputBuffer string
+	Listeners    []string
 }
 
 func NewMachine(c *sarif.Client) *Machine {
@@ -43,6 +45,7 @@ func (m *Machine) Enable() error {
 		"natural":     m.luaNatural,
 		"reply":       m.luaReply,
 		"reply_error": m.luaReplyError,
+		"dump":        m.luaDebug,
 	})
 	m.Lua.SetField(mod, "device_id", lua.LString(m.DeviceId))
 	if err := m.PreloadModuleString("fun", ModFun); err != nil {
@@ -195,12 +198,14 @@ func (m *Machine) Do(code string, arg interface{}) (string, error, interface{}) 
 	m.FlushOut()
 	fn, err := m.Lua.LoadString(code)
 	if err != nil {
+		m.InformListeners("err/internal", err.Error())
 		return "", err, nil
 	}
 	m.Lua.Push(fn)
 	m.Lua.Push(luareflect.ToLua(m.Lua, arg))
 	if err := m.Lua.PCall(1, 1, nil); err != nil {
 		out := m.FlushOut()
+		m.InformListeners("err/internal", err.Error())
 		return out, err, nil
 	}
 	out := m.FlushOut()
@@ -213,4 +218,40 @@ func (m *Machine) Do(code string, arg interface{}) (string, error, interface{}) 
 	}
 
 	return out, nil, rv
+}
+
+func (m *Machine) luaDebug(L *lua.LState) int {
+	out := ""
+
+	top := L.GetTop()
+	for i := 1; i <= top; i++ {
+		if i > 1 {
+			out += " "
+		}
+
+		v := L.Get(i)
+		if v.Type() == lua.LTTable {
+			rv := luareflect.DecodeToBasic(v)
+			text, _ := json.MarshalIndent(rv, "", "    ")
+			out += string(text)
+		} else {
+			out += v.String()
+		}
+	}
+	m.InformListeners("lua/debug", out)
+	return 0
+}
+
+func (m *Machine) Attach(listener string) {
+	m.Listeners = append(m.Listeners, listener)
+}
+
+func (m *Machine) InformListeners(action, message string) {
+	for _, l := range m.Listeners {
+		m.Publish(sarif.Message{
+			Action:      action,
+			Destination: l,
+			Text:        message,
+		})
+	}
 }

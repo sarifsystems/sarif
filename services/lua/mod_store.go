@@ -8,59 +8,34 @@ package lua
 const ModStore string = `
 local store = {}
 
--- TODO: get rid when gopher-lua correctly supports coroutines
-local function queue()
-	local q, i, e
-
-	local push = function(...)
-		q = q or {}
-		q[#q+1] = {...}
-	end
-
-	local pop = function()
-		if not q then return end
-		i, e = next(q, i)
-		if not i then
-			q = nil
-			return
-		end
-		return unpack(e)
-	end
-
-	return push, pop
-end
-
 function store.scan(collection, filter)
 	filter = filter or {}
 
-	local push, pop = queue()
-	return function()
-		local k, v = pop()
-		if k or v then
-			return k, v
-		end
-
-		local msg = sarif.request{
-			action = "store/scan/" .. collection,
-			p = filter,
-		}
-		if not msg or not msg.p then return end
-
-		for k, v in pairs(msg.p) do
-			if filter.reverse then 
-				if not filter['end'] or k < filter['end'] then
-					filter['end'] = k:sub(0, -2)
-				end
-			else
-				if not filter.start or k > filter.start then
-					filter.start = k .. "~"
-				end
+	return coroutine.wrap(function()
+		while true do
+			local msg = sarif.request{
+				action = "store/scan/" .. collection,
+				p = filter,
+			}
+			if not msg or not msg.p or #msg.p.values == 0 then
+				return
 			end
-			push(k, v)
+
+			for i, v in ipairs(msg.p.values) do
+				local k = msg.p.keys[i]
+				if filter.reverse then 
+					if not filter['end'] or k < filter['end'] then
+						filter['end'] = k:sub(0, -2)
+					end
+				else
+					if not filter.start or k > filter.start then
+						filter.start = k .. "~"
+					end
+				end
+				coroutine.yield(k, v)
+			end
 		end
-		local a, b = pop()
-		return a, b
-	end
+	end)
 end
 
 function store.get(key)
