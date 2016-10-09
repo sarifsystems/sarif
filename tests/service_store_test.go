@@ -55,11 +55,12 @@ func ServiceStoreTest(tr *TestRunner) {
 
 		reply := tr.Expect()
 		So(reply, ShouldBeAction, "store/scanned/person")
-		got := map[string]Person{}
+		got := make(map[string]interface{})
 		reply.DecodePayload(&got)
 		So(got, ShouldHaveLength, 2)
-		So(got["john_smith"].Age, ShouldEqual, 43)
-		So(got["bob_benson"].Age, ShouldEqual, 27)
+
+		So(got["keys"], ShouldResemble, []interface{}{"bob_benson", "john_smith"})
+		So(got["values"], ShouldHaveLength, 2)
 	})
 
 	Convey("should support prefix scan", func() {
@@ -67,10 +68,9 @@ func ServiceStoreTest(tr *TestRunner) {
 
 		reply := tr.Expect()
 		So(reply, ShouldBeAction, "store/scanned/person")
-		got := map[string]Person{}
+		got := make(map[string]interface{})
 		reply.DecodePayload(&got)
-		So(got, ShouldHaveLength, 1)
-		So(got["john_smith"].Name, ShouldEqual, "John Smith")
+		So(got["keys"], ShouldResemble, []interface{}{"john_smith"})
 	})
 
 	Convey("should support reverse scan", func() {
@@ -82,10 +82,9 @@ func ServiceStoreTest(tr *TestRunner) {
 
 		reply := tr.Expect()
 		So(reply, ShouldBeAction, "store/scanned/person")
-		got := map[string]Person{}
+		got := make(map[string]interface{})
 		reply.DecodePayload(&got)
-		So(got, ShouldHaveLength, 1)
-		So(got["john_smith"].Name, ShouldEqual, "John Smith")
+		So(got["keys"], ShouldResemble, []interface{}{"john_smith"})
 	})
 
 	Convey("should support filtering", func() {
@@ -94,13 +93,13 @@ func ServiceStoreTest(tr *TestRunner) {
 				"name ^":      "Bob",
 				"relevance <": 60,
 			},
+			"only": "keys",
 		}))
 
 		reply := tr.Expect()
 		So(reply, ShouldBeAction, "store/scanned/person")
-		got := map[string]Person{}
+		got := make([]interface{}, 0)
 		reply.DecodePayload(&got)
-		So(got, ShouldHaveLength, 1)
-		So(got["bob_benson"].Name, ShouldEqual, "Bob Benson")
+		So(got, ShouldResemble, []interface{}{"bob_benson"})
 	})
 }

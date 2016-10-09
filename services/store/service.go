@@ -259,6 +259,11 @@ func (s *Service) handleScan(msg sarif.Message) {
 	s.Reply(msg, sarif.CreateMessage("store/scanned/"+collection, got))
 }
 
+type DocsPayload struct {
+	Keys   []string           `json:"keys"`
+	Values []*json.RawMessage `json:"values"`
+}
+
 func (s *Service) doScan(collection string, p scanMessage) (interface{}, error) {
 	if p.Start == "" && p.End == "" {
 		if p.Prefix != "" {
@@ -277,7 +282,6 @@ func (s *Service) doScan(collection string, p scanMessage) (interface{}, error) 
 	defer cursor.Close()
 
 	keys := make([]string, 0)
-	docs := make(map[string]*json.RawMessage)
 	values := make([]*json.RawMessage, 0)
 	for doc := cursor.Next(); doc != nil && p.Limit > 0; doc = cursor.Next() {
 		if p.Filter != nil {
@@ -291,14 +295,12 @@ func (s *Service) doScan(collection string, p scanMessage) (interface{}, error) 
 		}
 
 		p.Limit--
-		if p.Only == "keys" {
+		if p.Only == "" || p.Only == "keys" {
 			keys = append(keys, doc.Key)
-		} else if p.Only == "values" {
+		}
+		if p.Only == "" || p.Only == "values" {
 			raw := json.RawMessage(doc.Value)
 			values = append(values, &raw)
-		} else {
-			raw := json.RawMessage(doc.Value)
-			docs[doc.Key] = &raw
 		}
 	}
 
@@ -307,6 +309,6 @@ func (s *Service) doScan(collection string, p scanMessage) (interface{}, error) 
 	} else if p.Only == "values" {
 		return values, nil
 	} else {
-		return docs, nil
+		return DocsPayload{keys, values}, nil
 	}
 }
