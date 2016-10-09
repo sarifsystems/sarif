@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sarifsystems/sarif/pkg/luareflect"
 	"github.com/sarifsystems/sarif/sarif"
@@ -46,6 +47,8 @@ func (m *Machine) Enable() error {
 		"reply":       m.luaReply,
 		"reply_error": m.luaReplyError,
 		"dump":        m.luaDebug,
+		"time":        m.luaTimeParse,
+		"date":        m.luaTimeFormat,
 	})
 	m.Lua.SetField(mod, "device_id", lua.LString(m.DeviceId))
 	if err := m.PreloadModuleString("fun", ModFun); err != nil {
@@ -240,6 +243,34 @@ func (m *Machine) luaDebug(L *lua.LState) int {
 	}
 	m.InformListeners("lua/debug", out)
 	return 0
+}
+
+func (m *Machine) luaTimeFormat(L *lua.LState) int {
+	t := time.Now()
+	if L.GetTop() > 0 && L.Get(1) != lua.LNil {
+		t = time.Unix(L.CheckInt64(1), 0)
+	}
+	if L.GetTop() > 1 && L.CheckBool(2) {
+		t = t.Local()
+	} else {
+		t = t.UTC()
+	}
+	L.Push(lua.LString(t.Format(time.RFC3339)))
+	return 1
+}
+
+func (m *Machine) luaTimeParse(L *lua.LState) int {
+	str := L.CheckString(1)
+
+	t, err := time.Parse(time.RFC3339, str)
+	if err != nil {
+		L.Push(lua.LNil)
+		L.Push(lua.LString(err.Error()))
+		return 2
+	}
+
+	L.Push(lua.LNumber(t.Unix()))
+	return 1
 }
 
 func (m *Machine) Attach(listener string) {
