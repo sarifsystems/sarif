@@ -16,6 +16,7 @@ import (
 	"github.com/sarifsystems/sarif/services/events"
 	"github.com/sarifsystems/sarif/services/location"
 	"github.com/sarifsystems/sarif/services/lua"
+	"github.com/sarifsystems/sarif/services/natural"
 	"github.com/sarifsystems/sarif/services/scheduler"
 	"github.com/sarifsystems/sarif/services/store"
 	"github.com/smartystreets/goconvey/convey"
@@ -28,6 +29,7 @@ var runTests = []Test{
 	{"Scheduler Service", ServiceSchedulerTest},
 	{"Events Service", ServiceEventsTest},
 	{"Location Service", ServiceLocationTest},
+	{"Natural Service", ServiceNaturalTest},
 	{"Lua Service", ServiceLuaTest},
 }
 
@@ -43,13 +45,16 @@ func TestSpec(t *testing.T) {
 	srv.RegisterModule(events.Module)
 	srv.RegisterModule(location.Module)
 	srv.RegisterModule(lua.Module)
+	srv.RegisterModule(natural.Module)
 	srv.RegisterModule(scheduler.Module)
 	srv.RegisterModule(store.Module)
 
+	srv.ServerConfig.Name = "myserver"
 	srv.ServerConfig.EnabledModules = []string{
 		"events",
 		"location",
 		"lua",
+		"natural",
 		"scheduler",
 		"store",
 	}

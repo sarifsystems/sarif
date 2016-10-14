@@ -350,7 +350,7 @@ func (s *Service) handleNaturalLearn(msg sarif.Message) {
 	if p.Sentence == "" {
 		return
 	}
-	p.Action = strings.TrimLeft(p.Action, ".")
+	p.Action = strings.TrimLeft(p.Action, "./")
 
 	if err := s.regular.Learn(p.Sentence, p.Action); err != nil {
 		s.ReplyBadRequest(msg, err)

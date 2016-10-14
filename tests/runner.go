@@ -79,9 +79,6 @@ func (t *TestRunner) listen() {
 		if t.IgnoreSubs && msg.IsAction("proto/sub") {
 			continue
 		}
-		if msg.Source == t.Id {
-			continue
-		}
 		t.RecMutex.Lock()
 		t.Received <- msg
 		t.RecMutex.Unlock()
