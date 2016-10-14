@@ -95,7 +95,7 @@ func (t *TestRunner) Publish(msg sarif.Message) {
 }
 
 func (t *TestRunner) Wait() {
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 }
 
 func (t *TestRunner) When(msgs ...sarif.Message) {
