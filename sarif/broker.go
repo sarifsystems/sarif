@@ -34,7 +34,7 @@ func NewBroker() *Broker {
 	return &Broker{
 		subs:          newSubtree(),
 		subsLock:      sync.RWMutex{},
-		dups:          make([]string, 128),
+		dups:          make([]string, 1024),
 		dupIndex:      0,
 		Log:           defaultLog,
 		trace:         false,
@@ -230,9 +230,6 @@ func (b *Broker) AuthenticateAndListenOnConn(auth AuthType, c Conn) error {
 // to it.
 func (b *Broker) publish(msg Message) {
 	if b.checkDuplicate(msg.Id) {
-		if b.trace {
-			b.Log.Debugln("[broker] ignore duplicate:", msg)
-		}
 		return
 	}
 
