@@ -11,8 +11,8 @@ var DefaultRules = SentenceRuleSet{
 	"parse [text]":                       "natural/parse",
 
 	"record that [text]": "event/new",
-	"#[tag]":             "tagged",
-	"#[tag] [text]":      "tagged",
+	"#[_action]":         "tagged",
+	"#[_action] [text]":  "tagged",
 
 	"remind me in [duration] to [text]": "schedule",
 }

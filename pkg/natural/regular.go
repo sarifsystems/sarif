@@ -137,7 +137,8 @@ func (r *SentenceRule) Parse(s string) (sarif.Message, bool) {
 			continue
 		}
 		if field == "_action" {
-			msg.Action = strings.TrimSpace(msg.Action + " " + v)
+			msg.Action = strings.TrimSpace(msg.Action + "/" + v)
+			continue
 		}
 		p[field] = v
 	}
