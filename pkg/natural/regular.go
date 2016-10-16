@@ -20,7 +20,7 @@ func buildRegexp(field string) string {
 	matches := reMatchVars.FindStringSubmatch(field)
 	field = matches[1]
 	field = strings.Replace(field, " ", "", -1)
-	return `(?P<` + field + `>("[^"]*"|[^"].*))`
+	return `(?P<` + field + `>("[^"]+"|[^"]+?))`
 }
 
 type RegularParser struct {
