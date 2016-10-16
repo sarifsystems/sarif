@@ -133,8 +133,11 @@ func (r *SentenceRule) Parse(s string) (sarif.Message, bool) {
 		}
 		v := TrimQuotes(match[i])
 		if field == "text" {
-			msg.Text = v
+			msg.Text = strings.TrimSpace(msg.Text + " " + v)
 			continue
+		}
+		if field == "_action" {
+			msg.Action = strings.TrimSpace(msg.Action + " " + v)
 		}
 		p[field] = v
 	}

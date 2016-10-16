@@ -58,11 +58,10 @@ func (s *Service) Enable() error {
 	if !s.cfg.Exists() {
 		cfg.RecordedActions = map[string]bool{
 			"devices/changed":        true,
-			"location/cluster/enter": true,
-			"location/cluster/leave": true,
-			"location/fence/enter":   true,
-			"location/fence/leave":   true,
-			"mood":                   true,
+			"location/cluster":       true,
+			"location/fence":         true,
+			"tagged":                 true,
+			"browser/session/update": true,
 		}
 	}
 	s.cfg.Get(&cfg)

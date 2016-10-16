@@ -10,10 +10,9 @@ var DefaultRules = SentenceRuleSet{
 	"associate [sentence] with [action]": "natural/learn",
 	"parse [text]":                       "natural/parse",
 
-	"record that [text]":                   "event/new",
-	"remind me in [duration] to [text]":    "schedule",
-	"calculate [text]":                     "cmd/calc",
-	"search for [query]":                   "knowledge/query",
-	"get last event from [action]":         "event/last",
-	"find last event with action [action]": "event/last",
+	"record that [text]": "event/new",
+	"#[tag]":             "tagged",
+	"#[tag] [text]":      "tagged",
+
+	"remind me in [duration] to [text]": "schedule",
 }

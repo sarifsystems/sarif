@@ -357,4 +357,7 @@ func (s *Service) handleNaturalLearn(msg sarif.Message) {
 	}
 	s.Log("info", "associating '"+p.Sentence+"' with "+p.Action)
 	s.Reply(msg, sarif.CreateMessage("natural/learned/meaning", p))
+
+	s.Cfg.Rules = s.regular.Rules()
+	s.Config.Set(&s.Cfg)
 }
