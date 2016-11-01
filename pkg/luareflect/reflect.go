@@ -43,6 +43,9 @@ func ToLua(L *lua.LState, data interface{}) lua.LValue {
 		t := L.NewTable()
 		for i := 0; i < typ.NumField(); i++ {
 			lk := lua.LString(typ.Field(i).Name)
+			if len(typ.Field(i).PkgPath) > 0 {
+				continue
+			}
 			lv := ToLua(L, val.Field(i).Interface())
 			t.RawSet(lk, lv)
 		}
