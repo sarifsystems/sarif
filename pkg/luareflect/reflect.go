@@ -31,7 +31,9 @@ func ToLua(L *lua.LState, data interface{}) lua.LValue {
 	case reflect.Float32:
 		return lua.LNumber(val.Float())
 	case reflect.Ptr:
-		return ToLua(L, reflect.Indirect(val).Interface())
+		if !val.IsNil() {
+			return ToLua(L, reflect.Indirect(val).Interface())
+		}
 	case reflect.Slice:
 		t := L.NewTable()
 		for i := 0; i < val.Len(); i++ {
