@@ -198,7 +198,7 @@ func (s *Server) InitModules() error {
 
 func (s *Server) findConfigStore() error {
 	time.Sleep(100 * time.Millisecond)
-	for try := 1; try <= 3; try++ {
+	for try := 1; try <= 5; try++ {
 		req := s.Client.Request(sarif.Message{
 			Action:      "proto/discover/store/get/config",
 			Destination: s.ServerConfig.ConfigStore,
@@ -211,7 +211,7 @@ func (s *Server) findConfigStore() error {
 			}
 			s.configStoreInitialized = true
 			return nil
-		case <-time.After(500 * time.Duration(try) * time.Millisecond):
+		case <-time.After(1 * time.Duration(try) * time.Second):
 		}
 	}
 

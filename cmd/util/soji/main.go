@@ -132,6 +132,7 @@ func relay() {
 	c, err := app.ClientDial(sarif.ClientInfo{
 		Name: "soji/" + sarif.GenerateId(),
 	})
+	c.HandleConcurrent = false
 	app.Must(err)
 
 	c.Subscribe("status", "", func(msg sarif.Message) {
