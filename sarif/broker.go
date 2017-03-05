@@ -168,7 +168,8 @@ func (b *Broker) Listen(cfg *NetConfig) error {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			return err
+			b.Log.Errorln("[broker] connect accept failed:", err, l.Addr())
+			continue
 		}
 
 		go func() {
