@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/sarifsystems/sarif/pkg/content"
@@ -26,8 +27,8 @@ type ContentPayload struct {
 
 func (app *App) Edit() {
 	// Request document from given action
-	action := flag.Arg(1)
-	putAction := flag.Arg(2)
+	action := strings.TrimLeft(flag.Arg(1), "/")
+	putAction := strings.TrimLeft(flag.Arg(2), "/")
 
 	msg, ok := <-app.Client.Request(sarif.CreateMessage(action, nil))
 	if !ok {
@@ -55,6 +56,9 @@ func (app *App) Edit() {
 		rawPayload = true
 	} else {
 		ctp.Content.Data = []byte(msg.Text)
+	}
+	if ctp.Content.PutAction == "" {
+		ctp.Content.PutAction = putAction
 	}
 
 	// Create temp file with content
@@ -96,7 +100,7 @@ func (app *App) Edit() {
 
 		fi, err := f.Stat()
 		app.Must(err)
-		if lastMod.Before(fi.ModTime()) && putAction != "" {
+		if lastMod.Before(fi.ModTime()) && ctp.Content.PutAction != "" {
 			lastMod = fi.ModTime()
 			_, err := f.Seek(0, 0)
 			app.Must(err)
@@ -104,7 +108,7 @@ func (app *App) Edit() {
 			app.Must(err)
 
 			lastErr = ""
-			req := sarif.CreateMessage(putAction, nil)
+			req := sarif.CreateMessage(ctp.Content.PutAction, nil)
 			if rawPayload {
 				var temp interface{}
 				err := json.Unmarshal(data, &temp)
