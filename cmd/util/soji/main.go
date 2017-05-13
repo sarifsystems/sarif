@@ -7,21 +7,14 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
-	"sort"
-	"strings"
-	"syscall"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/sarifsystems/sarif/core"
-	"github.com/sarifsystems/sarif/sarif"
 )
 
 var isTmux = flag.Bool("tmux", false, "tmux status line output")
@@ -32,70 +25,87 @@ func main() {
 	flag.Parse()
 	color.NoColor = false
 
+	app := &app{}
+	app.App = core.NewApp("sarif", "tars")
+	app.Init()
+
+	app.Info = Cache{
+		FilePath: app.Config.Dir() + "/soji.json",
+		Bars:     make(map[string]*Bar),
+	}
+
 	if flag.Arg(0) == "relay" {
-		relay()
+		r := Relay{app: app}
+		r.Relay()
 		return
 	}
 
-	watch()
+	w := Watcher{app}
+	w.Watch()
+}
+
+type app struct {
+	*core.App
+	Info Cache
 }
 
 type Bar struct {
-	Key string `json:"name,omitempty"`
-
-	Text string `json:"text,omitempty"`
-
-	Label string      `json:"key,omitempty"`
-	Value interface{} `json:"value,omitempty"`
-	Color string      `json:"color,omitempty"`
+	Key     string      `json:"name"`
+	Label   string      `json:"key"`
+	Display string      `json:"display"`
+	Value   interface{} `json:"value"`
+	Color   string      `json:"color"`
 }
 
 func (b Bar) PrettyString(mode string) string {
 	lbl := b.Label
-	if lbl == "default" || *hideLabels {
+	if lbl == "hidden" || *hideLabels {
 		lbl = ""
-	} else if lbl != "" {
+	} else {
+		lbl = b.Key
+	}
+	if lbl != "" {
 		lbl += " "
 	}
 
-	text := b.Text
-	if text == "" {
-		if b.Value == nil {
-			return ""
-		}
+	if b.Value == nil {
+		return ""
+	}
 
-		switch v := b.Value.(type) {
-		case string:
-			text = v
-		case bool:
-			if v {
-				text = colorize(mode, "green", "✓")
-			} else {
-				text = colorize(mode, "red", "✗")
-			}
-		default:
-			text = fmt.Sprintf("%v", v)
+	text, color := "", "green"
+	switch v := b.Value.(type) {
+	case string:
+		text = v
+	case bool:
+		if v {
+			text, color = "✓", "green"
+		} else {
+			text, color = "✗", "red"
 		}
+	default:
+		text = fmt.Sprintf("%v", v)
 	}
 	if text == "" {
 		return ""
 	}
-
-	cl := b.Color
-	if cl == "" {
-		cl = "green"
+	if b.Color != "" {
+		color = b.Color
 	}
 
-	return colorize(mode, "hi-white", lbl) + colorize(mode, cl, text)
+	return colorize(mode, "hi-white", lbl) + colorize(mode, color, text)
 }
 
 type Cache struct {
 	FilePath string `json:"-"`
 
+	DeviceId      string `json:"device_id"`
+	ActionChanged string `json:"action_changed"`
+	ActionPull    string `json:"action_pull"`
+
 	PID         int       `json:"pid,omitempty"`
 	LastUpdated time.Time `json:"time,omitempty"`
 
-	Bars map[string]Bar `json:"bars,omitempty"`
+	Bars map[string]*Bar `json:"bars,omitempty"`
 }
 
 func (c *Cache) Read() error {
@@ -115,116 +125,19 @@ func (c *Cache) Write() error {
 		return err
 	}
 	defer f.Close()
-	return json.NewEncoder(f).Encode(c)
-}
-
-func relay() {
-	app := core.NewApp("sarif", "tars")
-	app.Init()
-
-	info := Cache{FilePath: app.Config.Dir() + "/soji.json"}
-	info.Bars = make(map[string]Bar)
-	info.Read()
-
-	info.PID = os.Getpid()
-	app.Must(info.Write())
-
-	c, err := app.ClientDial(sarif.ClientInfo{
-		Name: "soji/" + sarif.GenerateId(),
-	})
-	c.HandleConcurrent = false
-	app.Must(err)
-
-	c.Subscribe("status", "", func(msg sarif.Message) {
-		key := msg.Action
-		if strings.HasPrefix(key, "status/") {
-			key = strings.TrimPrefix(key, "status/")
-		} else {
-			key = "default"
-		}
-
-		bar := Bar{Key: key, Label: key, Text: msg.Text}
-		if err := msg.DecodePayload(&bar); err != nil {
-			msg.DecodePayload(&bar.Text)
-			msg.DecodePayload(&bar.Value)
-		}
-
-		info.Bars[bar.Key] = bar
-		app.Must(info.Write())
-	})
-
-	fmt.Println(os.Getpid())
-	core.WaitUntilInterrupt()
-
-	info.PID = 0
-	app.Must(info.Write())
-
-	c.Publish(sarif.CreateMessage("soji/down", nil))
-}
-
-func watch() {
-	app := core.NewApp("sarif", "tars")
-	app.Init()
-
-	info := Cache{FilePath: app.Config.Dir() + "/soji.json"}
-	info.Bars = make(map[string]Bar)
-	info.Read()
-
-	err := info.Read()
-	if err == nil {
-		if info.PID > 0 {
-			var p *os.Process
-			p, err = os.FindProcess(info.PID)
-			if err == nil {
-				err = p.Signal(syscall.Signal(0))
-			}
-		} else {
-			err = errors.New("PID not found")
-		}
-	}
-
+	b, err := json.MarshalIndent(c, "", "    ")
 	if err != nil {
-		fork(app)
-		return
+		return err
 	}
-
-	mode := ""
-	if *isTmux {
-		mode = "tmux"
-	}
-
-	keys := make([]string, 0, len(info.Bars))
-	if len(flag.Args()) > 0 {
-		keys = flag.Args()
-	} else {
-		for key := range info.Bars {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
-	}
-
-	texts := make([]string, 0)
-	for _, key := range keys {
-		bar, ok := info.Bars[key]
-		if !ok {
-			continue
-		}
-		text := bar.PrettyString(mode)
-		if text != "" {
-			texts = append(texts, text)
-		}
-	}
-	fmt.Println(strings.Join(texts, *delimiter))
+	_, err = f.Write(b)
+	return err
 }
 
-func fork(app *core.App) {
-	fmt.Println("booting up ...")
-
-	cmd := exec.Command(os.Args[0], "relay")
-	stdout, err := cmd.StdoutPipe()
-	app.Must(err)
-	app.Must(cmd.Start())
-
-	out := bufio.NewReader(stdout)
-	out.ReadString('\n')
+func (c *Cache) Bar(key string) *Bar {
+	bar, ok := c.Bars[key]
+	if !ok {
+		bar = &Bar{Key: key}
+		c.Bars[key] = bar
+	}
+	return bar
 }
