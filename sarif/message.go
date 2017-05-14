@@ -81,6 +81,13 @@ func (m Message) IsAction(action string) bool {
 	return true
 }
 
+func (m Message) ActionSuffix(action string) string {
+	if !strings.HasPrefix(m.Action, action+"/") {
+		return ""
+	}
+	return strings.TrimPrefix(m.Action, action+"/")
+}
+
 func (m Message) DecodePayload(v interface{}) error {
 	return m.Payload.Decode(v)
 }
