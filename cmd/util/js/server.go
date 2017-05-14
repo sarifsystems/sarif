@@ -11,6 +11,7 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"time"
 
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/sarifsystems/sarif/pkg/inject"
@@ -71,6 +72,7 @@ func (s *Socket) Send(raw string) bool {
 }
 
 func (s *Socket) readLoop() {
+	time.Sleep(100 * time.Millisecond)
 	s.object.Set("readyState", 1)
 	s.object.Call("onopen")
 
