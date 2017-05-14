@@ -8,6 +8,7 @@ package lua
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -39,6 +40,7 @@ type Service struct {
 	Broker *sarif.Broker
 	*sarif.Client
 
+	Scripts   map[string]string
 	Machines  map[string]*Machine
 	Listeners map[string][]string
 }
@@ -47,6 +49,7 @@ func NewService(deps *Dependencies) *Service {
 	s := &Service{
 		Broker:    deps.Broker,
 		Client:    deps.Client,
+		Scripts:   make(map[string]string),
 		Machines:  make(map[string]*Machine),
 		Listeners: make(map[string][]string),
 	}
@@ -61,13 +64,25 @@ func (s *Service) Enable() error {
 	s.Subscribe("lua/do", "", s.handleLuaDo)
 	s.Subscribe("lua/start", "", s.handleLuaStart)
 	s.Subscribe("lua/stop", "", s.handleLuaStop)
+	s.Subscribe("lua/status", "", s.handleLuaStatus)
 	s.Subscribe("lua/load", "", s.handleLuaLoad)
 	s.Subscribe("lua/dump", "", s.handleLuaDump)
 	s.Subscribe("lua/attach", "", s.handleLuaAttach)
 
+	if err := s.readAvailableScripts(); err != nil {
+		return err
+	}
+	for _, f := range s.Scripts {
+		s.createMachineFromScript(f)
+	}
+	return nil
+}
+
+func (s *Service) readAvailableScripts() error {
 	if s.cfg.ScriptDir == "" {
 		return nil
 	}
+
 	dir, err := os.Open(s.cfg.ScriptDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -76,15 +91,18 @@ func (s *Service) Enable() error {
 		}
 		return err
 	}
+
 	files, err := dir.Readdirnames(0)
 	if err != nil {
 		return err
 	}
+
 	for _, f := range files {
 		if !strings.HasSuffix(f, ".lua") {
 			continue
 		}
-		s.createMachineFromScript(f)
+		name := strings.TrimSuffix(f, ".lua")
+		s.Scripts[name] = f
 	}
 	return nil
 }
@@ -213,6 +231,47 @@ func (s *Service) handleLuaStop(msg sarif.Message) {
 		"down",
 		"",
 	}))
+}
+
+type MsgMachineAllStatus struct {
+	Up     int               `json:"up"`
+	Status map[string]string `json:"status"`
+}
+
+func (s MsgMachineAllStatus) Text() string {
+	return fmt.Sprintf("%d/%d machines running.", s.Up, len(s.Status))
+}
+
+func (s *Service) handleLuaStatus(msg sarif.Message) {
+	name := msg.ActionSuffix("lua/status")
+
+	if name != "" {
+		status := "not_found"
+		if _, ok := s.Machines[name]; ok {
+			status = "up"
+		} else if _, ok := s.Scripts[name]; ok {
+			status = "down"
+		}
+		s.Reply(msg, sarif.CreateMessage("lua/status", &MsgMachineStatus{
+			name,
+			status,
+			"",
+		}))
+		return
+	}
+
+	status := MsgMachineAllStatus{
+		Status: make(map[string]string),
+	}
+	for name := range s.Scripts {
+		if _, ok := s.Machines[name]; ok {
+			status.Up++
+			status.Status[name] = "up"
+		} else {
+			status.Status[name] = "down"
+		}
+	}
+	s.Reply(msg, sarif.CreateMessage("lua/status", status))
 }
 
 type ContentPayload struct {
