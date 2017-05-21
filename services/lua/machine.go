@@ -47,6 +47,7 @@ func (m *Machine) Enable() error {
 		"reply":       m.luaReply,
 		"reply_error": m.luaReplyError,
 		"dump":        m.luaDebug,
+		"debug":       m.luaDebug,
 		"time":        m.luaTimeParse,
 		"date":        m.luaTimeFormat,
 	})
@@ -178,6 +179,7 @@ func (m *Machine) luaHandle(msg sarif.Message, handler *lua.LFunction) {
 		Protect: true,
 	}, v)
 	if err != nil {
+		m.InformListeners("err/internal", err.Error())
 		m.Log("err", "handle err: "+err.Error())
 	}
 
