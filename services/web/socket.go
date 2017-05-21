@@ -8,19 +8,24 @@ package web
 import (
 	"encoding/json"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/websocket"
 	"github.com/sarifsystems/sarif/sarif"
 )
 
 type WebSocketConn struct {
-	conn *websocket.Conn
+	conn  *websocket.Conn
+	mutex sync.Mutex
 }
 
 func (c *WebSocketConn) Write(msg sarif.Message) error {
 	if err := msg.IsValid(); err != nil {
 		return err
 	}
+
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	w, err := c.conn.NextWriter(websocket.TextMessage)
 	if err != nil {
 		return err
@@ -55,7 +60,7 @@ func (s *Server) handleSocket(w http.ResponseWriter, r *http.Request) {
 	defer ws.Close()
 	s.Client.Log("info", "new websocket conn from "+r.RemoteAddr)
 
-	c := &WebSocketConn{ws}
+	c := &WebSocketConn{conn: ws}
 	err = s.Broker.AuthenticateAndListenOnConn(sarif.AuthChallenge, c)
 	s.Client.Log("info", "websocket from "+r.RemoteAddr+" closed: "+err.Error())
 }
