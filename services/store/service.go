@@ -72,6 +72,7 @@ func (s *Service) Enable() (err error) {
 	s.Subscribe("store/get", "", s.handleGet)
 	s.Subscribe("store/del", "", s.handleDel)
 	s.Subscribe("store/scan", "", s.handleScan)
+	s.Subscribe("store/batch", "", s.handleBatch)
 	return nil
 }
 
@@ -317,5 +318,5 @@ func (s *Service) doScan(collection string, p scanMessage) (interface{}, error) 
 }
 
 func clampPrefix(prefix string) (start, end string) {
-	return prefix, prefix + " ~~~~~"
+	return prefix, prefix + "~~~~~"
 }
