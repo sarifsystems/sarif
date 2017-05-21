@@ -30,7 +30,8 @@ func (app *App) Edit() {
 	action := strings.TrimLeft(flag.Arg(1), "/")
 	putAction := strings.TrimLeft(flag.Arg(2), "/")
 
-	msg, ok := <-app.Client.Request(sarif.CreateMessage(action, nil))
+	getMsg := sarif.CreateMessage(action, nil)
+	msg, ok := <-app.Client.Request(getMsg)
 	if !ok {
 		app.Log.Fatalln("No response received at " + action)
 	}
@@ -59,6 +60,11 @@ func (app *App) Edit() {
 	}
 	if ctp.Content.PutAction == "" {
 		ctp.Content.PutAction = putAction
+		if ctp.Content.PutAction == "" && rawPayload {
+			if storeKey := getMsg.ActionSuffix("store/get"); storeKey != "" {
+				ctp.Content.PutAction = "store/put/" + storeKey
+			}
+		}
 	}
 
 	// Create temp file with content
