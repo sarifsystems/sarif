@@ -265,10 +265,13 @@ type DocsPayload struct {
 }
 
 func (s *Service) doScan(collection string, p scanMessage) (interface{}, error) {
-	if p.Start == "" && p.End == "" {
-		if p.Prefix != "" {
-			p.Start = p.Prefix
-			p.End = p.Prefix + "~~~~~" // oh god, what a hack
+	if p.Prefix != "" {
+		start, end := clampPrefix(p.Prefix)
+		if p.Start == "" {
+			p.Start = start
+		}
+		if p.End == "" {
+			p.End = end
 		}
 	}
 	if p.Limit == 0 {
@@ -311,4 +314,8 @@ func (s *Service) doScan(collection string, p scanMessage) (interface{}, error) 
 	} else {
 		return DocsPayload{keys, values}, nil
 	}
+}
+
+func clampPrefix(prefix string) (start, end string) {
+	return prefix, prefix + " ~~~~~"
 }
