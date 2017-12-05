@@ -124,6 +124,11 @@ func (s *Service) handleIncoming(msg sarif.Message) {
 }
 
 func (s *Service) initClient(name, token string) {
+	if client := s.clients[name]; client != nil {
+		client.Token = token
+		return
+	}
+
 	s.clients[name] = &client{
 		Name:  name,
 		Token: token,
