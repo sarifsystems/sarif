@@ -31,7 +31,7 @@ func messageToTable(L *lua.LState, msg sarif.Message) lua.LValue {
 	tableSetString(t, "id", msg.Id)
 	tableSetString(t, "action", msg.Action)
 	tableSetString(t, "src", msg.Source)
-	tableSetString(t, "dest", msg.Destination)
+	tableSetString(t, "dst", msg.Destination)
 	tableSetString(t, "corr", msg.CorrId)
 	tableSetString(t, "text", msg.Text)
 
@@ -47,7 +47,7 @@ func tableToMessage(L *lua.LState, t *lua.LTable) sarif.Message {
 	msg.Id = tableGetString(t, "id")
 	msg.Action = tableGetString(t, "action")
 	msg.Source = tableGetString(t, "src")
-	msg.Destination = tableGetString(t, "dest")
+	msg.Destination = tableGetString(t, "dst")
 	msg.CorrId = tableGetString(t, "corr")
 	msg.Text = tableGetString(t, "text")
 

@@ -48,5 +48,10 @@ function store.put(key, val)
 	return msg and msg.p and msg.p.key
 end
 
+function store.batch(cmds)
+	local msg = sarif.request{action = "store/batch, p = cmds}
+	return msg and msg.p
+end
+
 return store
 `

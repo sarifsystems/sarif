@@ -42,3 +42,4 @@ import:
   - html/charset
   - websocket
 - package: gopkg.in/yaml.v2
+- package: github.com/andybalholm/cascadia

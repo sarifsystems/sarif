@@ -241,7 +241,7 @@ func (b *Broker) publish(msg Message) {
 
 	topic := getTopic(msg.Action, msg.Destination)
 	b.subsLock.RLock()
-	b.subs.Call(topicParts(topic), func(c writer) {
+	b.subs.Call(topicParts(topic), false, func(c writer) {
 		go c.Write(msg)
 	})
 	b.subsLock.RUnlock()

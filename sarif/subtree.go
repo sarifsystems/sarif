@@ -98,12 +98,19 @@ func (t *subTree) Get(topic []string) *subTree {
 // "location/geofence/home", but not "location" or "location/update",
 // A "+" wildcard matches all branches: e.g. "topic/+/something" matches both
 // "topic/one/something" and "topic/two/something".
+// A "*" matches all subtrees: e.g. "topic/*/something" matches
+// "topic/something", "topic/one/something" and "topic/one/two/something".
 func (t *subTree) Walk(topic []string, depth int, f func(writer)) {
 	if topic != nil && len(topic) > 0 {
 		// Descend further along the topic path
 		if topic[0] == "+" {
 			for _, st := range t.Topic {
 				st.Walk(topic[1:], depth+1, f)
+			}
+		} else if topic[0] == "*" {
+			t.Walk(topic[1:], depth+1, f)
+			for _, st := range t.Topic {
+				st.Walk(topic[0:], depth+1, f)
 			}
 		} else {
 			if st, ok := t.Topic[topic[0]]; ok {
@@ -126,20 +133,32 @@ func (t *subTree) Walk(topic []string, depth int, f func(writer)) {
 //
 // For example, "topic/subtopic" would match children registered to "", ""topic"
 // and "topic/subtopic", but not "topic/subtopic/deeper".
-func (t *subTree) Call(topic []string, f func(writer)) {
-	if topic != nil && len(topic) > 0 {
+func (t *subTree) Call(topic []string, once bool, f func(writer)) bool {
+	if len(topic) > 0 {
 		// Descend further along the topic path
 		if st, ok := t.Topic[topic[0]]; ok {
-			st.Call(topic[1:], f)
+			call := st.Call(topic[1:], once, f)
+			if once && call {
+				return call
+			}
 		}
 		if st, ok := t.Topic["+"]; ok {
-			st.Call(topic[1:], f)
+			call := st.Call(topic[1:], once, f)
+			if once && call {
+				return call
+			}
 		}
 	}
 
+	called := false
 	for c := range t.Writers {
 		f(c)
+		called = true
+		if once {
+			break
+		}
 	}
+	return called
 }
 
 func (t *subTree) Print(w io.Writer, depth int) error {
