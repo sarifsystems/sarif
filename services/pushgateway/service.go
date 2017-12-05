@@ -156,4 +156,6 @@ func (s *Service) handlePushFetch(msg sarif.Message) {
 		queued.Destination = msg.Source
 		s.Publish(queued)
 	}
+
+	client.Queue = make([]sarif.Message, 0)
 }
