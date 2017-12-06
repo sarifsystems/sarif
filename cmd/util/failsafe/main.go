@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/smtp"
 	"strings"
@@ -63,14 +64,31 @@ func New() *App {
 		}))
 	})
 
-	fs.After(0, func() {
-		log.Print("30 seconds until destruction!")
+	fs.After(-2*time.Hour, func() {
+		msg := sarif.CreateMessage("failsafe/warning", nil)
+		msg.Destination = "user"
+		msg.Text = "Time for your daily check-in! Two hours remaining. Please confirm."
+		app.Client.Publish(msg)
 	})
 
-	for i := time.Duration(1); i < 120; i++ {
-		j := i * 10 * time.Second
+	fs.After(-1*time.Hour, func() {
+		msg := sarif.CreateMessage("failsafe/warning", nil)
+		msg.Destination = "user"
+		msg.Text = "Time for your daily check-in! One hour remaining. Please confirm."
+		app.Client.Publish(msg)
+	})
+
+	fs.After(0, func() {
+		msg := sarif.CreateMessage("notifications/new/failsafe/alert", nil)
+		msg.Text = "Alert! Deadline exceeded. Failsafe armed. Please check-in immediately."
+		app.Client.Publish(msg)
+	})
+
+	for i := time.Duration(1); i < 40; i++ {
+		j := i * 3 * time.Hour
 		fs.After(j, func() {
-			log.Printf("%d try", j)
+			remaining := fmt.Sprintf("%d:00 hours remaining until activation.", j/time.Hour)
+			app.SendMail("Failsafe Alert", "Deadline exceeded. Failsafe armed. Please check-in immediately.\n\n"+remaining)
 		})
 	}
 

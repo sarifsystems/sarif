@@ -19,11 +19,10 @@ type Failsafe struct {
 	stages []stage
 }
 
-// New test
 func New(d time.Duration) *Failsafe {
 	f := &Failsafe{
 		duration: d,
-		deadline: time.Now().Add(d),
+		deadline: time.Now(),
 		checkins: make(chan time.Time, 3),
 		confirms: make(chan bool, 3),
 	}
@@ -31,7 +30,6 @@ func New(d time.Duration) *Failsafe {
 	return f
 }
 
-// Run test
 func (f *Failsafe) Run() {
 	for {
 		stage := f.nextStage()
@@ -54,7 +52,6 @@ func (f *Failsafe) Run() {
 	}
 }
 
-// After test
 func (f *Failsafe) After(d time.Duration, t func()) {
 	f.stages = append(f.stages, stage{d, t})
 }
