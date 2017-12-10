@@ -65,23 +65,15 @@ func New() *App {
 	})
 
 	fs.After(-2*time.Hour, func() {
-		msg := sarif.CreateMessage("failsafe/warning", nil)
-		msg.Destination = "user"
-		msg.Text = "Time for your daily check-in! Two hours remaining. Please confirm."
-		app.Client.Publish(msg)
+		app.Client.Publish(sarif.CreateMessage("failsafe/warning/2h", nil))
 	})
 
 	fs.After(-1*time.Hour, func() {
-		msg := sarif.CreateMessage("failsafe/warning", nil)
-		msg.Destination = "user"
-		msg.Text = "Time for your daily check-in! One hour remaining. Please confirm."
-		app.Client.Publish(msg)
+		app.Client.Publish(sarif.CreateMessage("failsafe/warning/1h", nil))
 	})
 
 	fs.After(0, func() {
-		msg := sarif.CreateMessage("notifications/new/failsafe/alert", nil)
-		msg.Text = "Alert! Deadline exceeded. Failsafe armed. Please check-in immediately."
-		app.Client.Publish(msg)
+		app.Client.Publish(sarif.CreateMessage("failsafe/armed/0h", nil))
 	})
 
 	for i := time.Duration(1); i < 40; i++ {
@@ -89,12 +81,13 @@ func New() *App {
 		fs.After(j, func() {
 			remaining := fmt.Sprintf("%d:00 hours remaining until activation.", j/time.Hour)
 			app.SendMail("Failsafe Alert", "Deadline exceeded. Failsafe armed. Please check-in immediately.\n\n"+remaining)
+			app.Client.Publish(sarif.CreateMessage("failsafe/armed/exceeded", nil))
 		})
 	}
 
-	fs.After(30*time.Minute, func() {
-		app.SendMail("Failsafe", "You're dead!")
-		log.Print("you're dead!")
+	fs.After(3*40*time.Hour, func() {
+		app.SendMail("Failsafe triggered", "Deadline exceeded. Failsafe was activated. Please check-in to reset deadline.")
+		app.Client.Publish(sarif.CreateMessage("failsafe/triggered", nil))
 	})
 
 	return app
@@ -119,6 +112,7 @@ func (app *App) HandleCheckIn(msg sarif.Message) {
 
 	t := app.Failsafe.CheckIn()
 	app.Client.Reply(msg, sarif.CreateMessage("failsafe/ack", DeadlineInfo{t}))
+	app.Client.Publish(sarif.CreateMessage("failsafe/extended", DeadlineInfo{t}))
 }
 
 func (app *App) Challenge(device string) bool {
