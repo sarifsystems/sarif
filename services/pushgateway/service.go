@@ -135,6 +135,7 @@ func (s *Service) initClient(name, token string) {
 		Queue: make([]sarif.Message, 0),
 	}
 	s.Subscribe("", "push/"+name, s.handleIncoming)
+	s.Subscribe("", "user", s.handleIncoming)
 }
 
 func (s *Service) handlePushFetch(msg sarif.Message) {
