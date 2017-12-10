@@ -30,12 +30,24 @@ func New(d time.Duration) *Failsafe {
 	return f
 }
 
+func (f *Failsafe) advanceDeadline(t time.Time) {
+	if t.After(f.deadline.Add(f.duration / 2)) {
+		// If check-in is already half a period late, set new deadline
+		// a whole period later than the check-in.
+		f.deadline = t.Add(f.duration)
+	} else if t.After(f.deadline.Add(-f.duration / 2)) {
+		// If check-in is not more than half a period early, extend deadline
+		f.deadline = f.deadline.Add(f.duration)
+	}
+}
+
 func (f *Failsafe) Run() {
 	for {
 		stage := f.nextStage()
 		if stage == nil {
 			t := <-f.checkins
-			f.deadline = t.Add(f.duration)
+			f.advanceDeadline(t)
+			f.confirms <- true
 			continue
 		}
 
@@ -44,7 +56,7 @@ func (f *Failsafe) Run() {
 
 		select {
 		case t := <-f.checkins:
-			f.deadline = t.Add(f.duration)
+			f.advanceDeadline(t)
 			f.confirms <- true
 		case <-timeout:
 			go stage.Func()
