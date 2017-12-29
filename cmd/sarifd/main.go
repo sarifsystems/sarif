@@ -28,6 +28,7 @@ import (
 	"github.com/sarifsystems/sarif/services/nlquery"
 	"github.com/sarifsystems/sarif/services/pushgateway"
 	"github.com/sarifsystems/sarif/services/scheduler"
+	"github.com/sarifsystems/sarif/services/spotify"
 	"github.com/sarifsystems/sarif/services/store"
 	_ "github.com/sarifsystems/sarif/services/store/bolt"
 	"github.com/sarifsystems/sarif/services/vdir"
@@ -53,6 +54,7 @@ func main() {
 	srv.RegisterModule(nlquery.Module)
 	srv.RegisterModule(pushgateway.Module)
 	srv.RegisterModule(scheduler.Module)
+	srv.RegisterModule(spotify.Module)
 	srv.RegisterModule(store.Module)
 	srv.RegisterModule(vdir.Module)
 	srv.RegisterModule(web.Module)
