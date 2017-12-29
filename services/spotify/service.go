@@ -139,6 +139,8 @@ func (s *Service) readLoop() {
 		state, err := s.Spotify.PlayerStateOpt(opt)
 		if err != nil {
 			s.Log("err/internal", err.Error())
+			time.Sleep(5 * time.Minute)
+			return
 		}
 
 		dur := s.AdvanceState(*state)
