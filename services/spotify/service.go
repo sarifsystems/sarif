@@ -140,7 +140,7 @@ func (s *Service) readLoop() {
 		if err != nil {
 			s.Log("err/internal", err.Error())
 			time.Sleep(5 * time.Minute)
-			return
+			continue
 		}
 
 		dur := s.AdvanceState(*state)
