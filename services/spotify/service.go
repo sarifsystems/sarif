@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/sarifsystems/sarif/pkg/schema"
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services"
 	"github.com/zmb3/spotify"
@@ -94,6 +95,24 @@ type AuthConfirmPayload struct {
 	State string `json:"state"`
 }
 
+func stateToInfo(state spotify.PlayerState) schema.MusicInfo {
+	info := schema.MusicInfo{}
+	info.IsPlaying = state.Playing
+	if state.Playing {
+		if len(state.Item.Artists) > 0 {
+			info.Artist = state.Item.Artists[0].Name
+		}
+		info.Device = state.Device.Name
+		info.Track = state.Item.Name
+		info.Album = state.Item.Album.Name
+		info.Duration = state.Item.Duration / 1000
+
+		t := int64(state.Timestamp - state.Progress)
+		info.Time = time.Unix(t/1000, 0).Local()
+	}
+	return info
+}
+
 func (s *Service) handleAuthConfirm(msg sarif.Message) {
 	var p AuthConfirmPayload
 	msg.DecodePayload(&p)
@@ -156,12 +175,12 @@ func (s *Service) AdvanceState(state spotify.PlayerState) time.Duration {
 
 	if state.Playing {
 		if !prev.Playing {
-			s.Publish(sarif.CreateMessage("spotify/playback/started", state))
+			s.PublishState("started", state)
 		} else {
 			// If track changed or user rewinds
 			if state.Item.ID != prev.Item.ID || state.Progress < prev.Progress {
 				s.maybeScrobble(prev)
-				s.Publish(sarif.CreateMessage("spotify/playback/changed", state))
+				s.PublishState("changed", state)
 			}
 		}
 
@@ -174,7 +193,7 @@ func (s *Service) AdvanceState(state spotify.PlayerState) time.Duration {
 	} else {
 		if prev.Playing {
 			s.maybeScrobble(prev)
-			s.Publish(sarif.CreateMessage("spotify/playback/stopped", state))
+			s.PublishState("stopped", state)
 		}
 		next = 3 * time.Minute
 	}
@@ -182,11 +201,20 @@ func (s *Service) AdvanceState(state spotify.PlayerState) time.Duration {
 	return next
 }
 
+func (s *Service) PublishState(action string, state spotify.PlayerState) {
+	info := stateToInfo(state)
+	s.Publish(sarif.CreateMessage("spotify/playback/"+action, state))
+	s.Publish(sarif.CreateMessage("music/"+action, info))
+}
+
 func (s *Service) maybeScrobble(state spotify.PlayerState) {
-	rem := state.Item.Duration - state.Progress
+	if state.Item.Duration < 30*1e3 {
+		return
+	}
+
 	pct := float32(state.Progress) / float32(state.Item.Duration)
-	if pct > 0.7 || rem < 60*1e3 {
-		s.Publish(sarif.CreateMessage("spotify/playback/scrobble", state.Item))
+	if pct >= 0.5 || state.Progress >= 4*60*1000 {
+		s.PublishState("scrobble", state)
 	}
 }
 

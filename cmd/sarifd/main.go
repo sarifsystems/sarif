@@ -18,7 +18,6 @@ import (
 	"github.com/sarifsystems/sarif/services/events"
 	"github.com/sarifsystems/sarif/services/hostscan"
 	"github.com/sarifsystems/sarif/services/know"
-	"github.com/sarifsystems/sarif/services/lastfm"
 	"github.com/sarifsystems/sarif/services/location"
 	"github.com/sarifsystems/sarif/services/logger"
 	"github.com/sarifsystems/sarif/services/lua"
@@ -28,6 +27,7 @@ import (
 	"github.com/sarifsystems/sarif/services/nlquery"
 	"github.com/sarifsystems/sarif/services/pushgateway"
 	"github.com/sarifsystems/sarif/services/scheduler"
+	"github.com/sarifsystems/sarif/services/scrobbler"
 	"github.com/sarifsystems/sarif/services/spotify"
 	"github.com/sarifsystems/sarif/services/store"
 	_ "github.com/sarifsystems/sarif/services/store/bolt"
@@ -44,7 +44,6 @@ func main() {
 	srv.RegisterModule(events.Module)
 	srv.RegisterModule(hostscan.Module)
 	srv.RegisterModule(know.Module)
-	srv.RegisterModule(lastfm.Module)
 	srv.RegisterModule(logger.Module)
 	srv.RegisterModule(location.Module)
 	srv.RegisterModule(lua.Module)
@@ -54,6 +53,7 @@ func main() {
 	srv.RegisterModule(nlquery.Module)
 	srv.RegisterModule(pushgateway.Module)
 	srv.RegisterModule(scheduler.Module)
+	srv.RegisterModule(scrobbler.Module)
 	srv.RegisterModule(spotify.Module)
 	srv.RegisterModule(store.Module)
 	srv.RegisterModule(vdir.Module)
