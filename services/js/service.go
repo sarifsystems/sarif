@@ -138,7 +138,8 @@ func (s *Service) createMachine(name string) (*Machine, error) {
 	c.Connect(s.Broker.NewLocalConn())
 
 	m := NewMachine(c)
-	m.Modules.AddPath(s.cfg.ScriptDir)
+	m.Modules.AddPath(s.cfg.ScriptDir + "/node_modules")
+	m.Modules.AddPath(s.cfg.ScriptDir + "/modules")
 	s.Machines[name] = m
 	if listeners, ok := s.Listeners[name]; ok {
 		for _, l := range listeners {
