@@ -17,6 +17,7 @@ import (
 	"github.com/sarifsystems/sarif/services/commands"
 	"github.com/sarifsystems/sarif/services/events"
 	"github.com/sarifsystems/sarif/services/hostscan"
+	"github.com/sarifsystems/sarif/services/js"
 	"github.com/sarifsystems/sarif/services/know"
 	"github.com/sarifsystems/sarif/services/location"
 	"github.com/sarifsystems/sarif/services/logger"
@@ -47,6 +48,7 @@ func main() {
 	srv.RegisterModule(logger.Module)
 	srv.RegisterModule(location.Module)
 	srv.RegisterModule(lua.Module)
+	srv.RegisterModule(js.Module)
 	srv.RegisterModule(mock.Module)
 	srv.RegisterModule(natural.Module)
 	srv.RegisterModule(nlparser.Module)
