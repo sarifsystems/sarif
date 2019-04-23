@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/ddliu/motto"
 	"github.com/robertkrimen/otto"
 	"github.com/sarifsystems/sarif/sarif"
@@ -146,7 +145,6 @@ func (m *Machine) vmHandle(msg sarif.Message, handler otto.Value) {
 	m.StateLock.Lock()
 	defer m.StateLock.Unlock()
 
-	spew.Dump("handling", msg)
 	v := messageToObject(m.VM, msg)
 	_, err := handler.Call(handler, v)
 	if err != nil {

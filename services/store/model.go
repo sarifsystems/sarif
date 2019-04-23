@@ -42,3 +42,8 @@ var drivers = make(map[string]Driver)
 func Register(name string, d Driver) {
 	drivers[name] = d
 }
+
+func GetDriver(name string) (Driver, bool) {
+	d, ok := drivers[name]
+	return d, ok
+}

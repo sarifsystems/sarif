@@ -32,6 +32,8 @@ import (
 	"github.com/sarifsystems/sarif/services/spotify"
 	"github.com/sarifsystems/sarif/services/store"
 	_ "github.com/sarifsystems/sarif/services/store/bolt"
+	_ "github.com/sarifsystems/sarif/services/store/es7"
+	_ "github.com/sarifsystems/sarif/services/store/replicate"
 	"github.com/sarifsystems/sarif/services/vdir"
 	"github.com/sarifsystems/sarif/services/web"
 	"github.com/sarifsystems/sarif/services/xmpp"
