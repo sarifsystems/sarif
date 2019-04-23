@@ -107,7 +107,7 @@ func stateToInfo(state spotify.PlayerState) schema.MusicInfo {
 		info.Album = state.Item.Album.Name
 		info.Duration = state.Item.Duration / 1000
 
-		t := int64(state.Timestamp - state.Progress)
+		t := int64(state.Timestamp) - int64(state.Progress)
 		info.Time = time.Unix(t/1000, 0).Local()
 	}
 	return info
