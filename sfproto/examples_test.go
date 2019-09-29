@@ -4,13 +4,14 @@
 // license that can be found in the LICENSE file.
 
 // A simple sarif client that sends to the network and listens for a response.
-package sarif_test
+package sfproto_test
 
 import (
 	"fmt"
 	"time"
 
 	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/sfproto"
 )
 
 type MyPayload struct {
@@ -21,16 +22,16 @@ func ExampleClient() {
 	recv := make(chan bool)
 
 	// Hosting a broker
-	broker := sarif.NewBroker()
-	go broker.Listen(&sarif.NetConfig{
+	broker := sfproto.NewBroker()
+	go broker.Listen(&sfproto.NetConfig{
 		Address: "tcp://localhost:5698",
-		Auth:    sarif.AuthNone,
+		Auth:    sfproto.AuthNone,
 	})
 	time.Sleep(10 * time.Millisecond)
 
 	// Setup client and listen for "testaction"
-	client := sarif.NewClient("mytestdevice")
-	err := client.Dial(&sarif.NetConfig{
+	client := sfproto.NewClient("mytestdevice")
+	err := client.Dial(&sfproto.NetConfig{
 		Address: "tcp://localhost:5698",
 	})
 	if err != nil {

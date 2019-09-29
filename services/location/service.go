@@ -24,11 +24,11 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	Client *sarif.Client
+	Client sarif.Client
 }
 
 type Service struct {
-	*sarif.Client
+	sarif.Client
 	Store *store.Store
 
 	Clusters *ClusterGenerator

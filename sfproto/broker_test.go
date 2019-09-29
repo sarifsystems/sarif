@@ -3,11 +3,13 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package sarif
+package sfproto
 
 import (
 	"testing"
 	"time"
+
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 type brokerMultiEp struct {
@@ -46,8 +48,8 @@ func TestBrokerMultiple(t *testing.T) {
 	for i, test := range tests {
 		one.Reset()
 		two.Reset()
-		one.Publish(Message{
-			Id:          GenerateId(),
+		one.Publish(sarif.Message{
+			Id:          sarif.GenerateId(),
 			Action:      test.action,
 			Destination: test.device,
 		})
@@ -91,7 +93,7 @@ func TestBrokerBridge(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	one.Publish(Subscribe("ping", "one"))
-	two.Publish(CreateMessage("proto/subs", []subscription{
+	two.Publish(sarif.CreateMessage("proto/subs", []subscription{
 		{"ping", "two", nil},
 		{"ping", "", nil},
 	}))
@@ -105,8 +107,8 @@ func TestBrokerBridge(t *testing.T) {
 	for i, test := range tests {
 		one.Reset()
 		two.Reset()
-		one.Publish(Message{
-			Id:          GenerateId(),
+		one.Publish(sarif.Message{
+			Id:          sarif.GenerateId(),
 			Action:      test.action,
 			Destination: test.device,
 		})
@@ -150,7 +152,7 @@ func TestBrokerGateway(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	one.Publish(Subscribe("ping", "one"))
-	two.Publish(CreateMessage("proto/subs", []subscription{
+	two.Publish(sarif.CreateMessage("proto/subs", []subscription{
 		{"ping", "two", nil},
 		{"ping", "", nil},
 	}))
@@ -164,8 +166,8 @@ func TestBrokerGateway(t *testing.T) {
 	for i, test := range tests {
 		one.Reset()
 		two.Reset()
-		one.Publish(Message{
-			Id:          GenerateId(),
+		one.Publish(sarif.Message{
+			Id:          sarif.GenerateId(),
 			Action:      test.action,
 			Destination: test.device,
 		})
@@ -191,8 +193,8 @@ func BenchmarkBrokerSingle(b *testing.B) {
 	c := br.NewLocalConn()
 	c.Write(Subscribe("testaction", ""))
 
-	msg := Message{
-		Version: VERSION,
+	msg := sarif.Message{
+		Version: sarif.VERSION,
 		Action:  "testaction",
 		Source:  "me",
 		Text:    "this text ist a bit longer to test things.",
@@ -209,7 +211,7 @@ func BenchmarkBrokerSingle(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		msg2 := msg
-		msg2.Id = GenerateId()
+		msg2.Id = sarif.GenerateId()
 		c.Write(msg2)
 		c.Read()
 	}
@@ -220,8 +222,8 @@ func BenchmarkBrokerSingleParallel(b *testing.B) {
 	c := br.NewLocalConn()
 	c.Write(Subscribe("testaction", ""))
 
-	msg := Message{
-		Version: VERSION,
+	msg := sarif.Message{
+		Version: sarif.VERSION,
 		Action:  "testaction",
 		Source:  "me",
 		Text:    "this text ist a bit longer to test things.",
@@ -239,7 +241,7 @@ func BenchmarkBrokerSingleParallel(b *testing.B) {
 	go func() {
 		for n := 0; n < b.N; n++ {
 			msg2 := msg
-			msg2.Id = GenerateId()
+			msg2.Id = sarif.GenerateId()
 			c.Write(msg2)
 		}
 	}()
@@ -265,9 +267,9 @@ func BenchmarkBrokerSingleNet(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	msg = Message{
-		Id:      GenerateId(),
-		Version: VERSION,
+	msg = sarif.Message{
+		Id:      sarif.GenerateId(),
+		Version: sarif.VERSION,
 		Action:  "testaction",
 		Source:  "me",
 		Text:    "this text ist a bit longer to test things.",
@@ -285,7 +287,7 @@ func BenchmarkBrokerSingleNet(b *testing.B) {
 	go func() {
 		for n := 0; n < b.N; n++ {
 			msg2 := msg
-			msg2.Id = GenerateId()
+			msg2.Id = sarif.GenerateId()
 			if err := c.Write(msg2); err != nil {
 				b.Fatal(err)
 			}

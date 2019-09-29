@@ -24,7 +24,7 @@ var Module = &services.Module{
 
 type Dependencies struct {
 	Config services.Config
-	Client *sarif.Client
+	Client sarif.Client
 }
 
 type Config struct {
@@ -42,7 +42,7 @@ type client struct {
 type Service struct {
 	Config Config
 	cfg    services.Config
-	*sarif.Client
+	sarif.Client
 	fcm     *fcm.FCM
 	clients map[string]*client
 }

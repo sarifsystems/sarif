@@ -3,18 +3,20 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package sarif
+package sfproto
 
 import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 func TestNet(t *testing.T) {
-	msg := Message{
-		Version:     VERSION,
-		Id:          GenerateId(),
+	msg := sarif.Message{
+		Version:     sarif.VERSION,
+		Id:          sarif.GenerateId(),
 		Action:      "ping/something",
 		Source:      "someone",
 		Destination: "this",
@@ -27,7 +29,7 @@ func TestNet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	recv := make(chan Message)
+	recv := make(chan sarif.Message)
 	go func() {
 		srv, err := l.Accept()
 		if err != nil {

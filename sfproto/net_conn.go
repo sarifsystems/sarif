@@ -3,13 +3,15 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package sarif
+package sfproto
 
 import (
 	"crypto/tls"
 	"encoding/json"
 	"net"
 	"time"
+
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 type netConn struct {
@@ -28,7 +30,7 @@ func newNetConn(conn net.Conn) *netConn {
 	}
 }
 
-func (c *netConn) Write(msg Message) error {
+func (c *netConn) Write(msg sarif.Message) error {
 	if err := msg.IsValid(); err != nil {
 		return err
 	}
@@ -46,8 +48,8 @@ func (c *netConn) KeepaliveLoop(ka time.Duration) error {
 	}
 }
 
-func (c *netConn) Read() (Message, error) {
-	var msg Message
+func (c *netConn) Read() (sarif.Message, error) {
+	var msg sarif.Message
 	c.conn.SetReadDeadline(time.Now().Add(time.Hour))
 	if err := c.dec.Decode(&msg); err != nil {
 		return msg, err

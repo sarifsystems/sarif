@@ -3,7 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package sarif
+package sfproto
 
 import (
 	"encoding/json"
@@ -11,6 +11,8 @@ import (
 	"io"
 	"sync"
 	"time"
+
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 type canVerify interface {
@@ -26,7 +28,7 @@ type Broker struct {
 	Log           Logger
 	trace         bool
 	halfOpenConns map[string]chan bool
-	clients       map[string]*ClientInfo
+	clients       map[string]*sarif.ClientInfo
 }
 
 // NewBroker returns a new broker that dispatches messages.
@@ -39,7 +41,7 @@ func NewBroker() *Broker {
 		Log:           defaultLog,
 		trace:         false,
 		halfOpenConns: make(map[string]chan bool),
-		clients:       make(map[string]*ClientInfo),
+		clients:       make(map[string]*sarif.ClientInfo),
 	}
 }
 
@@ -134,7 +136,7 @@ func (b *Broker) ListenOnGateway(conn Conn) error {
 		for i, t := range topics {
 			subs[i].Action, subs[i].Device = fromTopic(t)
 		}
-		sub := CreateMessage("proto/subs", subs)
+		sub := sarif.CreateMessage("proto/subs", subs)
 		sub.Source = "broker"
 		if err := conn.Write(sub); err != nil {
 			conn.Close()
@@ -199,13 +201,13 @@ func (b *Broker) AuthenticateAndListenOnConn(auth AuthType, c Conn) error {
 			return errors.New("Authentication failed: unexpected message " + msg.Action)
 		}
 
-		var ci ClientInfo
+		var ci sarif.ClientInfo
 		msg.DecodePayload(&ci)
 		ci.Name = msg.Source
 		ci.LastSeen = time.Now()
 		b.clients[ci.Name] = &ci
 		msg.EncodePayload(ci)
-		msg.Id = GenerateId()
+		msg.Id = sarif.GenerateId()
 
 		confirm := make(chan bool, 1)
 		b.halfOpenConns[msg.Id] = confirm
@@ -229,7 +231,7 @@ func (b *Broker) AuthenticateAndListenOnConn(auth AuthType, c Conn) error {
 
 // Publish publishes a message to all client connections that are subscribed
 // to it.
-func (b *Broker) publish(msg Message) {
+func (b *Broker) publish(msg sarif.Message) {
 	if b.checkDuplicate(msg.Id) {
 		return
 	}
@@ -260,7 +262,7 @@ type brokerConn struct {
 	errs   chan error
 }
 
-func (c *brokerConn) Write(msg Message) error {
+func (c *brokerConn) Write(msg sarif.Message) error {
 	if err := c.Conn.Write(msg); err != nil {
 		c.errs <- err
 		return err
@@ -268,7 +270,7 @@ func (c *brokerConn) Write(msg Message) error {
 	return nil
 }
 
-func (c *brokerConn) Read() (Message, error) {
+func (c *brokerConn) Read() (sarif.Message, error) {
 	msg, err := c.Conn.Read()
 	if err != nil {
 		c.errs <- err
@@ -306,7 +308,7 @@ func (c *brokerConn) Unsubscribe(topic string) {
 	c.broker.subs.Unsubscribe(topicParts(topic), c)
 }
 
-func (c *brokerConn) Publish(msg Message) {
+func (c *brokerConn) Publish(msg sarif.Message) {
 	switch {
 	case msg.IsAction("proto/sub"):
 		var sub subscription

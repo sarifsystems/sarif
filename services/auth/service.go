@@ -23,13 +23,13 @@ var Module = &services.Module{
 
 type Dependencies struct {
 	Config services.Config
-	Client *sarif.Client
+	Client sarif.Client
 }
 
 type Service struct {
 	Config Config
 	cfg    services.Config
-	*sarif.Client
+	sarif.Client
 
 	SessionTokens map[string]time.Time
 }

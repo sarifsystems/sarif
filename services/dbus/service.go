@@ -10,6 +10,7 @@ import (
 	"github.com/godbus/dbus"
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services"
+	"github.com/sarifsystems/sarif/sfproto"
 )
 
 var Module = &services.Module{
@@ -19,15 +20,15 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	Log    sarif.Logger
-	Client *sarif.Client
+	Log    sfproto.Logger
+	Client sarif.Client
 }
 
 type Service struct {
-	Log     sarif.Logger
+	Log     sfproto.Logger
 	Session *dbus.Conn
 	System  *dbus.Conn
-	*sarif.Client
+	sarif.Client
 
 	Players map[string]*MprisPlayer
 }

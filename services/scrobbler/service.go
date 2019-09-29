@@ -33,12 +33,12 @@ func (c Config) IsValid() bool {
 
 type Dependencies struct {
 	Config services.Config
-	Client *sarif.Client
+	Client sarif.Client
 }
 
 type Service struct {
 	Config Config
-	*sarif.Client
+	sarif.Client
 	cfg services.Config
 	Api *lastfm.Api
 }

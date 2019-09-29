@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/sfproto"
 )
 
 func main() {
@@ -26,8 +27,8 @@ func main() {
 	fmt.Println("connecting to", addr)
 
 	// Setup our client.
-	client := sarif.NewClient("sarifping")
-	err := client.Dial(&sarif.NetConfig{
+	client := sfproto.NewClient("sarifping")
+	err := client.Dial(&sfproto.NetConfig{
 		Address: addr,
 	})
 	if err != nil {

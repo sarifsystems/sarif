@@ -3,7 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package sarif
+package sfproto
 
 import (
 	"strings"
@@ -63,7 +63,7 @@ func TestSubtree(t *testing.T) {
 	for i, test := range tests {
 		action := strings.Split(test.Action, "/")
 		aFired, bFired = 0, 0
-		st.Call(action, count)
+		st.Call(action, false, count)
 
 		t.Logf("test %d: %s", i, test.Action)
 		if aFired != test.CountA {

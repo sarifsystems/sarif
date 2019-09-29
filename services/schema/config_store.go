@@ -21,10 +21,10 @@ type ConfigStore struct {
 	ConfigDir  string
 }
 
-func NewConfigStore(c *sarif.Client) *ConfigStore {
+func NewConfigStore(c sarif.Client) *ConfigStore {
 	return &ConfigStore{
 		Store:      store.New(c),
-		ConfigName: c.DeviceId,
+		ConfigName: c.DeviceId(),
 	}
 }
 

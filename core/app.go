@@ -10,14 +10,15 @@ import (
 	"flag"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/sarifsystems/sarif/pkg/inject"
 	"github.com/sarifsystems/sarif/sarif"
-	"github.com/sarifsystems/sarif/services"
+	"github.com/sarifsystems/sarif/sarifmq"
+	"github.com/sarifsystems/sarif/sfproto"
 )
 
 var verbose = flag.Bool("v", false, "verbose debug output")
@@ -106,43 +107,27 @@ func (app *App) Must(err error) {
 	}
 }
 
-func (app *App) SetupInjector(inj *inject.Injector, name string) {
-	inj.Instance(app.Log)
-	inj.Factory(func() services.Config {
-		return app.Config.Section(name)
-	})
-	inj.Factory(func() sarif.Logger {
-		return app.Log
-	})
-}
-
-func (app *App) Inject(name string, container interface{}) error {
-	inj := inject.NewInjector()
-	app.SetupInjector(inj, name)
-	return inj.Inject(container)
-}
-
-func (app *App) Dial() sarif.Conn {
-	cfg := sarif.NetConfig{
-		Address: "tcp://localhost:" + sarif.DefaultPort,
+func (app *App) ClientDial(ci sarif.ClientInfo) (sarif.Client, error) {
+	cfg := sfproto.NetConfig{
+		Address: "tcp://localhost:" + sfproto.DefaultPort,
 	}
 	app.Config.Get("dial", &cfg)
 	app.WriteConfig()
-	conn, err := sarif.Dial(&cfg)
+
+	u, err := url.Parse(cfg.Address)
 	if err != nil {
-		app.Log.Fatal(err)
+		return nil, err
 	}
-	return conn
+
+	if u.Scheme == "amqp" {
+		return app.ClientDialAmqp(ci, cfg)
+	}
+
+	return app.ClientDialProto(ci, cfg)
 }
 
-func (app *App) ClientDial(ci sarif.ClientInfo) (*sarif.Client, error) {
-	cfg := sarif.NetConfig{
-		Address: "tcp://localhost:" + sarif.DefaultPort,
-	}
-	app.Config.Get("dial", &cfg)
-	app.WriteConfig()
-
-	c := sarif.NewClient(ci.Name)
+func (app *App) ClientDialProto(ci sarif.ClientInfo, cfg sfproto.NetConfig) (*sfproto.Client, error) {
+	c := sfproto.NewClient(ci.Name)
 	c.Info = ci
 	c.OnConnectionLost(func(err error) {
 		app.Log.Errorln("connection lost:", err)
@@ -155,6 +140,13 @@ func (app *App) ClientDial(ci sarif.ClientInfo) (*sarif.Client, error) {
 		}
 	})
 
+	err := c.Dial(&cfg)
+	return c, err
+}
+
+func (app *App) ClientDialAmqp(ci sarif.ClientInfo, cfg sfproto.NetConfig) (*sarifmq.Client, error) {
+	c := sarifmq.NewClient(ci.Name)
+	c.Info = ci
 	err := c.Dial(&cfg)
 	return c, err
 }

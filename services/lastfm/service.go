@@ -16,6 +16,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services"
+	"github.com/sarifsystems/sarif/sfproto"
 )
 
 var Module = &services.Module{
@@ -32,15 +33,15 @@ type Config struct {
 type Dependencies struct {
 	DB     *gorm.DB
 	Config services.Config
-	Log    sarif.Logger
-	Client *sarif.Client
+	Log    sfproto.Logger
+	Client sarif.Client
 }
 
 type Service struct {
 	cfg Config
 	DB  *gorm.DB
-	Log sarif.Logger
-	*sarif.Client
+	Log sfproto.Logger
+	sarif.Client
 
 	importing  sync.WaitGroup
 	refreshing bool

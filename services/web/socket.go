@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/sfproto"
 )
 
 type WebSocketConn struct {
@@ -61,6 +62,6 @@ func (s *Server) handleSocket(w http.ResponseWriter, r *http.Request) {
 	s.Client.Log("info", "new websocket conn from "+r.RemoteAddr)
 
 	c := &WebSocketConn{conn: ws}
-	err = s.Broker.AuthenticateAndListenOnConn(sarif.AuthChallenge, c)
+	err = s.Broker.AuthenticateAndListenOnConn(sfproto.AuthChallenge, c)
 	s.Client.Log("info", "websocket from "+r.RemoteAddr+" closed: "+err.Error())
 }

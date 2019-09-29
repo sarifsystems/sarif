@@ -33,13 +33,13 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Client *sarif.Client
+	Client sarif.Client
 }
 
 type Service struct {
 	Config services.Config
 	Cfg    Config
-	*sarif.Client
+	sarif.Client
 
 	ParserKeepAlive time.Duration
 
@@ -96,7 +96,7 @@ func (s *Service) Enable() error {
 		for {
 			parsers := s.Discover("natural/parse")
 			for msg := range parsers {
-				if msg.Source == s.DeviceId {
+				if msg.Source == s.DeviceId() {
 					continue
 				}
 				p, ok := s.Cfg.Parsers[msg.Source]
@@ -132,7 +132,7 @@ func (s *Service) getConversation(device string) *Conversation {
 			Device:  device,
 		}
 		s.conversations[device] = cv
-		s.Subscribe("", s.DeviceId+"/"+device, s.handleNetworkMessage)
+		s.Subscribe("", s.DeviceId()+"/"+device, s.handleNetworkMessage)
 		cv.PublishForClient(sarif.CreateMessage("natural/client/new", nil))
 	}
 	return cv
@@ -162,7 +162,7 @@ func (s *Service) handleNaturalParse(msg sarif.Message) {
 }
 
 func (s *Service) handleNetworkMessage(msg sarif.Message) {
-	client := strings.TrimPrefix(msg.Destination, s.DeviceId+"/")
+	client := strings.TrimPrefix(msg.Destination, s.DeviceId()+"/")
 	cv := s.getConversation(client)
 	cv.SendToClient(msg)
 }

@@ -9,14 +9,12 @@ import (
 	"flag"
 	"log"
 	"strings"
-	"time"
 
 	"github.com/sarifsystems/sarif/sarif"
 )
 
 func (app *App) SingleRequest() {
 	text := strings.Join(flag.Args(), " ")
-	app.Client.RequestTimeout = 1 * time.Second
 	msg, ok := <-app.Client.Request(sarif.Message{
 		Action: "natural/handle",
 		Text:   text,

@@ -19,19 +19,16 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	Log    sarif.Logger
-	Client *sarif.Client
+	Client sarif.Client
 }
 
 type Service struct {
-	Log sarif.Logger
 	Mpd *mpd.Client
-	*sarif.Client
+	sarif.Client
 }
 
 func NewService(deps *Dependencies) *Service {
 	s := &Service{
-		Log:    deps.Log,
 		Client: deps.Client,
 	}
 	return s

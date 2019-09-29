@@ -3,15 +3,19 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package sarif
+package sfproto
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/sarifsystems/sarif/sarif"
+)
 
 type testService struct {
 	Name     string
 	T        *testing.T
 	Conn     Conn
-	Received []Message
+	Received []sarif.Message
 }
 
 func newTestService(name string, t *testing.T) *testService {
@@ -19,7 +23,7 @@ func newTestService(name string, t *testing.T) *testService {
 		name,
 		t,
 		nil,
-		make([]Message, 0),
+		make([]sarif.Message, 0),
 	}
 }
 
@@ -40,9 +44,9 @@ func (s *testService) NewLocalConn() Conn {
 	return b
 }
 
-func (s *testService) Publish(msg Message) {
+func (s *testService) Publish(msg sarif.Message) {
 	if msg.Version == "" {
-		msg.Version = VERSION
+		msg.Version = sarif.VERSION
 	}
 	if msg.Source == "" {
 		msg.Source = s.Name
@@ -53,7 +57,7 @@ func (s *testService) Publish(msg Message) {
 }
 
 func (s *testService) Reset() {
-	s.Received = make([]Message, 0)
+	s.Received = make([]sarif.Message, 0)
 }
 
 func (s *testService) Fired() bool {

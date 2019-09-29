@@ -58,7 +58,7 @@ func (pl MsgErrNatural) String() string {
 }
 
 func (cv *Conversation) PublishForClient(msg sarif.Message) {
-	msg.Source = cv.service.DeviceId + "/" + cv.Device
+	msg.Source = cv.service.DeviceId() + "/" + cv.Device
 	cv.service.Publish(msg)
 }
 

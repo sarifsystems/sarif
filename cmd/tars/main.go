@@ -37,7 +37,7 @@ type Config struct {
 
 type App struct {
 	*core.App
-	Client   *sarif.Client
+	Client   sarif.Client
 	Commands []Command
 
 	Config Config

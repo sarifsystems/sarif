@@ -33,7 +33,6 @@ func (r *Relay) Relay() {
 	c, err := r.ClientDial(sarif.ClientInfo{
 		Name: r.Info.DeviceId,
 	})
-	c.HandleConcurrent = false
 	r.Must(err)
 
 	r.store = store.New(c)

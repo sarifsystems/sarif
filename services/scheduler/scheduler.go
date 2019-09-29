@@ -25,11 +25,11 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	Client *sarif.Client
+	Client sarif.Client
 }
 
 type Scheduler struct {
-	*sarif.Client
+	sarif.Client
 	Store *store.Store
 
 	mutex    sync.Mutex

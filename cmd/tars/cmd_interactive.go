@@ -14,6 +14,7 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
+	"github.com/sarifsystems/sarif/pkg/natural"
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/shiena/ansicolor"
 )
@@ -36,7 +37,7 @@ func (app *App) Interactive() {
 	pings := make(map[string]time.Time)
 
 	// Subscribe to all replies and print them to stdout
-	app.Client.Subscribe("", "self", func(msg sarif.Message) {
+	app.Must(app.Client.Subscribe("", "self", func(msg sarif.Message) {
 		text := msg.Text
 		if text == "" {
 			text = msg.Action + " from " + msg.Source
@@ -49,7 +50,7 @@ func (app *App) Interactive() {
 			text += color.YellowString("[%.1fms]", time.Since(sent).Seconds()*1e3)
 		}
 		log.Println(color.GreenString(" « ") + strings.Replace(text, "\n", "\n   ", -1))
-	})
+	}))
 
 	// Interactive mode sends all lines from stdin.
 	for {
@@ -64,15 +65,19 @@ func (app *App) Interactive() {
 			continue
 		}
 
-		// Publish natural message
-		msg := sarif.Message{
-			Id:     sarif.GenerateId(),
-			Action: "natural/handle",
-			Text:   line,
+		msg, ok := natural.ParseSimple(line)
+		if !ok {
+			// Publish natural message
+			msg = sarif.Message{
+				Id:     sarif.GenerateId(),
+				Action: "natural/handle",
+				Text:   line,
+			}
 		}
+
 		if *profile {
 			pings[msg.Id] = time.Now()
 		}
-		app.Client.Publish(msg)
+		app.Must(app.Client.Publish(msg))
 	}
 }

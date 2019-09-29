@@ -31,6 +31,7 @@ require (
 	github.com/shkh/lastfm-go v0.0.0-20180729041255-29483feae857
 	github.com/smartystreets/assertions v1.0.1 // indirect
 	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337
+	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/xconstruct/know v0.0.0-20140927200831-bed1a63d45e6
 	github.com/xconstruct/vdir v0.0.0-20150523181543-c30aee42d4e6
 	github.com/yuin/gopher-lua v0.0.0-20190514113301-1cd887cd7036

@@ -17,6 +17,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services"
+	"github.com/sarifsystems/sarif/sfproto"
 )
 
 const (
@@ -37,16 +38,16 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Broker *sarif.Broker
-	Client *sarif.Client
+	Broker *sfproto.Broker
+	Client *sfproto.Client
 }
 
 type Server struct {
 	Config     services.Config
 	cfg        Config
-	Broker     *sarif.Broker
-	apiClients map[string]*sarif.Client
-	Client     *sarif.Client
+	Broker     *sfproto.Broker
+	apiClients map[string]*sfproto.Client
+	Client     *sfproto.Client
 	websocket  websocket.Upgrader
 }
 
@@ -84,7 +85,7 @@ func New(deps *Dependencies) *Server {
 		Config:     deps.Config,
 		cfg:        cfg,
 		Broker:     deps.Broker,
-		apiClients: make(map[string]*sarif.Client),
+		apiClients: make(map[string]*sfproto.Client),
 		Client:     deps.Client,
 		websocket: websocket.Upgrader{
 			ReadBufferSize:  1024,
@@ -134,10 +135,10 @@ func parseAuthorizationHeader(h string) string {
 	return ""
 }
 
-func (s *Server) getApiClientByName(name string) *sarif.Client {
+func (s *Server) getApiClientByName(name string) *sfproto.Client {
 	client, ok := s.apiClients[name]
 	if !ok {
-		client = sarif.NewClient("web/" + name)
+		client = sfproto.NewClient("web/" + name)
 		client.Connect(s.Broker.NewLocalConn())
 		s.apiClients[name] = client
 	}

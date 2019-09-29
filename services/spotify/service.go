@@ -26,13 +26,13 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Client *sarif.Client
+	Client sarif.Client
 }
 
 type Service struct {
 	Config Config
 	cfg    services.Config
-	*sarif.Client
+	sarif.Client
 	Spotify *spotify.Client
 
 	authInProgress *ClientSecrets

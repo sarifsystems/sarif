@@ -3,9 +3,13 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package sarif
+package sfproto
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/sarifsystems/sarif/sarif"
+)
 
 var (
 	ErrClosed = errors.New("The other end is closed.")
@@ -14,24 +18,24 @@ var (
 type pipeConn struct {
 	name     string
 	other    *pipeConn
-	messages chan Message
+	messages chan sarif.Message
 }
 
 func NewPipe() (a, b Conn) {
 	ac := &pipeConn{}
 	bc := &pipeConn{}
-	ac.messages = make(chan Message, 10)
-	bc.messages = make(chan Message, 10)
+	ac.messages = make(chan sarif.Message, 10)
+	bc.messages = make(chan sarif.Message, 10)
 	ac.other = bc
 	bc.other = ac
 
-	id := GenerateId()
+	id := sarif.GenerateId()
 	ac.name = "Pipe-" + id + "-a"
 	bc.name = "Pipe-" + id + "-b"
 	return ac, bc
 }
 
-func (t *pipeConn) Write(msg Message) error {
+func (t *pipeConn) Write(msg sarif.Message) error {
 	if t.other == nil {
 		return ErrClosed
 	}
@@ -39,7 +43,7 @@ func (t *pipeConn) Write(msg Message) error {
 	return nil
 }
 
-func (t *pipeConn) Read() (Message, error) {
+func (t *pipeConn) Read() (sarif.Message, error) {
 	msg, ok := <-t.messages
 	if !ok {
 		return msg, ErrClosed

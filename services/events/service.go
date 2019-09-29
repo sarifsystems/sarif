@@ -30,12 +30,12 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Client *sarif.Client
+	Client sarif.Client
 }
 
 type Service struct {
 	cfg services.Config
-	*sarif.Client
+	sarif.Client
 	Store *store.Store
 }
 

@@ -27,13 +27,13 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Client *sarif.Client
+	Client sarif.Client
 }
 
 type Service struct {
 	Config services.Config
 	Cfg    Config
-	*sarif.Client
+	sarif.Client
 
 	parser       *query.Parser
 	ObjectsTried map[string]bool

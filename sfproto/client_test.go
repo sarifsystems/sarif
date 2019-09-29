@@ -3,11 +3,13 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package sarif
+package sfproto
 
 import (
 	"testing"
 	"time"
+
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 type single struct {
@@ -31,13 +33,13 @@ func TestClientSingle(t *testing.T) {
 	client.Connect(other)
 
 	fired := false
-	client.Subscribe("ping", "one", func(msg Message) {
+	client.Subscribe("ping", "one", func(msg sarif.Message) {
 		fired = true
 	})
 
 	for _, test := range tests {
 		fired = false
-		tc.Write(Message{
+		tc.Write(sarif.Message{
 			Action:      test.action,
 			Destination: test.device,
 		})
@@ -59,13 +61,13 @@ func TestClientRequest(t *testing.T) {
 	b.Connect(aconn)
 	b.RequestTimeout = 100 * time.Millisecond
 
-	a.Subscribe("hello_a", "", func(msg Message) {
-		a.Reply(msg, Message{
+	a.Subscribe("hello_a", "", func(msg sarif.Message) {
+		a.Reply(msg, sarif.Message{
 			Action: "hi",
 		})
 	})
 
-	msg, ok := <-b.Request(Message{
+	msg, ok := <-b.Request(sarif.Message{
 		Action: "hello_a",
 	})
 	if !ok {
@@ -76,7 +78,7 @@ func TestClientRequest(t *testing.T) {
 		t.Fatal("did not receive correct response")
 	}
 
-	msg, ok = <-b.Request(Message{
+	msg, ok = <-b.Request(sarif.Message{
 		Action: "hello_no_one",
 	})
 	if ok {

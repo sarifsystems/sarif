@@ -5,42 +5,24 @@
 
 package sarif
 
-type writer interface {
-	Write(msg Message) error
-}
-
-type reader interface {
-	Read() (Message, error)
-}
-
-type Conn interface {
-	Read() (Message, error)
-	Write(msg Message) error
-	Close() error
-}
-
-func transmitTo(r reader, w writer) error {
-	for {
-		msg, err := r.Read()
-		if err != nil {
-			return err
-		}
-		if err := w.Write(msg); err != nil {
-			return err
-		}
+func BadRequest(reason error) Message {
+	str := "Bad Request"
+	if reason != nil {
+		str += " - " + reason.Error()
+	}
+	return Message{
+		Action: "err/badrequest",
+		Text:   str,
 	}
 }
 
-func Transmit(a, b Conn) error {
-	defer a.Close()
-	defer b.Close()
-
-	errs := make(chan error, 2)
-	go func() {
-		errs <- transmitTo(a, b)
-	}()
-	go func() {
-		errs <- transmitTo(b, a)
-	}()
-	return <-errs
+func InternalError(reason error) Message {
+	str := "Internal Error"
+	if reason != nil {
+		str += " - " + reason.Error()
+	}
+	return Message{
+		Action: "err/internal",
+		Text:   str,
+	}
 }

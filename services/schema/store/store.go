@@ -23,11 +23,11 @@ type Document struct {
 }
 
 type Store struct {
-	client    *sarif.Client
+	client    sarif.Client
 	StoreName string
 }
 
-func New(c *sarif.Client) *Store {
+func New(c sarif.Client) *Store {
 	return &Store{client: c}
 }
 

@@ -13,10 +13,11 @@ import (
 	"github.com/ddliu/motto"
 	"github.com/robertkrimen/otto"
 	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/sfproto"
 )
 
 type Machine struct {
-	*sarif.Client
+	*sfproto.Client
 	Modules *motto.Motto
 	VM      *otto.Otto
 
@@ -25,7 +26,7 @@ type Machine struct {
 	Listeners    []string
 }
 
-func NewMachine(c *sarif.Client) *Machine {
+func NewMachine(c *sfproto.Client) *Machine {
 	m := motto.New()
 	return &Machine{
 		Modules: m,
@@ -53,7 +54,7 @@ func (m *Machine) Enable() error {
 		"print":     m.vmPrint,
 		"dump":      m.vmDebug,
 		"debug":     m.vmDebug,
-		"device_id": m.DeviceId,
+		"device_id": m.DeviceId(),
 	})
 	return nil
 }

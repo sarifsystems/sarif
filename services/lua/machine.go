@@ -13,11 +13,12 @@ import (
 
 	"github.com/sarifsystems/sarif/pkg/luareflect"
 	"github.com/sarifsystems/sarif/sarif"
-	"github.com/yuin/gopher-lua"
+	"github.com/sarifsystems/sarif/sfproto"
+	lua "github.com/yuin/gopher-lua"
 )
 
 type Machine struct {
-	*sarif.Client
+	*sfproto.Client
 	Lua *lua.LState
 
 	StateLock    sync.Mutex
@@ -25,7 +26,7 @@ type Machine struct {
 	Listeners    []string
 }
 
-func NewMachine(c *sarif.Client) *Machine {
+func NewMachine(c *sfproto.Client) *Machine {
 	return &Machine{
 		Lua:    lua.NewState(),
 		Client: c,
@@ -51,7 +52,7 @@ func (m *Machine) Enable() error {
 		"time":        m.luaTimeParse,
 		"date":        m.luaTimeFormat,
 	})
-	m.Lua.SetField(mod, "device_id", lua.LString(m.DeviceId))
+	m.Lua.SetField(mod, "device_id", lua.LString(m.DeviceId()))
 	if err := m.PreloadModuleString("fun", ModFun); err != nil {
 		return err
 	}

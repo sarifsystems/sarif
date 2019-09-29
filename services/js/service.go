@@ -17,6 +17,7 @@ import (
 	"github.com/sarifsystems/sarif/pkg/schema"
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services"
+	"github.com/sarifsystems/sarif/sfproto"
 )
 
 var Module = &services.Module{
@@ -31,14 +32,14 @@ type Config struct {
 
 type Dependencies struct {
 	Config services.Config
-	Client *sarif.Client
-	Broker *sarif.Broker
+	Client sarif.Client
+	Broker *sfproto.Broker
 }
 
 type Service struct {
 	cfg    Config
-	Broker *sarif.Broker
-	*sarif.Client
+	Broker *sfproto.Broker
+	sarif.Client
 
 	Scripts   map[string]string
 	Machines  map[string]*Machine
@@ -134,7 +135,7 @@ func (s *Service) createMachine(name string) (*Machine, error) {
 		return nil, errors.New("Machine " + name + " already exists")
 	}
 
-	c := sarif.NewClient(s.DeviceId + "/" + name)
+	c := sfproto.NewClient(s.DeviceId() + "/" + name)
 	c.Connect(s.Broker.NewLocalConn())
 
 	m := NewMachine(c)

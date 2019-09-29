@@ -14,6 +14,7 @@ import (
 	"github.com/sarifsystems/sarif/pkg/natural"
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services"
+	"github.com/sarifsystems/sarif/sfproto"
 )
 
 var Module = &services.Module{
@@ -24,8 +25,8 @@ var Module = &services.Module{
 
 type Dependencies struct {
 	Config services.Config
-	Log    sarif.Logger
-	Broker *sarif.Broker
+	Log    sfproto.Logger
+	Broker *sfproto.Broker
 }
 
 type Config struct {
@@ -37,14 +38,14 @@ type Config struct {
 
 type conversation struct {
 	Remote string
-	Proto  *sarif.Client
+	Proto  sarif.Client
 	Xmpp   *Client
 }
 
 type Client struct {
 	cfg           Config
-	Log           sarif.Logger
-	Broker        *sarif.Broker
+	Log           sfproto.Logger
+	Broker        *sfproto.Broker
 	xmpp          *xmpp.Conn
 	conversations map[string]*conversation
 }
@@ -111,7 +112,7 @@ func (c *Client) listen() {
 
 func (c *Client) newConversation(remote string) *conversation {
 	user := xmpp.RemoveResourceFromJid(remote)
-	client := sarif.NewClient("xmpp/" + user)
+	client := sfproto.NewClient("xmpp/" + user)
 	client.Connect(c.Broker.NewLocalConn())
 	cv := &conversation{
 		Remote: remote,

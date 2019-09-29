@@ -10,6 +10,7 @@ import (
 
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services"
+	"github.com/sarifsystems/sarif/sfproto"
 )
 
 var Module = &services.Module{
@@ -19,14 +20,14 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	Log    sarif.Logger
-	Client *sarif.Client
+	Log    sfproto.Logger
+	Client sarif.Client
 }
 
 type Service struct {
 	scan *HostScan
-	Log  sarif.Logger
-	*sarif.Client
+	Log  sfproto.Logger
+	sarif.Client
 }
 
 func NewService(deps *Dependencies) *Service {
