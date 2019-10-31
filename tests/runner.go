@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/sfproto"
 )
 
 func ShouldBeAction(actual interface{}, expected ...interface{}) string {
@@ -35,7 +36,7 @@ func ShouldBeAction(actual interface{}, expected ...interface{}) string {
 
 type TestRunner struct {
 	*testing.T
-	conn        sarif.Conn
+	conn        sfproto.Conn
 	WaitTimeout time.Duration
 	IgnoreSubs  bool
 	Id          string
@@ -56,7 +57,7 @@ func NewTestRunner(t *testing.T) *TestRunner {
 	}
 }
 
-func (t *TestRunner) UseConn(conn sarif.Conn) {
+func (t *TestRunner) UseConn(conn sfproto.Conn) {
 	t.conn = conn
 	t.Publish(sarif.CreateMessage("proto/sub", map[string]string{
 		"device": t.Id,

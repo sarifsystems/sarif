@@ -9,9 +9,13 @@ import "time"
 
 type Client interface {
 	DeviceId() string
+	Connect(conn Connection) error
+	Disconnect() error
+
 	Publish(msg Message) error
 	Subscribe(action, device string, h func(Message)) error
 
+	SetRequestTimeout(timeout time.Duration)
 	Request(msg Message) <-chan Message
 	Reply(orig, reply Message) error
 	ReplyBadRequest(orig Message, err error) error
@@ -26,4 +30,8 @@ type ClientInfo struct {
 	Auth         string    `json:"auth,omitempty"`
 	Capabilities []string  `json:"capabilities,omitempty"`
 	LastSeen     time.Time `json:"last_seen,omitempty"`
+}
+
+type ClientFactory interface {
+	NewClient(ci ClientInfo) (Client, error)
 }

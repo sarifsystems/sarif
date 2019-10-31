@@ -22,6 +22,7 @@ import (
 var profile = flag.Bool("profile", false, "interactive: print elapsed time for requests")
 
 func (app *App) Interactive() {
+	client := app.NewClient()
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:      color.BlueString("say » "),
 		HistoryFile: app.Config.HistoryFile,
@@ -37,7 +38,7 @@ func (app *App) Interactive() {
 	pings := make(map[string]time.Time)
 
 	// Subscribe to all replies and print them to stdout
-	app.Must(app.Client.Subscribe("", "self", func(msg sarif.Message) {
+	app.Must(client.Subscribe("", "self", func(msg sarif.Message) {
 		text := msg.Text
 		if text == "" {
 			text = msg.Action + " from " + msg.Source
@@ -78,6 +79,6 @@ func (app *App) Interactive() {
 		if *profile {
 			pings[msg.Id] = time.Now()
 		}
-		app.Must(app.Client.Publish(msg))
+		app.Must(client.Publish(msg))
 	}
 }

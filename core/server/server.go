@@ -24,7 +24,7 @@ type Server struct {
 	ServerConfig Config
 
 	Broker *sfproto.Broker
-	Client *sfproto.Client
+	Client sarif.Client
 	*services.ModuleManager
 	configStoreInitialized bool
 }
@@ -82,13 +82,18 @@ func (s *Server) InitBroker() error {
 
 	sfproto.SetDefaultLogger(s.Log)
 	s.Broker = sfproto.NewBroker()
+	s.ClientFactory = s.Broker
 	if s.Log.GetLevel() <= core.LogLevelTrace {
 		s.Broker.TraceMessages(true)
 	}
 
-	s.Client = sfproto.NewClient(s.ServerConfig.Name + "/sarifd")
-	s.Client.Connect(s.Broker.NewLocalConn())
-	s.Client.SetLogger(s.Log)
+	client, err := s.ClientFactory.NewClient(sarif.ClientInfo{
+		Name: s.ServerConfig.Name + "/sarifd",
+	})
+	if err != nil {
+		return err
+	}
+	s.Client = client
 
 	cfg := &s.ServerConfig
 	if _, ok := s.Config.Get("server", cfg); !ok {
@@ -114,7 +119,7 @@ func (s *Server) InitBroker() error {
 		go func(cfg *sfproto.NetConfig) {
 			for {
 				s.Log.Infoln("[server] bridging to ", cfg.Address)
-				conn, err := sfproto.Dial(cfg)
+				conn, err := sfproto.RawDial(cfg)
 				if err == nil {
 					err = s.Broker.ListenOnBridge(conn)
 				}
@@ -129,7 +134,7 @@ func (s *Server) InitBroker() error {
 		go func(cfg *sfproto.NetConfig) {
 			for {
 				s.Log.Infoln("[server] gateway to ", cfg.Address)
-				conn, err := sfproto.Dial(cfg)
+				conn, err := sfproto.RawDial(cfg)
 				if err == nil {
 					err = s.Broker.ListenOnGateway(conn)
 				}
@@ -147,15 +152,17 @@ func (s *Server) SetupInjector(inj *inject.Injector, name string) {
 	if s.ServerConfig.Name != "" {
 		cname = s.ServerConfig.Name + "/" + name
 	}
-	c := sfproto.NewClient(cname)
-	c.Connect(s.Broker.NewLocalConn())
-	c.SetLogger(s.Log)
+
+	c, err := s.Broker.NewClient(sarif.ClientInfo{
+		Name: cname,
+	})
+	s.Must(err)
 
 	inj.Instance(s.Broker)
-	inj.Factory(func() sfproto.Conn {
-		return s.Broker.NewLocalConn()
+	inj.Factory(func() sarif.ClientFactory {
+		return s.Broker
 	})
-	inj.Factory(func() *sfproto.Client {
+	inj.Factory(func() sarif.Client {
 		return c
 	})
 	inj.Factory(func() services.Config {

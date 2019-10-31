@@ -13,12 +13,11 @@ import (
 
 	"github.com/sarifsystems/sarif/pkg/luareflect"
 	"github.com/sarifsystems/sarif/sarif"
-	"github.com/sarifsystems/sarif/sfproto"
 	lua "github.com/yuin/gopher-lua"
 )
 
 type Machine struct {
-	*sfproto.Client
+	sarif.Client
 	Lua *lua.LState
 
 	StateLock    sync.Mutex
@@ -26,7 +25,7 @@ type Machine struct {
 	Listeners    []string
 }
 
-func NewMachine(c *sfproto.Client) *Machine {
+func NewMachine(c sarif.Client) *Machine {
 	return &Machine{
 		Lua:    lua.NewState(),
 		Client: c,

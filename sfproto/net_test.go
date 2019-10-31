@@ -47,7 +47,7 @@ func TestNet(t *testing.T) {
 	}()
 
 	fmt.Println(l.Addr())
-	client, err := Dial(&NetConfig{
+	client, err := RawDial(&NetConfig{
 		Address: "tcp://" + l.Addr().String(),
 	})
 	if err != nil {

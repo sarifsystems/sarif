@@ -36,13 +36,13 @@ type Config struct {
 type Dependencies struct {
 	DB     *gorm.DB
 	Config services.Config
-	Client *sarif.Client
+	Client sarif.Client
 }
 
 type Service struct {
 	cfg Config
 	DB  *gorm.DB
-	*sarif.Client
+	sarif.Client
 }
 
 func NewService(deps *Dependencies) *Service {

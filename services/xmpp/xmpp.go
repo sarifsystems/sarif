@@ -24,9 +24,9 @@ var Module = &services.Module{
 }
 
 type Dependencies struct {
-	Config services.Config
-	Log    sfproto.Logger
-	Broker *sfproto.Broker
+	Config        services.Config
+	ClientFactory sarif.ClientFactory
+	Log           sfproto.Logger
 }
 
 type Config struct {
@@ -45,7 +45,7 @@ type conversation struct {
 type Client struct {
 	cfg           Config
 	Log           sfproto.Logger
-	Broker        *sfproto.Broker
+	ClientFactory sarif.ClientFactory
 	xmpp          *xmpp.Conn
 	conversations map[string]*conversation
 }
@@ -53,7 +53,7 @@ type Client struct {
 func New(deps *Dependencies) *Client {
 	c := &Client{
 		Log:           deps.Log,
-		Broker:        deps.Broker,
+		ClientFactory: deps.ClientFactory,
 		conversations: make(map[string]*conversation, 0),
 	}
 	deps.Config.Get(&c.cfg)
@@ -112,8 +112,9 @@ func (c *Client) listen() {
 
 func (c *Client) newConversation(remote string) *conversation {
 	user := xmpp.RemoveResourceFromJid(remote)
-	client := sfproto.NewClient("xmpp/" + user)
-	client.Connect(c.Broker.NewLocalConn())
+	client, _ := c.ClientFactory.NewClient(sarif.ClientInfo{
+		Name: "xmpp/" + user,
+	})
 	cv := &conversation{
 		Remote: remote,
 		Proto:  client,

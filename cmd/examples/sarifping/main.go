@@ -27,11 +27,16 @@ func main() {
 	fmt.Println("connecting to", addr)
 
 	// Setup our client.
-	client := sfproto.NewClient("sarifping")
-	err := client.Dial(&sfproto.NetConfig{
+	client := sarif.NewClient(sarif.ClientInfo{
+		Name: "sarifping",
+	})
+	conn, err := sfproto.Dial(&sfproto.NetConfig{
 		Address: addr,
 	})
 	if err != nil {
+		log.Fatal(err)
+	}
+	if err := client.Connect(conn); err != nil {
 		log.Fatal(err)
 	}
 	pings := make(map[string]time.Time)

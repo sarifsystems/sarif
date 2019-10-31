@@ -257,7 +257,7 @@ func BenchmarkBrokerSingleNet(b *testing.B) {
 	br := NewBroker()
 	go br.Listen(cfg)
 	time.Sleep(10 * time.Millisecond)
-	c, err := Dial(cfg)
+	c, err := RawDial(cfg)
 	if err != nil {
 		b.Fatal(err)
 	}

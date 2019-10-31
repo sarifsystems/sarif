@@ -37,7 +37,6 @@ type Config struct {
 
 type App struct {
 	*core.App
-	Client   sarif.Client
 	Commands []Command
 
 	Config Config
@@ -50,23 +49,18 @@ type Command struct {
 }
 
 func New() *App {
-	var err error
 	log.SetFlags(0)
 	app := &App{
 		App: core.NewApp("sarif", "tars"),
 	}
 	app.Init()
-	app.Client, err = app.ClientDial(sarif.ClientInfo{
-		Name: "tars/" + sarif.GenerateId(),
-		Auth: *authString,
-	})
-	app.Must(err)
 
 	app.Config.HistoryFile = app.App.Config.Dir() + "/tars_history"
 	app.App.Config.Get("tars", &app.Config)
 
 	app.Commands = []Command{
 		{"help", app.Help, ""},
+		{"log", app.CmdLog, ""},
 		{"interactive", app.Interactive, ""},
 		{"location_import", app.LocationImport, ""},
 		{"cat", app.Cat, usageCat},
@@ -76,6 +70,15 @@ func New() *App {
 	}
 
 	return app
+}
+
+func (app *App) NewClient() sarif.Client {
+	c, err := app.ClientDial(sarif.ClientInfo{
+		Name: "tars/" + sarif.GenerateId(),
+		Auth: *authString,
+	})
+	app.Must(err)
+	return c
 }
 
 func (app *App) Run() {

@@ -13,11 +13,10 @@ import (
 	"github.com/ddliu/motto"
 	"github.com/robertkrimen/otto"
 	"github.com/sarifsystems/sarif/sarif"
-	"github.com/sarifsystems/sarif/sfproto"
 )
 
 type Machine struct {
-	*sfproto.Client
+	sarif.Client
 	Modules *motto.Motto
 	VM      *otto.Otto
 
@@ -26,7 +25,7 @@ type Machine struct {
 	Listeners    []string
 }
 
-func NewMachine(c *sfproto.Client) *Machine {
+func NewMachine(c sarif.Client) *Machine {
 	m := motto.New()
 	return &Machine{
 		Modules: m,

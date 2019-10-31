@@ -24,12 +24,12 @@ var Module = &services.Module{
 
 type Dependencies struct {
 	DB     *gorm.DB
-	Client *sarif.Client
+	Client sarif.Client
 }
 
 type Service struct {
 	DB *gorm.DB
-	*sarif.Client
+	sarif.Client
 }
 
 func NewService(deps *Dependencies) *Service {

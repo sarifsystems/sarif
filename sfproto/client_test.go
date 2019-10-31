@@ -29,8 +29,10 @@ func TestClientSingle(t *testing.T) {
 	}
 
 	tc, other := NewPipe()
-	client := NewClient("test")
-	client.Connect(other)
+	client := sarif.NewClient(sarif.ClientInfo{
+		Name: "test",
+	})
+	client.Connect(wrap(other))
 
 	fired := false
 	client.Subscribe("ping", "one", func(msg sarif.Message) {
@@ -55,11 +57,15 @@ func TestClientSingle(t *testing.T) {
 
 func TestClientRequest(t *testing.T) {
 	aconn, bconn := NewPipe()
-	a := NewClient("a")
-	b := NewClient("b")
-	a.Connect(bconn)
-	b.Connect(aconn)
-	b.RequestTimeout = 100 * time.Millisecond
+	a := sarif.NewClient(sarif.ClientInfo{
+		Name: "a",
+	})
+	b := sarif.NewClient(sarif.ClientInfo{
+		Name: "b",
+	})
+	a.Connect(wrap(bconn))
+	b.Connect(wrap(aconn))
+	b.SetRequestTimeout(100 * time.Millisecond)
 
 	a.Subscribe("hello_a", "", func(msg sarif.Message) {
 		a.Reply(msg, sarif.Message{

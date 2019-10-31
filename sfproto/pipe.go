@@ -36,6 +36,9 @@ func NewPipe() (a, b Conn) {
 }
 
 func (t *pipeConn) Write(msg sarif.Message) error {
+	if err := msg.IsValid(); err != nil {
+		return err
+	}
 	if t.other == nil {
 		return ErrClosed
 	}

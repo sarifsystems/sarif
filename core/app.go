@@ -14,7 +14,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/sarifmq"
@@ -26,10 +25,11 @@ var vverbose = flag.Bool("vv", false, "very verbose debug output: db, individual
 var configPath = flag.String("config", "", "path to config file")
 
 type App struct {
-	AppName    string
-	ModuleName string
-	Config     *Config
-	Log        *Logger
+	AppName       string
+	ModuleName    string
+	Config        *Config
+	Log           *Logger
+	ClientFactory sarif.ClientFactory
 }
 
 func NewApp(appName, moduleName string) *App {
@@ -86,6 +86,26 @@ func (app *App) initConfig() (err error) {
 	return nil
 }
 
+func (app *App) InitClientFactory() (err error) {
+	cfg := sfproto.NetConfig{
+		Address: "tcp://localhost:" + sfproto.DefaultPort,
+	}
+	app.Config.Get("dial", &cfg)
+	app.WriteConfig()
+
+	u, err := url.Parse(cfg.Address)
+	if err != nil {
+		return err
+	}
+
+	if u.Scheme == "amqp" {
+		app.ClientFactory = sarifmq.NewClientFactory(cfg)
+	} else {
+		app.ClientFactory = sfproto.NewClientFactory(cfg)
+	}
+	return nil
+}
+
 func (app *App) WriteConfig() {
 	if app.Config.IsModified() {
 		app.Log.Infof("[core] writing config to '%s'", app.Config.Path())
@@ -108,47 +128,13 @@ func (app *App) Must(err error) {
 }
 
 func (app *App) ClientDial(ci sarif.ClientInfo) (sarif.Client, error) {
-	cfg := sfproto.NetConfig{
-		Address: "tcp://localhost:" + sfproto.DefaultPort,
-	}
-	app.Config.Get("dial", &cfg)
-	app.WriteConfig()
-
-	u, err := url.Parse(cfg.Address)
-	if err != nil {
-		return nil, err
-	}
-
-	if u.Scheme == "amqp" {
-		return app.ClientDialAmqp(ci, cfg)
-	}
-
-	return app.ClientDialProto(ci, cfg)
-}
-
-func (app *App) ClientDialProto(ci sarif.ClientInfo, cfg sfproto.NetConfig) (*sfproto.Client, error) {
-	c := sfproto.NewClient(ci.Name)
-	c.Info = ci
-	c.OnConnectionLost(func(err error) {
-		app.Log.Errorln("connection lost:", err)
-		for {
-			time.Sleep(5 * time.Second)
-			if err := c.Dial(&cfg); err == nil {
-				app.Log.Println("reconnected")
-				return
-			}
+	if app.ClientFactory == nil {
+		if err := app.InitClientFactory(); err != nil {
+			return nil, err
 		}
-	})
+	}
 
-	err := c.Dial(&cfg)
-	return c, err
-}
-
-func (app *App) ClientDialAmqp(ci sarif.ClientInfo, cfg sfproto.NetConfig) (*sarifmq.Client, error) {
-	c := sarifmq.NewClient(ci.Name)
-	c.Info = ci
-	err := c.Dial(&cfg)
-	return c, err
+	return app.ClientFactory.NewClient(ci)
 }
 
 func WaitUntilInterrupt() {

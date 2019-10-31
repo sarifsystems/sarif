@@ -26,12 +26,13 @@ type ContentPayload struct {
 }
 
 func (app *App) Edit() {
+	client := app.NewClient()
 	// Request document from given action
 	action := strings.TrimLeft(flag.Arg(1), "/")
 	putAction := strings.TrimLeft(flag.Arg(2), "/")
 
 	getMsg := sarif.CreateMessage(action, nil)
-	msg, ok := <-app.Client.Request(getMsg)
+	msg, ok := <-client.Request(getMsg)
 	if !ok {
 		app.Log.Fatalln("No response received at " + action)
 	}
@@ -124,7 +125,7 @@ func (app *App) Edit() {
 			} else {
 				req.EncodePayload(ContentPayload{content.PutData(data)})
 			}
-			msg, ok := <-app.Client.Request(req)
+			msg, ok := <-client.Request(req)
 
 			if !ok {
 				lastErr = "Could not save: no response received at " + ctp.Content.PutAction

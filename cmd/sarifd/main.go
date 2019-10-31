@@ -12,7 +12,7 @@ package main
 import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
-	"github.com/sarifsystems/sarif/core/server"
+	"github.com/sarifsystems/sarif/core/apphost"
 	"github.com/sarifsystems/sarif/services/auth"
 	"github.com/sarifsystems/sarif/services/commands"
 	"github.com/sarifsystems/sarif/services/events"
@@ -35,12 +35,11 @@ import (
 	_ "github.com/sarifsystems/sarif/services/store/es7"
 	_ "github.com/sarifsystems/sarif/services/store/replicate"
 	"github.com/sarifsystems/sarif/services/vdir"
-	"github.com/sarifsystems/sarif/services/web"
 	"github.com/sarifsystems/sarif/services/xmpp"
 )
 
 func main() {
-	srv := server.New("sarif", "sarifd")
+	srv := apphost.New("sarif", "sarifd")
 
 	srv.RegisterModule(auth.Module)
 	srv.RegisterModule(commands.Module)
@@ -61,14 +60,14 @@ func main() {
 	srv.RegisterModule(spotify.Module)
 	srv.RegisterModule(store.Module)
 	srv.RegisterModule(vdir.Module)
-	srv.RegisterModule(web.Module)
+	// srv.RegisterModule(web.Module)
 	srv.RegisterModule(xmpp.Module)
 
 	// Default configuration
-	srv.ServerConfig.BaseModules = []string{
+	srv.HostConfig.BaseModules = []string{
 		"store",
 	}
-	srv.ServerConfig.EnabledModules = []string{
+	srv.HostConfig.EnabledModules = []string{
 		"auth",
 		"commands",
 		"events",
@@ -82,7 +81,7 @@ func main() {
 		"nlquery",
 		"scheduler",
 		"vdir",
-		"web",
+		// "web",
 	}
 
 	srv.Run()

@@ -57,10 +57,13 @@ func (s *Service) Enable() error {
 
 	// TODO: Use a more idiomatic config way to disable filesystem access
 	if s.Config.Dir() != "" {
-		if err := s.loadModel(); err != nil {
-			return err
-		}
-		go s.saveModelLoop()
+		go func() {
+			if err := s.loadModel(); err != nil {
+				s.Log("err", err.Error())
+				return
+			}
+			s.saveModelLoop()
+		}()
 	}
 	return nil
 }

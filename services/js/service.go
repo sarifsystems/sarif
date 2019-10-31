@@ -17,7 +17,6 @@ import (
 	"github.com/sarifsystems/sarif/pkg/schema"
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services"
-	"github.com/sarifsystems/sarif/sfproto"
 )
 
 var Module = &services.Module{
@@ -31,14 +30,14 @@ type Config struct {
 }
 
 type Dependencies struct {
-	Config services.Config
-	Client sarif.Client
-	Broker *sfproto.Broker
+	Config        services.Config
+	Client        sarif.Client
+	ClientFactory sarif.ClientFactory
 }
 
 type Service struct {
-	cfg    Config
-	Broker *sfproto.Broker
+	cfg           Config
+	ClientFactory sarif.ClientFactory
 	sarif.Client
 
 	Scripts   map[string]string
@@ -48,11 +47,11 @@ type Service struct {
 
 func NewService(deps *Dependencies) *Service {
 	s := &Service{
-		Broker:    deps.Broker,
-		Client:    deps.Client,
-		Scripts:   make(map[string]string),
-		Machines:  make(map[string]*Machine),
-		Listeners: make(map[string][]string),
+		ClientFactory: deps.ClientFactory,
+		Client:        deps.Client,
+		Scripts:       make(map[string]string),
+		Machines:      make(map[string]*Machine),
+		Listeners:     make(map[string][]string),
 	}
 	s.cfg.ScriptDir = deps.Config.Dir() + "/js"
 	deps.Config.Get(&s.cfg)
@@ -135,8 +134,12 @@ func (s *Service) createMachine(name string) (*Machine, error) {
 		return nil, errors.New("Machine " + name + " already exists")
 	}
 
-	c := sfproto.NewClient(s.DeviceId() + "/" + name)
-	c.Connect(s.Broker.NewLocalConn())
+	c, err := s.ClientFactory.NewClient(sarif.ClientInfo{
+		Name: s.DeviceId() + "/" + name,
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	m := NewMachine(c)
 	m.Modules.AddPath(s.cfg.ScriptDir + "/node_modules")

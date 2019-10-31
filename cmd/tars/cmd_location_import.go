@@ -14,13 +14,14 @@ import (
 )
 
 func (app *App) LocationImport() {
+	client := app.NewClient()
 	fname := flag.Arg(1)
 	body, err := ioutil.ReadFile(fname)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	result, ok := <-app.Client.Request(sarif.CreateMessage("location/import", map[string]string{
+	result, ok := <-client.Request(sarif.CreateMessage("location/import", map[string]string{
 		"csv": string(body),
 	}))
 	if !ok {

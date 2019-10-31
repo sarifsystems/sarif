@@ -39,6 +39,7 @@ optionally in the format "action:device" (e.g. "ping", "ping:self",
 `
 
 func (app *App) Cat() {
+	client := app.NewClient()
 	received := make(chan bool, 10)
 
 	// Handle replies: print them as readable JSON.
@@ -54,7 +55,7 @@ func (app *App) Cat() {
 
 	// Subscribe to all topics we're interested in.
 	if flag.NArg() <= 1 {
-		app.Client.Subscribe("", "self", handle)
+		client.Subscribe("", "self", handle)
 	}
 	for i, action := range flag.Args() {
 		if i == 0 {
@@ -62,9 +63,9 @@ func (app *App) Cat() {
 		}
 		parts := strings.Split(action, ":")
 		if len(parts) > 1 {
-			app.Client.Subscribe(parts[0], parts[1], handle)
+			client.Subscribe(parts[0], parts[1], handle)
 		} else {
-			app.Client.Subscribe(parts[0], "", handle)
+			client.Subscribe(parts[0], "", handle)
 		}
 	}
 
@@ -79,7 +80,7 @@ func (app *App) Cat() {
 				}
 				app.Must(err)
 			}
-			app.Must(app.Client.Publish(msg))
+			app.Must(client.Publish(msg))
 		}
 	}()
 

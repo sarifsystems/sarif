@@ -14,8 +14,9 @@ import (
 )
 
 func (app *App) SingleRequest() {
+	client := app.NewClient()
 	text := strings.Join(flag.Args(), " ")
-	msg, ok := <-app.Client.Request(sarif.Message{
+	msg, ok := <-client.Request(sarif.Message{
 		Action: "natural/handle",
 		Text:   text,
 	})

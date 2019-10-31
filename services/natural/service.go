@@ -121,6 +121,7 @@ func (s *Service) Enable() error {
 			time.Sleep(s.ParserKeepAlive / 2)
 		}
 	}()
+
 	return nil
 }
 
@@ -269,7 +270,7 @@ func (s *Service) Parse(ctx *natural.Context) (*natural.ParseResult, error) {
 				msg := sarif.CreateMessage("natural/parse", ctx)
 				msg.Destination = name
 				reply, ok := <-s.Request(msg)
-				if !ok {
+				if !ok || reply.IsAction("err") {
 					return
 				}
 				r := &natural.ParseResult{}
@@ -282,7 +283,7 @@ func (s *Service) Parse(ctx *natural.Context) (*natural.ParseResult, error) {
 		}
 	}
 
-	waitTimeout(wg, time.Second)
+	waitTimeout(wg, 100*time.Millisecond)
 	return res, nil
 }
 

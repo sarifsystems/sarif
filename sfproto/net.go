@@ -14,6 +14,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/sarifsystems/sarif/sarif"
 )
 
 const DefaultPort = "23100"
@@ -101,7 +103,7 @@ func (cfg *NetConfig) parseUrl() (*url.URL, error) {
 }
 
 // Dial connects to a sarif broker.
-func Dial(cfg *NetConfig) (Conn, error) {
+func RawDial(cfg *NetConfig) (Conn, error) {
 	u, err := cfg.parseUrl()
 	if err != nil {
 		return nil, err
@@ -128,6 +130,14 @@ func Dial(cfg *NetConfig) (Conn, error) {
 	nc := newNetConn(conn)
 	go nc.KeepaliveLoop(ka)
 	return nc, nil
+}
+
+func Dial(cfg *NetConfig) (sarif.Connection, error) {
+	c, err := RawDial(cfg)
+	if err != nil {
+		return nil, err
+	}
+	return wrap(c), nil
 }
 
 type NetListener struct {

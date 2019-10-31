@@ -37,18 +37,20 @@ type Config struct {
 }
 
 type Dependencies struct {
-	Config services.Config
-	Broker *sfproto.Broker
-	Client *sfproto.Client
+	Config        services.Config
+	ClientFactory sarif.ClientFactory
+	Broker        *sfproto.Broker
+	Client        sarif.Client
 }
 
 type Server struct {
-	Config     services.Config
-	cfg        Config
-	Broker     *sfproto.Broker
-	apiClients map[string]*sfproto.Client
-	Client     *sfproto.Client
-	websocket  websocket.Upgrader
+	Config        services.Config
+	cfg           Config
+	Broker        *sfproto.Broker
+	ClientFactory sarif.ClientFactory
+	apiClients    map[string]sarif.Client
+	Client        sarif.Client
+	websocket     websocket.Upgrader
 }
 
 func GenerateApiKey() (string, error) {
@@ -82,11 +84,12 @@ func New(deps *Dependencies) *Server {
 	}
 
 	s := &Server{
-		Config:     deps.Config,
-		cfg:        cfg,
-		Broker:     deps.Broker,
-		apiClients: make(map[string]*sfproto.Client),
-		Client:     deps.Client,
+		Config:        deps.Config,
+		cfg:           cfg,
+		ClientFactory: deps.ClientFactory,
+		Broker:        deps.Broker,
+		apiClients:    make(map[string]sarif.Client),
+		Client:        deps.Client,
 		websocket: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 2014,
@@ -135,11 +138,12 @@ func parseAuthorizationHeader(h string) string {
 	return ""
 }
 
-func (s *Server) getApiClientByName(name string) *sfproto.Client {
+func (s *Server) getApiClientByName(name string) sarif.Client {
 	client, ok := s.apiClients[name]
 	if !ok {
-		client = sfproto.NewClient("web/" + name)
-		client.Connect(s.Broker.NewLocalConn())
+		client, _ := s.ClientFactory.NewClient(sarif.ClientInfo{
+			Name: "web/" + name,
+		})
 		s.apiClients[name] = client
 	}
 	return client

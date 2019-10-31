@@ -17,12 +17,13 @@ import (
 )
 
 func (app *App) Down() {
+	client := app.NewClient()
 	if flag.NArg() <= 1 {
 		app.Log.Fatal("Please specify an action to listen for.")
 	}
 	action := flag.Arg(1)
 
-	msg, ok := <-app.Client.Request(sarif.Message{
+	msg, ok := <-client.Request(sarif.Message{
 		Action: action,
 	})
 	if !ok {
@@ -32,6 +33,7 @@ func (app *App) Down() {
 }
 
 func (app *App) Up() {
+	client := app.NewClient()
 	if flag.NArg() <= 1 {
 		app.Log.Fatal("Please specify an action to send to.")
 	}
@@ -56,7 +58,7 @@ func (app *App) Up() {
 		app.Log.Fatal(err)
 	}
 
-	msg, ok := <-app.Client.Request(msg)
+	msg, ok := <-client.Request(msg)
 	if !ok {
 		app.Log.Fatal("No reply received.")
 	}

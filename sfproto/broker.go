@@ -159,6 +159,12 @@ func (b *Broker) NewLocalConn() Conn {
 	return two
 }
 
+func (b *Broker) NewClient(ci sarif.ClientInfo) (sarif.Client, error) {
+	conn := wrap(b.NewLocalConn())
+	c := sarif.NewClient(ci)
+	return c, c.Connect(conn)
+}
+
 // Listen starts accepting connections on the specified network and blocks
 // until an error is received.
 func (b *Broker) Listen(cfg *NetConfig) error {

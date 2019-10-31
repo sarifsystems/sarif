@@ -30,11 +30,17 @@ func ExampleClient() {
 	time.Sleep(10 * time.Millisecond)
 
 	// Setup client and listen for "testaction"
-	client := sfproto.NewClient("mytestdevice")
-	err := client.Dial(&sfproto.NetConfig{
+	client := sarif.NewClient(sarif.ClientInfo{
+		Name: "mytestdevice",
+	})
+	conn, err := sfproto.Dial(&sfproto.NetConfig{
 		Address: "tcp://localhost:5698",
 	})
 	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if err := client.Connect(conn); err != nil {
 		fmt.Println(err)
 		return
 	}

@@ -90,6 +90,7 @@ func (s *Service) handleLog(msg sarif.Message) {
 		}
 	}
 
+	log.Println(msg.Action, msg.Source, msg.Text)
 	lm := LogMessage{time.Now(), msg}
 
 	s.mutex.Lock()
