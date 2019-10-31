@@ -16,7 +16,7 @@ import (
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services"
 	config "github.com/sarifsystems/sarif/services/schema"
-	"github.com/sarifsystems/sarif/sfproto"
+	"github.com/sarifsystems/sarif/transports/sfproto"
 )
 
 type Server struct {

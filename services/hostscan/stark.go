@@ -10,7 +10,7 @@ import (
 
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services"
-	"github.com/sarifsystems/sarif/sfproto"
+	"github.com/sarifsystems/sarif/transports/sfproto"
 )
 
 var Module = &services.Module{

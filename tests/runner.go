@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/sarifsystems/sarif/sarif"
-	"github.com/sarifsystems/sarif/sfproto"
+	"github.com/sarifsystems/sarif/transports/sfproto"
 )
 
 func ShouldBeAction(actual interface{}, expected ...interface{}) string {

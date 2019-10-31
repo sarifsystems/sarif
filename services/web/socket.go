@@ -12,7 +12,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/sarifsystems/sarif/sarif"
-	"github.com/sarifsystems/sarif/sfproto"
+	"github.com/sarifsystems/sarif/transports/sfproto"
 )
 
 type WebSocketConn struct {

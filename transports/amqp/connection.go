@@ -3,7 +3,7 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package sarifmq
+package amqp
 
 import (
 	"encoding/json"
@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/sarifsystems/sarif/sarif"
-	"github.com/sarifsystems/sarif/sfproto"
+	"github.com/sarifsystems/sarif/transports/sfproto"
 	"github.com/streadway/amqp"
 )
 

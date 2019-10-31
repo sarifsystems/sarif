@@ -16,8 +16,8 @@ import (
 	"syscall"
 
 	"github.com/sarifsystems/sarif/sarif"
-	"github.com/sarifsystems/sarif/sarifmq"
-	"github.com/sarifsystems/sarif/sfproto"
+	"github.com/sarifsystems/sarif/transports/amqp"
+	"github.com/sarifsystems/sarif/transports/sfproto"
 )
 
 var verbose = flag.Bool("v", false, "verbose debug output")
@@ -99,7 +99,7 @@ func (app *App) InitClientFactory() (err error) {
 	}
 
 	if u.Scheme == "amqp" {
-		app.ClientFactory = sarifmq.NewClientFactory(cfg)
+		app.ClientFactory = amqp.NewClientFactory(cfg)
 	} else {
 		app.ClientFactory = sfproto.NewClientFactory(cfg)
 	}

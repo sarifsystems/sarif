@@ -1,8 +1,8 @@
-package sarifmq
+package amqp
 
 import (
 	"github.com/sarifsystems/sarif/sarif"
-	"github.com/sarifsystems/sarif/sfproto"
+	"github.com/sarifsystems/sarif/transports/sfproto"
 )
 
 type amqpFactory struct {
