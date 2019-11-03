@@ -50,6 +50,7 @@ func New(appName, moduleName string) *AppHost {
 
 func (s *AppHost) Init() {
 	s.App.Init()
+	s.Config.Get("apphost", &s.HostConfig)
 	s.InitClient()
 	s.Must(s.InitModules())
 	s.WriteConfig()
@@ -148,7 +149,7 @@ func (s *AppHost) findConfigStore() error {
 		case msg := <-req:
 			if s.HostConfig.ConfigStore != msg.Source {
 				s.HostConfig.ConfigStore = msg.Source
-				s.Config.Set("server", &s.HostConfig)
+				s.Config.Set("apphost", &s.HostConfig)
 			}
 			s.configStoreInitialized = true
 			return nil
