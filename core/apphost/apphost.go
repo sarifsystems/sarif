@@ -117,8 +117,10 @@ func (s *AppHost) InitModules() error {
 	// TODO: Real dependency support
 	for _, module := range s.HostConfig.BaseModules {
 		if err := s.EnableModule(module); err != nil {
+			s.Log.Warnf("Error enabling module %s: %v", module, err)
 			return err
 		}
+		s.Log.Infoln("Enabled base module", module)
 	}
 
 	if err := s.findConfigStore(); err != nil {
@@ -126,12 +128,11 @@ func (s *AppHost) InitModules() error {
 	}
 
 	for _, module := range s.HostConfig.EnabledModules {
-		fmt.Println(module)
 		if err := s.EnableModule(module); err != nil {
-			s.Log.Infoln(module)
+			s.Log.Warnf("Error enabling module %s: %v", module, err)
 			return err
 		}
-		fmt.Println("done")
+		s.Log.Infoln("Enabled module", module)
 	}
 	return nil
 }

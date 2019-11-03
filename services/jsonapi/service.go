@@ -3,7 +3,8 @@
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 
-package web
+// Service jsonapi provides a simple REST client
+package jsonapi
 
 import (
 	"encoding/json"
@@ -14,7 +15,33 @@ import (
 	"strings"
 
 	"github.com/sarifsystems/sarif/sarif"
+	"github.com/sarifsystems/sarif/services"
 )
+
+var Module = &services.Module{
+	Name:        "jsonapi",
+	Version:     "1.0",
+	NewInstance: New,
+}
+
+type Dependencies struct {
+	Client sarif.Client
+}
+
+type Service struct {
+	Client sarif.Client
+}
+
+func New(deps *Dependencies) *Service {
+	s := &Service{
+		Client: deps.Client,
+	}
+	return s
+}
+
+func (s *Service) Enable() error {
+	return s.Client.Subscribe("json", "", s.handleJson)
+}
 
 type jsonResponse struct {
 	Request *jsonRequest `json:"request,omitempty"`
@@ -31,7 +58,7 @@ func (r jsonResponse) String() string {
 	return ""
 }
 
-func (s *Server) handleJson(msg sarif.Message) {
+func (s *Service) handleJson(msg sarif.Message) {
 	req, err := parseActionAsURL(msg.Action)
 	if err != nil {
 		s.Client.ReplyBadRequest(msg, err)

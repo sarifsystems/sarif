@@ -35,6 +35,7 @@ import (
 	_ "github.com/sarifsystems/sarif/services/store/es7"
 	_ "github.com/sarifsystems/sarif/services/store/replicate"
 	"github.com/sarifsystems/sarif/services/vdir"
+	"github.com/sarifsystems/sarif/services/web"
 	"github.com/sarifsystems/sarif/services/xmpp"
 )
 
@@ -60,7 +61,7 @@ func main() {
 	srv.RegisterModule(spotify.Module)
 	srv.RegisterModule(store.Module)
 	srv.RegisterModule(vdir.Module)
-	// srv.RegisterModule(web.Module)
+	srv.RegisterModule(web.Module)
 	srv.RegisterModule(xmpp.Module)
 
 	// Default configuration
@@ -81,7 +82,7 @@ func main() {
 		"nlquery",
 		"scheduler",
 		"vdir",
-		// "web",
+		"web",
 	}
 
 	srv.Run()

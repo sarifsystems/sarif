@@ -17,7 +17,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sarifsystems/sarif/sarif"
 	"github.com/sarifsystems/sarif/services"
-	"github.com/sarifsystems/sarif/transports/sfproto"
 )
 
 const (
@@ -39,14 +38,12 @@ type Config struct {
 type Dependencies struct {
 	Config        services.Config
 	ClientFactory sarif.ClientFactory
-	Broker        *sfproto.Broker
 	Client        sarif.Client
 }
 
 type Server struct {
 	Config        services.Config
 	cfg           Config
-	Broker        *sfproto.Broker
 	ClientFactory sarif.ClientFactory
 	apiClients    map[string]sarif.Client
 	Client        sarif.Client
@@ -87,7 +84,6 @@ func New(deps *Dependencies) *Server {
 		Config:        deps.Config,
 		cfg:           cfg,
 		ClientFactory: deps.ClientFactory,
-		Broker:        deps.Broker,
 		apiClients:    make(map[string]sarif.Client),
 		Client:        deps.Client,
 		websocket: websocket.Upgrader{
@@ -103,9 +99,6 @@ func (s *Server) Enable() error {
 	dir := s.Config.Dir() + "/web"
 	http.Handle("/", http.FileServer(http.Dir(dir)))
 	http.HandleFunc(REST_URL, s.handleRestPublish)
-	http.HandleFunc("/socket", s.handleSocket)
-
-	s.Client.Subscribe("json", "", s.handleJson)
 
 	go func() {
 		s.Client.Log("info", "listening on "+s.cfg.Interface)
@@ -138,15 +131,20 @@ func parseAuthorizationHeader(h string) string {
 	return ""
 }
 
-func (s *Server) getApiClientByName(name string) sarif.Client {
+func (s *Server) getApiClientByName(name string) (sarif.Client, error) {
 	client, ok := s.apiClients[name]
-	if !ok {
-		client, _ := s.ClientFactory.NewClient(sarif.ClientInfo{
-			Name: "web/" + name,
-		})
-		s.apiClients[name] = client
+	if ok {
+		return client, nil
 	}
-	return client
+
+	client, err := s.ClientFactory.NewClient(sarif.ClientInfo{
+		Name: "web/" + name,
+	})
+	if err != nil {
+		return nil, err
+	}
+	s.apiClients[name] = client
+	return client, nil
 }
 
 func (s *Server) checkAuthentication(req *http.Request) string {
@@ -185,14 +183,6 @@ func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 	s.Client.Log("debug", "new REST request: "+req.URL.Path)
 
-	// Parse form values.
-	if err := req.ParseForm(); err != nil {
-		s.Client.Log("warn", "REST bad request: "+err.Error())
-		w.WriteHeader(400)
-		fmt.Fprintln(w, "Bad request:", err)
-		return
-	}
-
 	// Check authentication.
 	name := s.checkAuthentication(req)
 	if name == "" {
@@ -202,32 +192,21 @@ func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	s.Client.Log("info", "authenticated "+req.RemoteAddr+" for "+name)
-	client := s.getApiClientByName(name)
+	client, err := s.getApiClientByName(name)
+	if err != nil {
+		s.Client.Log("error", "could not create client: "+err.Error())
+		w.WriteHeader(500)
+		fmt.Fprintln(w, "Internal error creating client")
+	}
 
 	// Create message from form values.
-	msg := sarif.Message{
-		Id:     sarif.GenerateId(),
-		Source: name,
+	msg, err := RequestToMessage(req, REST_URL)
+	if err != nil {
+		s.Client.Log("warn", "REST bad request: "+err.Error())
+		w.WriteHeader(400)
+		fmt.Fprintln(w, "Bad request:", err)
+		return
 	}
-	if strings.HasPrefix(req.URL.Path, REST_URL) {
-		msg.Action = strings.TrimPrefix(req.URL.Path, REST_URL)
-	}
-	pl := make(map[string]interface{})
-	for k, v := range req.Form {
-		if k == "authtoken" {
-			continue
-		}
-		if k == "_device" {
-			msg.Destination = v[0]
-		} else if k == "text" {
-			msg.Text = strings.Join(v, "\n")
-		} else if len(v) == 1 {
-			pl[k] = parseValue(v[0])
-		} else if k == "_device" {
-			pl[k] = v
-		}
-	}
-	_ = msg.EncodePayload(pl)
 
 	if !s.clientIsAllowed(name, msg) {
 		w.WriteHeader(401)
@@ -244,14 +223,4 @@ func (s *Server) handleRestPublish(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	w.Write([]byte(msg.Id))
-}
-
-func parseValue(s string) interface{} {
-	if v, err := strconv.Atoi(s); err == nil {
-		return v
-	}
-	if v, err := strconv.ParseFloat(s, 64); err == nil {
-		return v
-	}
-	return s
 }
