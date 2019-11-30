@@ -8,6 +8,7 @@ package amqp
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"strings"
 
 	"github.com/sarifsystems/sarif/sarif"
@@ -16,29 +17,12 @@ import (
 )
 
 type connection struct {
-	conn  *connpair
-	in    *amqp.Channel
-	out   *amqp.Channel
-	queue amqp.Queue
-}
-
-type connpair struct {
-	in  *amqp.Connection
-	out *amqp.Connection
-}
-
-func internalDial(cfg *sfproto.NetConfig) (*connpair, error) {
-	in, err := amqp.Dial(cfg.Address)
-	if err != nil {
-		return nil, err
-	}
-
-	out, err := amqp.Dial(cfg.Address)
-	if err != nil {
-		return nil, err
-	}
-
-	return &connpair{in, out}, nil
+	conn     *connpair
+	in       *amqp.Channel
+	out      *amqp.Channel
+	messages chan sarif.Message
+	queue    amqp.Queue
+	topics   []string
 }
 
 func Dial(cfg *sfproto.NetConfig) (sarif.Connection, error) {
@@ -51,12 +35,40 @@ func Dial(cfg *sfproto.NetConfig) (sarif.Connection, error) {
 }
 
 func newConnection(conn *connpair) (sarif.Connection, error) {
-	out, err := conn.out.Channel()
-	if err != nil {
+	aconn := &connection{conn: conn}
+	aconn.messages = make(chan sarif.Message, 10)
+
+	if err := aconn.setupOutgoing(); err != nil {
+		return nil, err
+	}
+	if err := aconn.setupIncoming(); err != nil {
 		return nil, err
 	}
 
-	err = out.ExchangeDeclare(
+	go func() {
+		ch := conn.out.NotifyReconnect(make(chan *amqp.Connection))
+		for _ = range ch {
+			aconn.setupOutgoing()
+		}
+	}()
+
+	go func() {
+		ch := conn.in.NotifyReconnect(make(chan *amqp.Connection))
+		for _ = range ch {
+			aconn.setupIncoming()
+		}
+	}()
+
+	return aconn, nil
+}
+
+func (c *connection) setupOutgoing() (err error) {
+	c.out, err = c.conn.out.conn.Channel()
+	if err != nil {
+		return err
+	}
+
+	err = c.out.ExchangeDeclare(
 		"sarif",
 		"topic",
 		true,
@@ -65,16 +77,19 @@ func newConnection(conn *connpair) (sarif.Connection, error) {
 		false,
 		nil,
 	)
+
+	log.Printf("outgoing done")
+
+	return err
+}
+
+func (c *connection) setupIncoming() (err error) {
+	c.in, err = c.conn.in.conn.Channel()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	in, err := conn.in.Channel()
-	if err != nil {
-		return nil, err
-	}
-
-	queue, err := in.QueueDeclare(
+	c.queue, err = c.in.QueueDeclare(
 		"",
 		false,
 		false,
@@ -83,10 +98,42 @@ func newConnection(conn *connpair) (sarif.Connection, error) {
 		nil,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &connection{conn, in, out, queue}, nil
+	for _, topic := range c.topics {
+		if err := c.in.QueueBind(c.queue.Name, topic, "sarif", false, nil); err != nil {
+			return err
+		}
+	}
+
+	msgs, err := c.in.Consume(
+		c.queue.Name,
+		"",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for amsg := range msgs {
+			var msg sarif.Message
+			err := json.Unmarshal(amsg.Body, &msg)
+			if err != nil {
+				continue
+			}
+			c.messages <- msg
+		}
+	}()
+
+	log.Printf("incoming done")
+
+	return err
 }
 
 func (c *connection) Publish(msg sarif.Message) error {
@@ -125,6 +172,8 @@ func (c *connection) Subscribe(src, action, dest string) error {
 	if err := c.in.QueueBind(c.queue.Name, topic, "sarif", false, nil); err != nil {
 		return err
 	}
+	c.topics = append(c.topics, topic)
+
 	return nil
 }
 
@@ -145,33 +194,5 @@ func (c *connection) Close() error {
 }
 
 func (c *connection) Consume() (<-chan sarif.Message, error) {
-	ch := make(chan sarif.Message, 10)
-
-	msgs, err := c.in.Consume(
-		c.queue.Name,
-		"",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	go func() {
-		for amsg := range msgs {
-			var msg sarif.Message
-			err := json.Unmarshal(amsg.Body, &msg)
-			if err != nil {
-				close(ch)
-				c.conn = nil
-				return
-			}
-			ch <- msg
-		}
-	}()
-
-	return (<-chan sarif.Message)(ch), nil
+	return (<-chan sarif.Message)(c.messages), nil
 }
