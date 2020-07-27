@@ -51,6 +51,10 @@ func ParseSimple(text string) (sarif.Message, bool) {
 		for _, part := range parts[1:] {
 			keyval, _ := SplitQuoted(part, "=")
 			if len(keyval) == 1 {
+				if strings.HasPrefix(part, "@") {
+					msg.Destination = strings.TrimLeft(part, "@")
+				}
+
 				if msg.Text != "" {
 					msg.Text += " "
 				}
@@ -69,10 +73,6 @@ func ParseSimple(text string) (sarif.Message, bool) {
 			switch k {
 			case "text":
 				msg.Text = vtext
-			case "device":
-				fallthrough
-			case "destination":
-				msg.Destination = vtext
 			default:
 				payload[k] = v
 			}
@@ -104,7 +104,7 @@ func FormatSimple(msg sarif.Message) string {
 		return msg.Text
 	}
 
-	return fmt.Sprintf("%s from %s.", msg.Action, msg.Source)
+	return fmt.Sprintf("%s from @%s.", msg.Action, msg.Source)
 }
 
 var (

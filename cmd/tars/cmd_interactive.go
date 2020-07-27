@@ -6,6 +6,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"io"
 	"log"
@@ -20,6 +21,7 @@ import (
 )
 
 var profile = flag.Bool("profile", false, "interactive: print elapsed time for requests")
+var printJson = flag.Bool("json", false, "interactive: print replies as json")
 
 func (app *App) Interactive() {
 	client := app.NewClient()
@@ -40,9 +42,13 @@ func (app *App) Interactive() {
 	// Subscribe to all replies and print them to stdout
 	app.Must(client.Subscribe("", "self", func(msg sarif.Message) {
 		text := msg.Text
-		if text == "" {
-			text = msg.Action + " from " + msg.Source
+		if *printJson {
+			raw, _ := json.MarshalIndent(msg, "", "    ")
+			text = string(raw)
+		} else if text == "" {
+			text = natural.FormatSimple(msg)
 		}
+
 		if msg.IsAction("err") {
 			text = color.RedString(text)
 		}

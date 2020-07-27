@@ -87,11 +87,12 @@ func (app *App) initConfig() (err error) {
 }
 
 func (app *App) InitClientFactory() (err error) {
-	cfg := sfproto.NetConfig{
-		Address: "tcp://localhost:" + sfproto.DefaultPort,
-	}
+	cfg := sfproto.NetConfig{}
 	app.Config.Get("dial", &cfg)
 	app.WriteConfig()
+	if cfg.Address == "" {
+		cfg.Address = os.Getenv("SARIF_QUEUE_URL")
+	}
 
 	u, err := url.Parse(cfg.Address)
 	if err != nil {

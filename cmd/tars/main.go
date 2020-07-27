@@ -16,10 +16,6 @@ import (
 	"github.com/sarifsystems/sarif/sarif"
 )
 
-var (
-	authString = flag.String("auth", "", "authentication DSN")
-)
-
 func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, Usage)
@@ -62,7 +58,6 @@ func New() *App {
 		{"help", app.Help, ""},
 		{"log", app.CmdLog, ""},
 		{"interactive", app.Interactive, ""},
-		{"location_import", app.LocationImport, ""},
 		{"cat", app.Cat, usageCat},
 		{"down", app.Down, ""},
 		{"up", app.Up, ""},
@@ -75,7 +70,6 @@ func New() *App {
 func (app *App) NewClient() sarif.Client {
 	c, err := app.ClientDial(sarif.ClientInfo{
 		Name: "tars/" + sarif.GenerateId(),
-		Auth: *authString,
 	})
 	app.Must(err)
 	return c

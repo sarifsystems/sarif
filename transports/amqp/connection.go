@@ -8,7 +8,6 @@ package amqp
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"strings"
 
 	"github.com/sarifsystems/sarif/sarif"
@@ -78,8 +77,6 @@ func (c *connection) setupOutgoing() (err error) {
 		nil,
 	)
 
-	log.Printf("outgoing done")
-
 	return err
 }
 
@@ -130,8 +127,6 @@ func (c *connection) setupIncoming() (err error) {
 			c.messages <- msg
 		}
 	}()
-
-	log.Printf("incoming done")
 
 	return err
 }
